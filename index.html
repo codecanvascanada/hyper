@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Infinite Survival Fixed</title>
+    <title>Survival: Knockback Update</title>
     <style>
         body {
             margin: 0; background: #000;
@@ -38,17 +38,17 @@
 
         /* Combo & Warning */
         #centerMsg {
-            position: absolute; top: 20%; left: 50%; transform: translateX(-50%);
-            text-align: center; width: 100%;
+            position: absolute; top: 18%; left: 50%; transform: translateX(-50%);
+            text-align: center; width: 100%; pointer-events: none;
         }
         #comboCount { 
             font-size: 48px; font-weight: 900; color: #fffa65; 
             text-shadow: 0 0 10px rgba(255, 165, 2, 0.8);
-            display: none; /* 평소엔 숨김 */
+            display: none; transition: transform 0.1s;
         }
         #warningMsg {
-            color: #ff4757; font-size: 24px; font-weight: 900;
-            text-shadow: 0 0 10px red; display: none;
+            color: #ff4757; font-size: 26px; font-weight: 900;
+            text-shadow: 0 0 15px red; display: none;
             animation: blink 0.5s infinite alternate;
             margin-top: 20px;
         }
@@ -64,7 +64,7 @@
         #hyperText {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             display: flex; align-items: center; justify-content: center;
-            font-size: 11px; font-weight: bold;
+            font-size: 11px; font-weight: bold; text-shadow: 1px 1px 1px #000;
         }
 
         /* Modals */
@@ -75,9 +75,11 @@
             pointer-events: auto; z-index: 100;
         }
         .card {
-            background: white; color: #333; width: 80%; margin: 10px; padding: 15px;
-            border-radius: 10px; cursor: pointer; text-align: center;
+            background: white; color: #333; width: 85%; margin: 8px; padding: 15px;
+            border-radius: 12px; cursor: pointer; text-align: center;
+            box-shadow: 0 4px 0 #bdc3c7; transition: transform 0.1s;
         }
+        .card:active { transform: translateY(4px); box-shadow: none; }
         
         .hyper-active #gameContainer { animation: shake 0.2s infinite; }
         @keyframes shake { 0% { transform: translate(1px, 1px); } 50% { transform: translate(-1px, -1px); } 100% { transform: translate(1px, -1px); } }
@@ -100,7 +102,7 @@
         
         <div id="centerMsg">
             <div id="comboCount">0 COMBO</div>
-            <div id="warningMsg">⚠ WARNING ⚠<br>ELITE ENEMY</div>
+            <div id="warningMsg">⚠ WARNING ⚠<br>BOSS APPROACHING</div>
         </div>
 
         <div class="bottom-ui">
@@ -113,14 +115,14 @@
     </div>
 
     <div id="levelUpScreen" class="modal">
-        <h2 style="color:#fdcb6e;">LEVEL UP!</h2>
+        <h2 style="color:#fdcb6e; margin-bottom:20px;">LEVEL UP!</h2>
         <div id="cardsBox" style="width:100%; display:flex; flex-direction:column; align-items:center;"></div>
     </div>
 
     <div id="gameOverScreen" class="modal">
         <h1 style="color: #ff7675;">YOU DIED</h1>
         <h3 id="resultText" style="color:white; margin-bottom: 30px;"></h3>
-        <button onclick="location.reload()" style="padding:15px 40px; font-size:20px; border-radius:30px; border:none; background:#00d2d3; color:white; font-weight:bold;">RETRY</button>
+        <button onclick="location.reload()" style="padding:15px 40px; font-size:20px; border-radius:30px; border:none; background:#00d2d3; color:white; font-weight:bold; cursor:pointer;">RETRY</button>
     </div>
 </div>
 
@@ -151,12 +153,12 @@
 
     const player = {
         wx: 0, wy: 0, // World Coord
-        r: 8, hitR: 4, grazeR: 35,
+        r: 8, hitR: 4, grazeR: 40, // 그레이즈 범위 약간 상향
         color: '#00d2d3',
         hp: 100, maxHp: 100,
-        speed: 3, baseSpeed: 3,
+        speed: 3.5, baseSpeed: 3.5, // 플레이어 기본 속도 약간 상향
         damage: 10,
-        fireRate: 30, baseFireRate: 30,
+        fireRate: 25, baseFireRate: 25, // 연사 속도 약간 상향
         bulletCount: 1,
         magnet: 80,
         level: 1, exp: 0, nextExp: 10,
@@ -179,8 +181,8 @@
         const dx = x - startX;
         const dy = y - startY;
         const angle = Math.atan2(dy, dx);
-        const dist = Math.min(50, Math.hypot(dx, dy));
-        const power = dist / 50;
+        const dist = Math.min(60, Math.hypot(dx, dy));
+        const power = dist / 60;
         moveVx = Math.cos(angle) * power;
         moveVy = Math.sin(angle) * power;
     }
@@ -210,7 +212,7 @@
         constructor() { this.active=false; }
         spawn(isElite) {
             const angle = Math.random() * Math.PI * 2;
-            const dist = 450; // 화면 밖
+            const dist = 480; // 화면 밖
             this.wx = player.wx + Math.cos(angle)*dist;
             this.wy = player.wy + Math.sin(angle)*dist;
             this.isElite = isElite;
@@ -218,25 +220,31 @@
             this.grazeCool = 0;
             
             if(isElite) {
-                this.hp = 200 + player.level*30; this.maxHp=this.hp;
-                this.speed = player.baseSpeed * 1.1; // 플레이어보다 빠름!
-                this.r = 20; this.color = '#e17055'; this.xp = 50;
+                // 너프된 보스 스펙
+                this.hp = 150 + player.level*20; // 체력 감소
+                this.maxHp = this.hp;
+                this.speed = player.baseSpeed * 0.85; // 중요: 플레이어보다 느림!
+                this.r = 25; // 덩치 키움 (맞추기 쉽게)
+                this.color = '#e17055'; 
+                this.xp = 50;
             } else {
-                this.hp = 15 + player.level*5;
-                this.speed = 1 + Math.random();
+                this.hp = 15 + player.level*4;
+                this.speed = 1.5 + Math.random();
                 this.r = 10; this.color = '#ff6b81'; this.xp = 5;
             }
         }
         update() {
+            // 추적
             const angle = Math.atan2(player.wy - this.wy, player.wx - this.wx);
             this.wx += Math.cos(angle)*this.speed;
             this.wy += Math.sin(angle)*this.speed;
             if(this.grazeCool>0) this.grazeCool--;
 
             const dist = Math.hypot(player.wx-this.wx, player.wy-this.wy);
-            // Hit
+            
+            // Hit Player
             if(dist < player.hitR + this.r) {
-                player.hp -= (this.isElite?30:10);
+                player.hp -= (this.isElite?25:10); // 데미지 소폭 감소
                 spawnText("-HP", player.wx, player.wy, 'red');
                 if(!this.isElite) this.active=false;
                 player.combo=0; updateUI();
@@ -248,18 +256,21 @@
                 addHyper(this.isElite?5:1);
                 this.grazeCool=30;
             }
-            if(dist > 900) this.active=false;
+            if(dist > 1000) this.active=false;
         }
         draw() {
             const sx = this.wx - player.wx + CW/2;
             const sy = this.wy - player.wy + CH/2;
-            // 화면 밖 그리지 않음
-            if(sx<-50||sx>CW+50||sy<-50||sy>CH+50) return;
+            if(sx<-60||sx>CW+60||sy<-60||sy>CH+60) return;
             
             ctx.beginPath(); ctx.arc(sx, sy, this.r, 0, Math.PI*2);
             ctx.fillStyle = this.color; ctx.fill();
             if(this.isElite) {
-                ctx.lineWidth=2; ctx.strokeStyle='#fff'; ctx.stroke();
+                ctx.lineWidth=3; ctx.strokeStyle='#fff'; ctx.stroke();
+                // 체력바
+                const pct = this.hp / this.maxHp;
+                ctx.fillStyle = 'red'; ctx.fillRect(sx-20, sy-40, 40, 6);
+                ctx.fillStyle = '#00d2d3'; ctx.fillRect(sx-20, sy-40, 40*pct, 6);
             }
         }
     }
@@ -268,8 +279,8 @@
         constructor() { this.active=false; }
         spawn(wx, wy, a) {
             this.wx=wx; this.wy=wy; 
-            this.vx=Math.cos(a)*7; this.vy=Math.sin(a)*7;
-            this.active=true; this.life=60;
+            this.vx=Math.cos(a)*8; this.vy=Math.sin(a)*8; // 탄속 증가
+            this.active=true; this.life=50;
             this.r = player.isHyper ? 8 : 4;
         }
         update() {
@@ -291,8 +302,8 @@
         update() {
             const dist = Math.hypot(player.wx-this.wx, player.wy-this.wy);
             let range = player.magnet;
-            let spd = 6;
-            if(player.isHyper) { range=1000; spd=12; }
+            let spd = 7;
+            if(player.isHyper) { range=1200; spd=15; } // 하이퍼때 자석 강화
             
             if(dist < range) {
                 const a = Math.atan2(player.wy-this.wy, player.wx-this.wx);
@@ -303,25 +314,25 @@
                     this.active=false;
                 }
             }
-            if(dist > 1000) this.active=false;
+            if(dist > 1200) this.active=false;
         }
         draw() {
             const sx = this.wx - player.wx + CW/2;
             const sy = this.wy - player.wy + CH/2;
             if(sx<-10||sx>CW+10||sy<-10||sy>CH+10) return;
             ctx.fillStyle='#55efc4';
-            ctx.beginPath(); ctx.arc(sx, sy, 5, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(sx, sy, 6, 0, Math.PI*2); ctx.fill();
         }
     }
 
     class FloatText {
         constructor() { this.active=false; }
-        spawn(t, wx, wy, c) { this.t=t; this.wx=wx; this.wy=wy; this.c=c; this.life=30; this.active=true; }
+        spawn(t, wx, wy, c) { this.t=t; this.wx=wx; this.wy=wy; this.c=c; this.life=40; this.active=true; }
         update() { this.wy-=1; this.life--; if(this.life<=0) this.active=false; }
         draw() {
             const sx = this.wx - player.wx + CW/2;
             const sy = this.wy - player.wy + CH/2;
-            ctx.fillStyle=this.c; ctx.font="bold 12px Arial"; ctx.fillText(this.t, sx, sy);
+            ctx.fillStyle=this.c; ctx.font="bold 14px Arial"; ctx.fillText(this.t, sx, sy);
         }
     }
 
@@ -331,10 +342,10 @@
     // Logic
     function addCombo(n) {
         player.combo += n;
-        player.comboTimer = 100;
+        player.comboTimer = 120;
         comboEl.style.display = 'block';
         comboEl.innerText = player.combo + " COMBO";
-        comboEl.style.transform = 'scale(1.3)';
+        comboEl.style.transform = 'scale(1.2)';
         setTimeout(()=>comboEl.style.transform='scale(1)', 100);
     }
     
@@ -344,7 +355,7 @@
         if(player.hyperGauge>=100) {
             player.isHyper=true; player.hyperTime=300;
             document.body.classList.add('hyper-active');
-            spawnText("HYPER!", player.wx, player.wy-30, "#fffa65");
+            spawnText("HYPER MODE!", player.wx, player.wy-40, "#fffa65");
         }
         updateUI();
     }
@@ -354,7 +365,7 @@
         if(player.exp >= player.nextExp) {
             player.level++;
             player.exp=0; 
-            player.nextExp = Math.floor(player.nextExp*1.3);
+            player.nextExp = Math.floor(player.nextExp*1.4);
             levelUp();
         }
         updateUI();
@@ -369,25 +380,17 @@
     }
 
     function drawGrid() {
-        // 안전한 그리드 계산 (음수 모듈러 문제 해결)
         ctx.fillStyle = '#111';
         ctx.fillRect(0, 0, CW, CH);
         
         ctx.strokeStyle = '#222';
         ctx.lineWidth = 2;
         ctx.beginPath();
-
-        const sz = 50;
-        // 양수로 변환 후 나머지 계산
+        const sz = 60;
         const offX = ((player.wx % sz) + sz) % sz;
         const offY = ((player.wy % sz) + sz) % sz;
-
-        for(let x = -offX; x < CW; x += sz) {
-            ctx.moveTo(x, 0); ctx.lineTo(x, CH);
-        }
-        for(let y = -offY; y < CH; y += sz) {
-            ctx.moveTo(0, y); ctx.lineTo(CW, y);
-        }
+        for(let x = -offX; x < CW; x += sz) { ctx.moveTo(x, 0); ctx.lineTo(x, CH); }
+        for(let y = -offY; y < CH; y += sz) { ctx.moveTo(0, y); ctx.lineTo(CW, y); }
         ctx.stroke();
     }
 
@@ -412,22 +415,20 @@
         }
         if(player.combo>0) {
             player.comboTimer--;
-            if(player.comboTimer<=0) {
-                player.combo=0; comboEl.style.display='none';
-            }
+            if(player.comboTimer<=0) { player.combo=0; comboEl.style.display='none'; }
         }
 
         // Fire
-        const fr = player.isHyper ? 5 : player.baseFireRate;
+        const fr = player.isHyper ? 4 : player.baseFireRate;
         if(frameCount - player.lastShot > fr) {
-            // Find target
+            // Target Nearest
             let t=null, min=Infinity;
             enemies.forEach(e=>{
                 if(!e.active) return;
                 const d = Math.hypot(player.wx-e.wx, player.wy-e.wy);
                 if(d<min) { min=d; t=e; }
             });
-            if(t && min<350) {
+            if(t && min<400) {
                 const a = Math.atan2(t.wy-player.wy, t.wx-player.wx);
                 const spread = 0.2;
                 const startA = a - (spread*(player.bulletCount-1))/2;
@@ -438,18 +439,18 @@
             }
         }
 
-        // Spawn
-        const rate = player.isHyper ? 5 : Math.max(10, 60-player.level);
+        // Spawner
+        const rate = player.isHyper ? 5 : Math.max(15, 60-player.level);
         if(frameCount % rate === 0) getObj(enemies, Enemy).spawn(false);
         
-        // Elite (15초 = 900프레임)
+        // Elite Spawn (15초 주기)
         if(frameCount % 900 === 0 && frameCount > 0) {
             getObj(enemies, Enemy).spawn(true);
             warnEl.style.display='block';
             setTimeout(()=>warnEl.style.display='none', 3000);
         }
 
-        // Update All
+        // Updates
         bullets.forEach(b=>{
             if(b.active) {
                 b.update();
@@ -457,11 +458,24 @@
                     if(e.active) {
                         const d = Math.hypot(b.wx-e.wx, b.wy-e.wy);
                         if(d < b.r + e.r) {
-                            e.hp -= player.damage * (player.isHyper?2:1);
-                            spawnText(Math.floor(player.damage), e.wx, e.wy, 'white');
+                            // 데미지 계산
+                            const dmg = player.damage * (player.isHyper?2:1);
+                            e.hp -= dmg;
+                            spawnText(Math.floor(dmg), e.wx, e.wy, 'white');
+                            
+                            // 넉백 (Knockback) 효과 구현
+                            // 총알 방향대로 적을 밀어냄 (엘리트는 덜 밀림)
+                            const kbPower = e.isElite ? 0.5 : 4.0;
+                            e.wx += b.vx * 0.5 * kbPower; 
+                            e.wy += b.vy * 0.5 * kbPower;
+
                             if(e.hp<=0) {
                                 e.active=false;
                                 getObj(gems, Gem).spawn(e.wx, e.wy, e.xp);
+                                if(e.isElite) {
+                                    spawnText("BOSS KILL!", e.wx, e.wy, "#fdcb6e");
+                                    addHyper(20);
+                                }
                             }
                             b.active=false;
                         }
@@ -488,7 +502,9 @@
 
         // Player
         ctx.fillStyle = player.isHyper ? '#fffa65' : player.color;
+        if(player.isHyper) { ctx.shadowColor='#fffa65'; ctx.shadowBlur=15; }
         ctx.beginPath(); ctx.arc(CW/2, CH/2, player.r, 0, Math.PI*2); ctx.fill();
+        ctx.shadowBlur=0;
     }
 
     function loop() {
@@ -506,13 +522,12 @@
         cardsBox.innerHTML='';
         const opts = [
             {t:"공격력 UP", d:"데미지 +5", f:()=>{player.damage+=5}},
-            {t:"공속 UP", d:"공격속도 +10%", f:()=>{player.baseFireRate*=0.9}},
+            {t:"연사속도 UP", d:"공격속도 +10%", f:()=>{player.baseFireRate*=0.9}},
             {t:"멀티샷", d:"탄환 +1", f:()=>{player.bulletCount++}},
+            {t:"이동속도 UP", d:"속도 +10%", f:()=>{player.baseSpeed*=1.1}},
             {t:"체력회복", d:"HP +30", f:()=>{player.hp=Math.min(player.maxHp, player.hp+30)}},
-            {t:"자석범위", d:"범위 증가", f:()=>{player.magnet+=50}},
         ];
         
-        // 3 Random
         for(let i=0; i<3; i++) {
             const r = Math.floor(Math.random()*opts.length);
             const item = opts[r];
@@ -530,11 +545,10 @@
 
     function gameOver() {
         gameState='GAMEOVER';
-        resultText.innerText = "최종 레벨: " + player.level;
+        resultText.innerText = `최종 레벨: ${player.level}`;
         gameOverScreen.style.display='flex';
     }
 
-    // Start
     loop();
 
 </script>
