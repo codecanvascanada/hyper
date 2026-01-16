@@ -3,151 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mobile Optimized Bullet Hell</title>
+    <title>Survival io</title>
     <style>
         body {
-            margin: 0;
-            background-color: #050505;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            overflow: hidden;
-            color: white;
+            margin: 0; background: #111;
+            display: flex; justify-content: center; align-items: center;
+            height: 100vh; overflow: hidden;
             font-family: 'Segoe UI', sans-serif;
-            user-select: none;
-            touch-action: none; /* 브라우저 기본 제스처 차단 */
+            user-select: none; touch-action: none; color: white;
         }
 
         #gameContainer {
-            position: relative;
-            width: 100vh;
-            max-width: 56.25vh; /* 9:16 비율 */
-            height: 100vh;
-            background: radial-gradient(circle at center, #1a1a2e 0%, #000000 100%);
-            box-shadow: 0 0 40px rgba(0, 210, 211, 0.1);
-            overflow: hidden;
+            position: relative; width: 100vh; max-width: 56.25vh; height: 100vh;
+            background: #222; overflow: hidden;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
         }
 
         canvas { display: block; width: 100%; height: 100%; }
 
+        /* UI 레이어 */
         #uiLayer {
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            pointer-events: none;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            padding: 24px;
-            box-sizing: border-box;
-            z-index: 10;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; padding: 15px; box-sizing: border-box;
         }
 
-        /* 점수판 */
-        .top-ui { 
-            text-align: right; 
-            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+        /* 상단 경험치 바 */
+        #expContainer {
+            width: 100%; height: 20px; background: #333;
+            border-radius: 10px; border: 2px solid #555; overflow: hidden; margin-top: 10px;
         }
-        #scoreBoard {
-            font-size: 36px;
-            font-weight: 800;
-            color: #fff;
-            letter-spacing: 1px;
+        #expBar {
+            height: 100%; width: 0%; background: #00d2d3;
+            transition: width 0.2s;
         }
-        .label { font-size: 12px; color: #888; letter-spacing: 2px; text-transform: uppercase;}
+        #levelText {
+            position: absolute; top: 15px; left: 50%; transform: translateX(-50%);
+            font-weight: bold; text-shadow: 1px 1px 2px black; font-size: 14px;
+        }
 
-        /* 중앙 콤보 */
-        #comboContainer {
-            position: absolute;
-            top: 18%; left: 50%;
-            transform: translateX(-50%);
-            text-align: center;
-            opacity: 0;
-            transition: opacity 0.3s;
+        /* 레벨업 선택창 (평소엔 숨김) */
+        #levelUpScreen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: none; flex-direction: column; justify-content: center; align-items: center;
+            pointer-events: auto; z-index: 100;
         }
-        #comboCount {
-            font-size: 50px;
-            font-weight: 900;
-            color: #fffa65;
-            line-height: 1;
-            text-shadow: 0 0 20px rgba(255, 250, 101, 0.5);
+        .card {
+            background: #fff; color: #333; width: 80%; margin: 10px 0;
+            padding: 20px; border-radius: 8px; cursor: pointer;
+            text-align: center; transition: transform 0.1s;
         }
-        #comboLabel { font-size: 16px; color: #fff; font-weight: bold; }
-
-        /* 하단 게이지 */
-        .bottom-ui { width: 100%; }
-        .gauge-wrapper {
-            position: relative;
-            height: 24px;
-            background: #222;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: inset 0 2px 5px rgba(0,0,0,0.5);
-            border: 1px solid #444;
-        }
-        .gauge-fill {
-            height: 100%;
-            width: 0%;
-            background: linear-gradient(90deg, #4834d4, #686de0);
-            transition: width 0.1s linear;
-        }
-        .gauge-overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 11px; font-weight: bold; color: rgba(255,255,255,0.7);
-        }
-        
-        /* 모바일 안내 문구 */
-        #touchGuide {
-            position: absolute; bottom: 80px; width: 100%; 
-            text-align: center; color: #555; font-size: 12px;
-            animation: blink 2s infinite;
-        }
-        @keyframes blink { 0%,100%{opacity:0.3} 50%{opacity:0.8} }
-
-        /* 이펙트 레이어 */
-        #effectLayer {
-            position: absolute; top: 0; left: 0; 
-            width: 100%; height: 100%; 
-            pointer-events: none;
-        }
-        .pop-score {
-            position: absolute;
-            color: #00d2d3;
-            font-weight: 900;
-            font-size: 32px;
-            text-shadow: 0 0 10px rgba(0, 210, 211, 0.8);
-            animation: floatUp 1.2s cubic-bezier(0.19, 1, 0.22, 1) forwards;
-        }
-        @keyframes floatUp {
-            0% { transform: translate(-50%, 0) scale(0.5); opacity: 0; }
-            20% { transform: translate(-50%, -40px) scale(1.2); opacity: 1; }
-            100% { transform: translate(-50%, -100px) scale(1); opacity: 0; }
-        }
+        .card:hover { transform: scale(1.05); background: #eee; }
+        .card h3 { margin: 0 0 5px 0; color: #d63031; }
+        .card p { margin: 0; font-size: 12px; color: #666; }
 
         /* 게임오버 */
         #gameOverScreen {
-            position: absolute; top: 0; left: 0;
-            width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            display: none;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            pointer-events: auto;
-            z-index: 100;
-            backdrop-filter: blur(5px);
+            display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); flex-direction: column; justify-content: center; align-items: center;
+            pointer-events: auto; z-index: 200;
         }
-        button {
-            background: white; color: black; border: none;
-            padding: 16px 48px; font-size: 20px; font-weight: bold;
-            cursor: pointer; border-radius: 50px; margin-top: 40px;
-            transition: transform 0.1s;
-        }
-        button:hover { transform: scale(1.05); background: #eee; }
-
     </style>
 </head>
 <body>
@@ -156,386 +71,404 @@
     <canvas id="gameCanvas"></canvas>
     
     <div id="uiLayer">
-        <div class="top-ui">
-            <div class="label">TOTAL SCORE</div>
-            <div id="scoreBoard">0</div>
-        </div>
-        
-        <div id="comboContainer">
-            <div id="comboCount">0</div>
-            <div id="comboLabel">COMBO</div>
-        </div>
-
-        <div id="touchGuide">화면 아무 곳이나 드래그하여 이동</div>
-
-        <div class="bottom-ui">
-            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
-                <span class="label" style="color:#ff9f43;">HYPER GAUGE</span>
-                <span class="label" id="phaseLabel">PHASE 1 (EASY)</span>
-            </div>
-            <div class="gauge-wrapper">
-                <div class="gauge-fill" id="hyperBar"></div>
-                <div class="gauge-overlay" id="hyperText">GRAZE TO FILL</div>
-            </div>
-        </div>
+        <div id="expContainer"><div id="expBar"></div></div>
+        <div id="levelText">LV. 1</div>
+        <div id="hpText" style="margin-top:5px; font-size:12px; color:#ff7675;">HP: 100/100</div>
     </div>
 
-    <div id="effectLayer"></div>
+    <div id="levelUpScreen">
+        <h2 style="color:#fdcb6e; margin-bottom: 20px;">LEVEL UP!</h2>
+        <div id="cardsContainer" style="width:100%; display:flex; flex-direction:column; align-items:center;"></div>
+    </div>
 
     <div id="gameOverScreen">
-        <h1 style="color: #ff6b81; font-size: 48px; margin-bottom: 0;">GAME OVER</h1>
-        <p style="color: #888; margin-bottom: 10px;">Relative Touch Control</p>
-        <h2 id="finalScore" style="font-size: 32px; color: white;">0</h2>
-        <button onclick="restartGame()">RETRY</button>
+        <h1 style="color: #ff7675;">YOU DIED</h1>
+        <h3 id="finalLevel">Lv. 1</h3>
+        <button onclick="restartGame()" style="padding:10px 30px; font-size:18px; border-radius:20px; border:none; background:white; cursor:pointer;">RETRY</button>
     </div>
 </div>
 
 <script>
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
-    
-    // UI
-    const scoreEl = document.getElementById('scoreBoard');
-    const comboContainer = document.getElementById('comboContainer');
-    const comboCountEl = document.getElementById('comboCount');
-    const hyperBar = document.getElementById('hyperBar');
-    const hyperText = document.getElementById('hyperText');
-    const effectLayer = document.getElementById('effectLayer');
+    const expBar = document.getElementById('expBar');
+    const levelText = document.getElementById('levelText');
+    const hpText = document.getElementById('hpText');
+    const levelUpScreen = document.getElementById('levelUpScreen');
+    const cardsContainer = document.getElementById('cardsContainer');
     const gameOverScreen = document.getElementById('gameOverScreen');
-    const finalScoreEl = document.getElementById('finalScore');
-    const phaseLabel = document.getElementById('phaseLabel');
-    const touchGuide = document.getElementById('touchGuide');
 
-    // Resolution
-    const GAME_WIDTH = 360;
-    const GAME_HEIGHT = 640;
-    canvas.width = GAME_WIDTH;
-    canvas.height = GAME_HEIGHT;
+    const GW = 360; // Game Width
+    const GH = 640; // Game Height
+    canvas.width = GW; canvas.height = GH;
 
-    // Game Variables
-    let score = 0;
-    let combo = 0;
-    let hyperGauge = 0;
-    const MAX_GAUGE = 100;
+    let gameState = 'PLAY'; // PLAY, PAUSE, GAMEOVER
     let frameCount = 0;
-    let isGameOver = false;
-    let animationId;
     
-    // Player Settings
+    // --- Player ---
     const player = {
-        x: GAME_WIDTH / 2,
-        y: GAME_HEIGHT / 2,
-        hitRadius: 3,       
-        grazeRadius: 30,    
-        visualRadius: 8,
-        color: '#00d2d3'
+        x: GW/2, y: GH/2,
+        r: 10, color: '#0984e3',
+        hp: 100, maxHp: 100,
+        speed: 2.5,
+        level: 1, exp: 0, nextExp: 10,
+        // Stats
+        damage: 10,
+        fireRate: 40, // frames per shot (lower is faster)
+        bulletSpeed: 5,
+        bulletCount: 1, // 멀티샷
+        magnet: 50, // 자석 범위
+        lastShotTime: 0
     };
 
-    // Target Position (for smoothing)
-    let targetX = GAME_WIDTH / 2;
-    let targetY = GAME_HEIGHT / 2;
+    // --- Input (Relative Touch) ---
+    let touchActive = false;
+    let tStartX=0, tStartY=0, pStartX=0, pStartY=0;
+    let targetX = player.x, targetY = player.y;
 
-    // Bullet Pooling
-    const MAX_BULLETS = 600;
+    canvas.addEventListener('mousedown', e => startInput(e.clientX, e.clientY));
+    canvas.addEventListener('mousemove', e => moveInput(e.clientX, e.clientY));
+    canvas.addEventListener('mouseup', endInput);
+    
+    canvas.addEventListener('touchstart', e => { e.preventDefault(); startInput(e.touches[0].clientX, e.touches[0].clientY); }, {passive:false});
+    canvas.addEventListener('touchmove', e => { e.preventDefault(); moveInput(e.touches[0].clientX, e.touches[0].clientY); }, {passive:false});
+    canvas.addEventListener('touchend', endInput);
+
+    function startInput(cx, cy) {
+        if(gameState !== 'PLAY') return;
+        touchActive = true;
+        tStartX = cx; tStartY = cy;
+        pStartX = player.x; pStartY = player.y;
+        targetX = player.x; targetY = player.y;
+    }
+    function moveInput(cx, cy) {
+        if(!touchActive || gameState !== 'PLAY') return;
+        const rect = canvas.getBoundingClientRect();
+        const scale = GW / rect.width;
+        const dx = (cx - tStartX) * scale;
+        const dy = (cy - tStartY) * scale;
+        targetX = pStartX + dx;
+        targetY = pStartY + dy;
+    }
+    function endInput() { touchActive = false; }
+
+
+    // --- Entities & Pooling ---
+    const enemies = [];
     const bullets = [];
+    const gems = [];
+    const texts = []; // 데미지 폰트 등
 
-    class Bullet {
-        constructor() {
-            this.x = 0; this.y = 0;
-            this.vx = 0; this.vy = 0;
-            this.radius = 5; 
-            this.active = false;
-            this.grazed = false;
-            this.color = '#ff6b81';
-        }
-        spawn(x, y, angle, speed) {
-            this.x = x; this.y = y;
-            this.vx = Math.cos(angle) * speed;
-            this.vy = Math.sin(angle) * speed;
+    class Enemy {
+        constructor() { this.active = false; }
+        spawn(type) {
+            // 화면 밖 랜덤 위치
+            const side = Math.floor(Math.random()*4);
+            if(side===0) { this.x = Math.random()*GW; this.y = -20; }
+            else if(side===1) { this.x = GW+20; this.y = Math.random()*GH; }
+            else if(side===2) { this.x = Math.random()*GW; this.y = GH+20; }
+            else { this.x = -20; this.y = Math.random()*GH; }
+
+            // 타입별 스탯 (시간 지나면 강한 적)
+            this.hp = 15 + (player.level * 5);
+            this.maxHp = this.hp;
+            this.speed = 0.8 + (Math.random()*0.5) + (player.level * 0.05);
+            this.r = 8;
+            this.damage = 5;
+            this.color = '#d63031';
+            this.xpValue = 5;
             this.active = true;
-            this.grazed = false;
-            this.color = speed > 5 ? '#ff4757' : '#ff6b81';
         }
         update() {
-            if (!this.active) return;
-            this.x += this.vx;
-            this.y += this.vy;
-            if (this.x < -50 || this.x > GAME_WIDTH+50 || this.y < -50 || this.y > GAME_HEIGHT+50) {
-                this.active = false;
+            // 플레이어 추적
+            const angle = Math.atan2(player.y - this.y, player.x - this.x);
+            this.x += Math.cos(angle) * this.speed;
+            this.y += Math.sin(angle) * this.speed;
+
+            // 플레이어 충돌
+            const dist = Math.hypot(player.x - this.x, player.y - this.y);
+            if(dist < player.r + this.r) {
+                player.hp -= this.damage;
+                spawnFloatingText(this.damage, player.x, player.y, 'red');
+                this.active = false; // 자폭
+                updateUI();
+                if(player.hp <= 0) endGame();
             }
         }
         draw(ctx) {
-            if (!this.active) return;
-            ctx.beginPath();
-            ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-            ctx.fillStyle = this.grazed ? '#535c68' : this.color; 
-            ctx.fill();
+            ctx.fillStyle = this.color;
+            ctx.fillRect(this.x - this.r, this.y - this.r, this.r*2, this.r*2);
+        }
+        takeDamage(dmg) {
+            this.hp -= dmg;
+            spawnFloatingText(dmg, this.x, this.y, 'white');
+            if(this.hp <= 0) {
+                this.active = false;
+                spawnGem(this.x, this.y, this.xpValue);
+            }
         }
     }
 
-    for (let i = 0; i < MAX_BULLETS; i++) bullets.push(new Bullet());
-    function getInactiveBullet() { return bullets.find(b => !b.active); }
-
-    // --- Input Handling (Relative Touch & Mouse) ---
-    
-    // Mouse: Absolute (PC)
-    function updateMousePos(clientX, clientY) {
-        if (isGameOver) return;
-        const rect = canvas.getBoundingClientRect();
-        const scaleX = canvas.width / rect.width;
-        const scaleY = canvas.height / rect.height;
-        targetX = (clientX - rect.left) * scaleX;
-        targetY = (clientY - rect.top) * scaleY;
-        touchGuide.style.display = 'none'; // 마우스 쓰면 가이드 숨김
+    class Bullet {
+        constructor() { this.active = false; }
+        spawn(x, y, angle) {
+            this.x = x; this.y = y;
+            this.vx = Math.cos(angle) * player.bulletSpeed;
+            this.vy = Math.sin(angle) * player.bulletSpeed;
+            this.r = 4;
+            this.active = true;
+            this.life = 100; // 사거리 제한
+        }
+        update() {
+            this.x += this.vx; this.y += this.vy;
+            this.life--;
+            if(this.life <= 0) this.active = false;
+        }
+        draw(ctx) {
+            ctx.beginPath(); ctx.arc(this.x, this.y, this.r, 0, Math.PI*2);
+            ctx.fillStyle = '#fdcb6e'; ctx.fill();
+        }
     }
-    
-    window.addEventListener('mousemove', e => {
-        // 터치 중이 아닐 때만 마우스 입력 받음
-        if (!isTouchActive) updateMousePos(e.clientX, e.clientY);
-    });
 
-    // Touch: Relative (Mobile)
-    let isTouchActive = false;
-    let touchStartX = 0;
-    let touchStartY = 0;
-    let playerStartX = 0;
-    let playerStartY = 0;
+    class Gem {
+        constructor() { this.active = false; }
+        spawn(x, y, val) {
+            this.x = x; this.y = y; this.val = val;
+            this.active = true;
+            this.r = 4;
+            this.vx = 0; this.vy = 0;
+        }
+        update() {
+            // 자석 효과
+            const dist = Math.hypot(player.x - this.x, player.y - this.y);
+            if(dist < player.magnet) {
+                this.x += (player.x - this.x) * 0.15;
+                this.y += (player.y - this.y) * 0.15;
+                if(dist < player.r + this.r) {
+                    addExp(this.val);
+                    this.active = false;
+                }
+            }
+        }
+        draw(ctx) {
+            ctx.beginPath(); ctx.arc(this.x, this.y, this.r, 0, Math.PI*2);
+            ctx.fillStyle = '#55efc4'; ctx.fill();
+        }
+    }
 
-    canvas.addEventListener('touchstart', e => {
-        if (isGameOver) return;
-        e.preventDefault(); // 스크롤 방지
-        isTouchActive = true;
-        
-        const touch = e.touches[0];
-        touchStartX = touch.clientX;
-        touchStartY = touch.clientY;
-        
-        // 터치 시작 시, 현재 플레이어 위치를 기준으로 잡음 (점프 방지)
-        playerStartX = player.x;
-        playerStartY = player.y;
-        
-        // 타겟도 현재 위치로 초기화하여 튀는 현상 방지
-        targetX = player.x;
-        targetY = player.y;
-        
-        touchGuide.style.display = 'none';
-    }, {passive: false});
+    class FloatingText {
+        constructor() { this.active = false; }
+        spawn(text, x, y, color) {
+            this.text = text; this.x = x; this.y = y; this.color = color;
+            this.life = 30; this.active = true;
+        }
+        update() {
+            this.y -= 1; this.life--;
+            if(this.life <= 0) this.active = false;
+        }
+        draw(ctx) {
+            ctx.fillStyle = this.color;
+            ctx.font = 'bold 12px Arial';
+            ctx.fillText(this.text, this.x, this.y);
+        }
+    }
 
-    canvas.addEventListener('touchmove', e => {
-        if (isGameOver || !isTouchActive) return;
-        e.preventDefault();
-        
-        const touch = e.touches[0];
-        const rect = canvas.getBoundingClientRect();
-        const scaleX = canvas.width / rect.width;
-        const scaleY = canvas.height / rect.height;
-
-        // 이동량 계산 (Delta)
-        const dx = (touch.clientX - touchStartX) * scaleX;
-        const dy = (touch.clientY - touchStartY) * scaleY;
-
-        // 초기 플레이어 위치 + 이동량
-        targetX = playerStartX + dx;
-        targetY = playerStartY + dy;
-    }, {passive: false});
-
-    canvas.addEventListener('touchend', () => {
-        isTouchActive = false;
-    });
-
+    // Pooling Utils
+    function spawnEnemy() {
+        let e = enemies.find(x => !x.active);
+        if(!e) { e = new Enemy(); enemies.push(e); }
+        e.spawn();
+    }
+    function spawnBullet(x, y, angle) {
+        let b = bullets.find(x => !x.active);
+        if(!b) { b = new Bullet(); bullets.push(b); }
+        b.spawn(x, y, angle);
+    }
+    function spawnGem(x, y, val) {
+        let g = gems.find(x => !x.active);
+        if(!g) { g = new Gem(); gems.push(g); }
+        g.spawn(x, y, val);
+    }
+    function spawnFloatingText(txt, x, y, c) {
+        let t = texts.find(x => !x.active);
+        if(!t) { t = new FloatingText(); texts.push(t); }
+        t.spawn(txt, x, y, c);
+    }
 
     // --- Game Logic ---
 
-    function getDifficulty() {
-        const seconds = frameCount / 60;
-        const factor = Math.min(seconds / 120, 1.0); 
-        return factor;
-    }
+    function fireWeapon() {
+        // 가장 가까운 적 찾기
+        let nearest = null;
+        let minDst = Infinity;
+        enemies.forEach(e => {
+            if(!e.active) return;
+            const d = Math.hypot(player.x - e.x, player.y - e.y);
+            if(d < minDst) { minDst = d; nearest = e; }
+        });
 
-    function spawnPattern() {
-        const factor = getDifficulty();
-        
-        if (factor < 0.2) phaseLabel.innerText = "PHASE 1 (WARMING UP)";
-        else if (factor < 0.5) phaseLabel.innerText = "PHASE 2 (NORMAL)";
-        else if (factor < 0.8) phaseLabel.innerText = "PHASE 3 (HARD)";
-        else phaseLabel.innerText = "PHASE 4 (HELL)";
-        phaseLabel.style.color = factor > 0.8 ? "#ff4757" : "#888";
-
-        const speed = 2.0 + (factor * 5.0);
-        const spawnRate = Math.floor(50 - (factor * 42));
-        const count = 1 + Math.floor(factor * 4);
-
-        if (frameCount % spawnRate === 0) {
-            for(let i=0; i<count; i++) {
-                const b = getInactiveBullet();
-                if(!b) return;
-
-                const side = Math.floor(Math.random()*4);
-                let sx, sy;
-                const margin = 20;
-                if(side===0) { sx=Math.random()*GAME_WIDTH; sy=-margin; }
-                else if(side===1) { sx=GAME_WIDTH+margin; sy=Math.random()*GAME_HEIGHT; }
-                else if(side===2) { sx=Math.random()*GAME_WIDTH; sy=GAME_HEIGHT+margin; }
-                else { sx=-margin; sy=Math.random()*GAME_HEIGHT; }
-
-                const angle = Math.atan2(player.y - sy, player.x - sx) + (Math.random()-0.5)*0.2;
-                b.spawn(sx, sy, angle, speed);
+        if(nearest && minDst < 200) { // 사거리 200
+            const angle = Math.atan2(nearest.y - player.y, nearest.x - player.x);
+            
+            // 멀티샷 처리
+            if(player.bulletCount === 1) {
+                spawnBullet(player.x, player.y, angle);
+            } else {
+                // 부채꼴 발사
+                const spread = 0.2; 
+                const startAngle = angle - (spread * (player.bulletCount-1))/2;
+                for(let i=0; i<player.bulletCount; i++) {
+                    spawnBullet(player.x, player.y, startAngle + spread*i);
+                }
             }
         }
     }
 
-    function checkCollisions() {
-        const p = player;
-        bullets.forEach(b => {
-            if (!b.active) return;
-            
-            const dx = p.x - b.x;
-            const dy = p.y - b.y;
-            const distSq = dx*dx + dy*dy;
-            const combinedR = p.hitRadius + b.radius;
-            
-            if (distSq < combinedR * combinedR) {
-                endGame();
-                return;
-            }
-
-            if (!b.grazed) {
-                const grazeDist = p.grazeRadius + b.radius;
-                if (distSq < grazeDist * grazeDist) {
-                    b.grazed = true;
-                    combo++;
-                    hyperGauge += 2.5; 
-                    if(hyperGauge > MAX_GAUGE) hyperGauge = MAX_GAUGE;
-                    updateUI();
-                }
-            }
-        });
-    }
-
-    function triggerScore() {
-        const bonus = combo * combo * 10; 
-        score += bonus;
-        showFloatingText(bonus);
-        combo = 0;
-        hyperGauge = 0;
+    function addExp(amount) {
+        player.exp += amount;
+        if(player.exp >= player.nextExp) {
+            player.level++;
+            player.exp -= player.nextExp;
+            player.nextExp = Math.floor(player.nextExp * 1.3);
+            showLevelUp();
+        }
         updateUI();
-    }
-
-    function showFloatingText(val) {
-        const el = document.createElement('div');
-        el.className = 'pop-score';
-        el.innerText = `+${val.toLocaleString()}`;
-        el.style.left = '50%';
-        el.style.top = '40%';
-        effectLayer.appendChild(el);
-        setTimeout(() => el.remove(), 1200);
     }
 
     function updateUI() {
-        scoreEl.innerText = score.toLocaleString();
-        if (combo > 0) {
-            comboContainer.style.opacity = 1;
-            comboCountEl.innerText = combo;
-            comboCountEl.style.transform = `scale(${1 + Math.min(combo/200, 0.3)})`;
-        } else {
-            comboContainer.style.opacity = 0;
-        }
-        hyperBar.style.width = `${hyperGauge}%`;
-        
-        if (hyperGauge >= 100) {
-            hyperBar.style.background = 'linear-gradient(90deg, #f9ca24, #f0932b)';
-            hyperText.innerText = "MAX GAUGE - CASH OUT!";
-            hyperText.style.color = "#fff";
-        } else {
-            hyperBar.style.background = 'linear-gradient(90deg, #4834d4, #686de0)';
-            hyperText.innerText = `${Math.floor(hyperGauge)}%`;
-            hyperText.style.color = "rgba(255,255,255,0.7)";
+        const pct = (player.exp / player.nextExp) * 100;
+        expBar.style.width = `${pct}%`;
+        levelText.innerText = `LV. ${player.level}`;
+        hpText.innerText = `HP: ${Math.floor(player.hp)}/${player.maxHp}`;
+    }
+
+    // --- Upgrade System ---
+    const upgradeOptions = [
+        { name: "파워 업", desc: "공격력 +5", apply: () => { player.damage += 5; } },
+        { name: "공격 속도", desc: "공격속도 +15%", apply: () => { player.fireRate = Math.max(5, player.fireRate * 0.85); } },
+        { name: "멀티 샷", desc: "투사체 개수 +1", apply: () => { player.bulletCount++; } },
+        { name: "스피드 업", desc: "이동속도 +10%", apply: () => { player.speed *= 1.1; } },
+        { name: "최대 체력", desc: "Max HP +30 (회복)", apply: () => { player.maxHp += 30; player.hp += 30; } },
+        { name: "자석", desc: "아이템 획득 범위 증가", apply: () => { player.magnet += 30; } }
+    ];
+
+    function showLevelUp() {
+        gameState = 'PAUSE';
+        levelUpScreen.style.display = 'flex';
+        cardsContainer.innerHTML = '';
+
+        // 랜덤 3개 뽑기
+        const pool = [...upgradeOptions];
+        for(let i=0; i<3; i++) {
+            if(pool.length === 0) break;
+            const idx = Math.floor(Math.random() * pool.length);
+            const opt = pool.splice(idx, 1)[0];
+
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `<h3>${opt.name}</h3><p>${opt.desc}</p>`;
+            card.onclick = () => {
+                opt.apply();
+                levelUpScreen.style.display = 'none';
+                gameState = 'PLAY';
+                touchActive = false; // 입력 초기화
+                targetX = player.x; targetY = player.y;
+                loop();
+            };
+            cardsContainer.appendChild(card);
         }
     }
 
+    // --- Main Loop ---
     function update() {
-        if (isGameOver) return;
+        if(gameState !== 'PLAY') return;
         frameCount++;
 
-        // 플레이어 이동 (마우스/터치 타겟으로 부드럽게 이동)
-        // Lerp 계수를 0.2 -> 0.3으로 올려 반응성 개선
-        player.x += (targetX - player.x) * 0.3;
-        player.y += (targetY - player.y) * 0.3;
-        
-        // 화면 제한
-        player.x = Math.max(player.visualRadius, Math.min(GAME_WIDTH - player.visualRadius, player.x));
-        player.y = Math.max(player.visualRadius, Math.min(GAME_HEIGHT - player.visualRadius, player.y));
+        // 1. Player Move
+        player.x += (targetX - player.x) * 0.2;
+        player.y += (targetY - player.y) * 0.2;
+        player.x = Math.max(player.r, Math.min(GW-player.r, player.x));
+        player.y = Math.max(player.r, Math.min(GH-player.r, player.y));
 
-        spawnPattern();
-        bullets.forEach(b => b.update());
-        checkCollisions();
+        // 2. Auto Fire
+        if(frameCount - player.lastShotTime > player.fireRate) {
+            fireWeapon();
+            player.lastShotTime = frameCount;
+        }
 
-        if (hyperGauge < MAX_GAUGE) hyperGauge += 0.02; 
-        if (hyperGauge >= MAX_GAUGE) triggerScore();
-        
-        updateUI();
+        // 3. Spawner
+        // 레벨이 오를수록 적이 더 많이 나옴
+        if(frameCount % Math.max(10, 60 - player.level*2) === 0) {
+            spawnEnemy();
+        }
+
+        // 4. Update Entities
+        bullets.forEach(b => {
+            if(b.active) {
+                b.update();
+                // Collision Bullet vs Enemy
+                enemies.forEach(e => {
+                    if(e.active) {
+                        const d = Math.hypot(b.x - e.x, b.y - e.y);
+                        if(d < b.r + e.r) {
+                            e.takeDamage(player.damage);
+                            b.active = false; // 관통력 없음
+                        }
+                    }
+                });
+            }
+        });
+
+        enemies.forEach(e => { if(e.active) e.update(); });
+        gems.forEach(g => { if(g.active) g.update(); });
+        texts.forEach(t => { if(t.active) t.update(); });
     }
 
     function draw() {
-        ctx.fillStyle = '#050505'; 
-        ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+        // 잔상 효과 없이 깔끔하게 지움
+        ctx.fillStyle = '#222';
+        ctx.fillRect(0, 0, GW, GH);
 
-        // Graze Range
+        // 그리드 배경 (이동 느낌 나게)
+        ctx.strokeStyle = '#333';
         ctx.beginPath();
-        ctx.arc(player.x, player.y, player.grazeRadius, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-        ctx.lineWidth = 1;
+        for(let i=0; i<=GW; i+=40) { ctx.moveTo(i,0); ctx.lineTo(i,GH); }
+        for(let i=0; i<=GH; i+=40) { ctx.moveTo(0,i); ctx.lineTo(GW,i); }
         ctx.stroke();
 
-        bullets.forEach(b => b.draw(ctx));
+        gems.forEach(g => { if(g.active) g.draw(ctx); });
+        bullets.forEach(b => { if(b.active) b.draw(ctx); });
+        enemies.forEach(e => { if(e.active) e.draw(ctx); });
+        
+        // Player
+        ctx.fillStyle = player.color;
+        ctx.beginPath(); ctx.arc(player.x, player.y, player.r, 0, Math.PI*2); ctx.fill();
+        // 자석 범위 표시 (아주 옅게)
+        ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+        ctx.beginPath(); ctx.arc(player.x, player.y, player.magnet, 0, Math.PI*2); ctx.stroke();
 
-        if (!isGameOver) {
-            ctx.beginPath();
-            ctx.arc(player.x, player.y, player.visualRadius, 0, Math.PI*2);
-            ctx.fillStyle = player.color;
-            ctx.fill();
-            // Hitbox
-            ctx.beginPath();
-            ctx.arc(player.x, player.y, player.hitRadius, 0, Math.PI*2);
-            ctx.fillStyle = '#fff';
-            ctx.fill();
-        }
+        texts.forEach(t => { if(t.active) t.draw(ctx); });
     }
 
     function loop() {
-        update();
-        draw();
-        animationId = requestAnimationFrame(loop);
+        if(gameState === 'PLAY') {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
     }
 
     function endGame() {
-        isGameOver = true;
-        finalScoreEl.innerText = score.toLocaleString();
+        gameState = 'GAMEOVER';
+        document.getElementById('finalLevel').innerText = `최종 레벨: ${player.level}`;
         gameOverScreen.style.display = 'flex';
-        cancelAnimationFrame(animationId);
     }
 
     window.restartGame = function() {
-        isGameOver = false;
-        score = 0;
-        combo = 0;
-        hyperGauge = 0;
-        frameCount = 0;
-        effectLayer.innerHTML = '';
-        gameOverScreen.style.display = 'none';
-        
-        player.x = GAME_WIDTH/2;
-        player.y = GAME_HEIGHT/2;
-        targetX = GAME_WIDTH/2; // 타겟도 리셋
-        targetY = GAME_HEIGHT/2;
-        
-        bullets.forEach(b => b.active = false);
-
-        loop();
+        location.reload(); // 간단한 리셋
     }
 
+    updateUI();
     loop();
 
 </script>
