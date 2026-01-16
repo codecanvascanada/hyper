@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Infinite Survival: Elite Hunt</title>
+    <title>Infinite Survival Fixed</title>
     <style>
         body {
-            margin: 0; background: #050505;
+            margin: 0; background: #000;
             display: flex; justify-content: center; align-items: center;
             height: 100vh; overflow: hidden;
             font-family: 'Segoe UI', sans-serif;
@@ -15,84 +15,73 @@
 
         #gameContainer {
             position: relative; width: 100vh; max-width: 56.25vh; height: 100vh;
-            background: #111; /* 배경색은 캔버스에서 처리 */
+            background: #111;
             overflow: hidden; box-shadow: 0 0 30px rgba(0,210,211,0.2);
         }
 
         canvas { display: block; width: 100%; height: 100%; }
 
-        /* UI 레이어 */
         #uiLayer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; padding: 15px; box-sizing: border-box;
+            pointer-events: none; padding: 20px; box-sizing: border-box;
             display: flex; flex-direction: column; justify-content: space-between;
         }
 
-        /* 상단 UI */
-        .top-ui { width: 100%; text-shadow: 1px 1px 3px rgba(0,0,0,0.8); }
-        #expContainer {
-            width: 100%; height: 12px; background: #333;
-            border-radius: 6px; overflow: hidden; margin-bottom: 5px; border: 1px solid #555;
+        /* Top UI */
+        .top-ui { width: 100%; }
+        #expBarContainer {
+            width: 100%; height: 10px; background: #333;
+            border-radius: 5px; overflow: hidden; margin-bottom: 5px; border: 1px solid #555;
         }
         #expBar { height: 100%; width: 0%; background: #00d2d3; transition: width 0.2s; }
-        .stats-row { display: flex; justify-content: space-between; font-size: 14px; font-weight: bold; }
-        
-        /* 콤보 UI */
-        #comboContainer {
-            position: absolute; top: 15%; left: 50%; transform: translateX(-50%);
-            text-align: center; opacity: 0; transition: opacity 0.2s;
+        .stats { display: flex; justify-content: space-between; font-weight: bold; font-size: 14px; text-shadow: 1px 1px 2px black; }
+
+        /* Combo & Warning */
+        #centerMsg {
+            position: absolute; top: 20%; left: 50%; transform: translateX(-50%);
+            text-align: center; width: 100%;
         }
-        #comboCount { font-size: 48px; font-weight: 900; color: #fffa65; text-shadow: 0 0 10px #e67e22; }
-        
-        /* 경고 메시지 (보스 등장 시) */
+        #comboCount { 
+            font-size: 48px; font-weight: 900; color: #fffa65; 
+            text-shadow: 0 0 10px rgba(255, 165, 2, 0.8);
+            display: none; /* 평소엔 숨김 */
+        }
         #warningMsg {
-            position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%);
-            color: #ff4757; font-size: 30px; font-weight: 900;
+            color: #ff4757; font-size: 24px; font-weight: 900;
             text-shadow: 0 0 10px red; display: none;
             animation: blink 0.5s infinite alternate;
+            margin-top: 20px;
         }
-        @keyframes blink { from { opacity: 1; transform: translate(-50%, -50%) scale(1); } to { opacity: 0.3; transform: translate(-50%, -50%) scale(1.1); } }
+        @keyframes blink { from { opacity: 1; transform: scale(1); } to { opacity: 0.5; transform: scale(1.1); } }
 
-        /* 하단 UI */
+        /* Bottom UI */
         .bottom-ui { width: 100%; margin-bottom: 20px; }
-        .gauge-wrapper {
-            width: 100%; height: 24px; background: #222; border-radius: 12px;
+        .gauge-wrap {
+            width: 100%; height: 20px; background: #222; border-radius: 10px;
             overflow: hidden; border: 2px solid #444; position: relative;
         }
-        #hyperBar {
-            height: 100%; width: 0%; background: linear-gradient(90deg, #6c5ce7, #a29bfe);
-            transition: width 0.1s linear;
-        }
+        #hyperBar { height: 100%; width: 0%; background: linear-gradient(90deg, #6c5ce7, #a29bfe); }
         #hyperText {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             display: flex; align-items: center; justify-content: center;
-            font-size: 12px; font-weight: bold; text-shadow: 0 0 2px black;
+            font-size: 11px; font-weight: bold;
         }
 
-        /* 쉐이크 효과 */
-        @keyframes shake {
-            0% { transform: translate(1px, 1px) rotate(0deg); }
-            50% { transform: translate(-1px, -1px) rotate(0deg); }
-            100% { transform: translate(1px, -1px) rotate(0deg); }
-        }
-        .hyper-active #gameContainer { animation: shake 0.2s infinite; }
-        .hyper-active #hyperBar { background: linear-gradient(90deg, #ff9f43, #ff6b81) !important; }
-
-        /* 모달 (레벨업/게임오버) */
+        /* Modals */
         .modal {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.85); display: none;
+            background: rgba(0,0,0,0.9); display: none;
             flex-direction: column; justify-content: center; align-items: center;
-            pointer-events: auto; z-index: 100; backdrop-filter: blur(4px);
+            pointer-events: auto; z-index: 100;
         }
         .card {
-            background: white; color: #333; width: 85%; margin: 8px 0; padding: 15px;
+            background: white; color: #333; width: 80%; margin: 10px; padding: 15px;
             border-radius: 10px; cursor: pointer; text-align: center;
-            box-shadow: 0 4px 0 #bdc3c7; transition: transform 0.1s;
         }
-        .card:active { transform: translateY(4px); box-shadow: 0 0 0; }
-        .card h3 { margin: 0 0 4px 0; color: #d63031; }
-        .card p { margin: 0; font-size: 12px; color: #555; }
+        
+        .hyper-active #gameContainer { animation: shake 0.2s infinite; }
+        @keyframes shake { 0% { transform: translate(1px, 1px); } 50% { transform: translate(-1px, -1px); } 100% { transform: translate(1px, -1px); } }
+
     </style>
 </head>
 <body>
@@ -102,23 +91,21 @@
     
     <div id="uiLayer">
         <div class="top-ui">
-            <div id="expContainer"><div id="expBar"></div></div>
-            <div class="stats-row">
-                <span id="levelText">LV. 1</span>
+            <div id="expBarContainer"><div id="expBar"></div></div>
+            <div class="stats">
+                <span id="lvText">LV. 1</span>
                 <span id="hpText" style="color:#ff7675;">HP: 100</span>
             </div>
         </div>
         
-        <div id="comboContainer">
-            <div id="comboCount">0</div>
-            <div style="font-size:12px; color:#fff;">COMBO</div>
+        <div id="centerMsg">
+            <div id="comboCount">0 COMBO</div>
+            <div id="warningMsg">⚠ WARNING ⚠<br>ELITE ENEMY</div>
         </div>
-
-        <div id="warningMsg">⚠ WARNING ⚠<br><span style="font-size:16px; color:white;">ELITE ENEMY DETECTED</span></div>
 
         <div class="bottom-ui">
             <div style="font-size:12px; color:#a29bfe; margin-bottom:4px;">HYPER GAUGE</div>
-            <div class="gauge-wrapper">
+            <div class="gauge-wrap">
                 <div id="hyperBar"></div>
                 <div id="hyperText">0%</div>
             </div>
@@ -127,13 +114,13 @@
 
     <div id="levelUpScreen" class="modal">
         <h2 style="color:#fdcb6e;">LEVEL UP!</h2>
-        <div id="cardsContainer" style="width:100%; display:flex; flex-direction:column; align-items:center;"></div>
+        <div id="cardsBox" style="width:100%; display:flex; flex-direction:column; align-items:center;"></div>
     </div>
 
     <div id="gameOverScreen" class="modal">
         <h1 style="color: #ff7675;">YOU DIED</h1>
-        <h3 id="finalResult" style="color:white; margin-bottom: 30px;"></h3>
-        <button onclick="restartGame()" style="padding:15px 40px; font-size:20px; border-radius:30px; border:none; background:#00d2d3; color:white; font-weight:bold; cursor:pointer;">RETRY</button>
+        <h3 id="resultText" style="color:white; margin-bottom: 30px;"></h3>
+        <button onclick="location.reload()" style="padding:15px 40px; font-size:20px; border-radius:30px; border:none; background:#00d2d3; color:white; font-weight:bold;">RETRY</button>
     </div>
 </div>
 
@@ -141,138 +128,415 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     
-    // UI Elements
+    // UI Refs
     const expBar = document.getElementById('expBar');
-    const levelText = document.getElementById('levelText');
+    const lvText = document.getElementById('lvText');
     const hpText = document.getElementById('hpText');
-    const comboContainer = document.getElementById('comboContainer');
-    const comboCountEl = document.getElementById('comboCount');
+    const comboEl = document.getElementById('comboCount');
+    const warnEl = document.getElementById('warningMsg');
     const hyperBar = document.getElementById('hyperBar');
     const hyperText = document.getElementById('hyperText');
-    const warningMsg = document.getElementById('warningMsg');
     const levelUpScreen = document.getElementById('levelUpScreen');
-    const cardsContainer = document.getElementById('cardsContainer');
+    const cardsBox = document.getElementById('cardsBox');
     const gameOverScreen = document.getElementById('gameOverScreen');
+    const resultText = document.getElementById('resultText');
 
-    // Canvas Size
-    const CW = 360;
-    const CH = 640;
+    // Config
+    const CW = 360, CH = 640;
     canvas.width = CW; canvas.height = CH;
 
+    // Game State
     let gameState = 'PLAY';
     let frameCount = 0;
-    
-    // --- Player & World ---
-    // 플레이어의 실제 위치는 worldX, worldY
-    // 화면에 그릴 때는 항상 중앙(CW/2, CH/2)에 그림
+
     const player = {
-        wx: 0, wy: 0, // World Coordinates (Infinite)
+        wx: 0, wy: 0, // World Coord
         r: 8, hitR: 4, grazeR: 35,
         color: '#00d2d3',
         hp: 100, maxHp: 100,
-        
-        // Movement
         speed: 3, baseSpeed: 3,
-        
-        // Attack
         damage: 10,
         fireRate: 30, baseFireRate: 30,
-        bulletSpeed: 7, bulletCount: 1,
+        bulletCount: 1,
         magnet: 80,
-        lastShotTime: 0,
-        
-        // Progression
         level: 1, exp: 0, nextExp: 10,
-        
-        // Hyper
         combo: 0, comboTimer: 0,
-        hyperGauge: 0, isHyper: false, hyperDuration: 0
+        hyperGauge: 0, isHyper: false, hyperTime: 0,
+        lastShot: 0
     };
 
-    // --- Input (Relative Joystick for Infinite World) ---
-    let touchActive = false;
-    let tStartX=0, tStartY=0;
-    let moveVx = 0, moveVy = 0; // Velocity
+    // Input (Virtual Joystick)
+    let isTouch = false;
+    let startX=0, startY=0;
+    let moveVx=0, moveVy=0;
 
-    function handleInputStart(cx, cy) {
-        if(gameState !== 'PLAY') return;
-        touchActive = true;
-        tStartX = cx; tStartY = cy;
+    function inputStart(x, y) {
+        if(gameState!=='PLAY') return;
+        isTouch=true; startX=x; startY=y;
     }
-    function handleInputMove(cx, cy) {
-        if(!touchActive || gameState !== 'PLAY') return;
-        const dx = cx - tStartX;
-        const dy = cy - tStartY;
-        
-        // 조이스틱처럼 거리와 각도로 속도 결정
+    function inputMove(x, y) {
+        if(!isTouch || gameState!=='PLAY') return;
+        const dx = x - startX;
+        const dy = y - startY;
         const angle = Math.atan2(dy, dx);
-        const dist = Math.min(50, Math.hypot(dx, dy)); // 최대 거리 제한
-        
-        // 0 ~ 1 사이의 강도
+        const dist = Math.min(50, Math.hypot(dx, dy));
         const power = dist / 50;
-        
         moveVx = Math.cos(angle) * power;
         moveVy = Math.sin(angle) * power;
     }
-    function handleInputEnd() {
-        touchActive = false;
-        moveVx = 0; moveVy = 0;
-    }
+    function inputEnd() { isTouch=false; moveVx=0; moveVy=0; }
 
-    canvas.addEventListener('mousedown', e => handleInputStart(e.clientX, e.clientY));
-    window.addEventListener('mousemove', e => handleInputMove(e.clientX, e.clientY));
-    window.addEventListener('mouseup', handleInputEnd);
-    
-    canvas.addEventListener('touchstart', e => { e.preventDefault(); handleInputStart(e.touches[0].clientX, e.touches[0].clientY); }, {passive:false});
-    window.addEventListener('touchmove', e => { if(touchActive) { e.preventDefault(); handleInputMove(e.touches[0].clientX, e.touches[0].clientY); } }, {passive:false});
-    window.addEventListener('touchend', handleInputEnd);
+    canvas.addEventListener('mousedown', e=>inputStart(e.clientX, e.clientY));
+    window.addEventListener('mousemove', e=>inputMove(e.clientX, e.clientY));
+    window.addEventListener('mouseup', inputEnd);
+    canvas.addEventListener('touchstart', e=>{e.preventDefault(); inputStart(e.touches[0].clientX, e.touches[0].clientY)}, {passive:false});
+    window.addEventListener('touchmove', e=>{if(isTouch){e.preventDefault(); inputMove(e.touches[0].clientX, e.touches[0].clientY)}}, {passive:false});
+    window.addEventListener('touchend', inputEnd);
 
-
-    // --- Entities ---
-    // 모든 엔티티는 World X/Y를 가짐
+    // Entities
     const enemies = [];
     const bullets = [];
     const gems = [];
     const texts = [];
 
+    // Helper: Pool
+    function getObj(arr, Class) {
+        let o = arr.find(x=>!x.active);
+        if(!o) { o=new Class(); arr.push(o); }
+        return o;
+    }
+
     class Enemy {
-        constructor() { this.active = false; }
-        spawn(isElite = false) {
-            // 플레이어 기준 화면 밖 랜덤 위치 생성
+        constructor() { this.active=false; }
+        spawn(isElite) {
             const angle = Math.random() * Math.PI * 2;
-            const dist = 400 + Math.random() * 200; // 화면 밖
-            
-            this.wx = player.wx + Math.cos(angle) * dist;
-            this.wy = player.wy + Math.sin(angle) * dist;
-            
+            const dist = 450; // 화면 밖
+            this.wx = player.wx + Math.cos(angle)*dist;
+            this.wy = player.wy + Math.sin(angle)*dist;
             this.isElite = isElite;
             this.active = true;
-            this.grazedCooldown = 0;
-
-            if (isElite) {
-                // 엘리트 스펙 (빠르고 튼튼함)
-                this.hp = 150 + (player.level * 30);
-                this.maxHp = this.hp;
-                this.speed = player.speed * 1.05; // 플레이어보다 살짝 빠름 (도망 불가)
-                this.r = 25;
-                this.damage = 30;
-                this.color = '#e17055'; // 주황/빨강
-                this.xpValue = 50;
+            this.grazeCool = 0;
+            
+            if(isElite) {
+                this.hp = 200 + player.level*30; this.maxHp=this.hp;
+                this.speed = player.baseSpeed * 1.1; // 플레이어보다 빠름!
+                this.r = 20; this.color = '#e17055'; this.xp = 50;
             } else {
-                // 일반 잡몹
-                this.hp = 10 + (player.level * 4);
-                this.speed = 1.0 + Math.random() * 1.5;
-                this.r = 10;
-                this.damage = 10;
-                this.color = '#ff6b81';
-                this.xpValue = 5;
+                this.hp = 15 + player.level*5;
+                this.speed = 1 + Math.random();
+                this.r = 10; this.color = '#ff6b81'; this.xp = 5;
+            }
+        }
+        update() {
+            const angle = Math.atan2(player.wy - this.wy, player.wx - this.wx);
+            this.wx += Math.cos(angle)*this.speed;
+            this.wy += Math.sin(angle)*this.speed;
+            if(this.grazeCool>0) this.grazeCool--;
+
+            const dist = Math.hypot(player.wx-this.wx, player.wy-this.wy);
+            // Hit
+            if(dist < player.hitR + this.r) {
+                player.hp -= (this.isElite?30:10);
+                spawnText("-HP", player.wx, player.wy, 'red');
+                if(!this.isElite) this.active=false;
+                player.combo=0; updateUI();
+                if(player.hp<=0) gameOver();
+            }
+            // Graze
+            else if(dist < player.grazeR + this.r && this.grazeCool<=0) {
+                addCombo(1);
+                addHyper(this.isElite?5:1);
+                this.grazeCool=30;
+            }
+            if(dist > 900) this.active=false;
+        }
+        draw() {
+            const sx = this.wx - player.wx + CW/2;
+            const sy = this.wy - player.wy + CH/2;
+            // 화면 밖 그리지 않음
+            if(sx<-50||sx>CW+50||sy<-50||sy>CH+50) return;
+            
+            ctx.beginPath(); ctx.arc(sx, sy, this.r, 0, Math.PI*2);
+            ctx.fillStyle = this.color; ctx.fill();
+            if(this.isElite) {
+                ctx.lineWidth=2; ctx.strokeStyle='#fff'; ctx.stroke();
+            }
+        }
+    }
+
+    class Bullet {
+        constructor() { this.active=false; }
+        spawn(wx, wy, a) {
+            this.wx=wx; this.wy=wy; 
+            this.vx=Math.cos(a)*7; this.vy=Math.sin(a)*7;
+            this.active=true; this.life=60;
+            this.r = player.isHyper ? 8 : 4;
+        }
+        update() {
+            this.wx+=this.vx; this.wy+=this.vy;
+            this.life--; if(this.life<=0) this.active=false;
+        }
+        draw() {
+            const sx = this.wx - player.wx + CW/2;
+            const sy = this.wy - player.wy + CH/2;
+            if(sx<-10||sx>CW+10||sy<-10||sy>CH+10) return;
+            ctx.fillStyle = player.isHyper?'#fffa65':'#00d2d3';
+            ctx.beginPath(); ctx.arc(sx, sy, this.r, 0, Math.PI*2); ctx.fill();
+        }
+    }
+
+    class Gem {
+        constructor() { this.active=false; }
+        spawn(wx, wy, v) { this.wx=wx; this.wy=wy; this.val=v; this.active=true; }
+        update() {
+            const dist = Math.hypot(player.wx-this.wx, player.wy-this.wy);
+            let range = player.magnet;
+            let spd = 6;
+            if(player.isHyper) { range=1000; spd=12; }
+            
+            if(dist < range) {
+                const a = Math.atan2(player.wy-this.wy, player.wx-this.wx);
+                this.wx += Math.cos(a)*spd;
+                this.wy += Math.sin(a)*spd;
+                if(dist < 20) {
+                    addExp(this.val);
+                    this.active=false;
+                }
+            }
+            if(dist > 1000) this.active=false;
+        }
+        draw() {
+            const sx = this.wx - player.wx + CW/2;
+            const sy = this.wy - player.wy + CH/2;
+            if(sx<-10||sx>CW+10||sy<-10||sy>CH+10) return;
+            ctx.fillStyle='#55efc4';
+            ctx.beginPath(); ctx.arc(sx, sy, 5, 0, Math.PI*2); ctx.fill();
+        }
+    }
+
+    class FloatText {
+        constructor() { this.active=false; }
+        spawn(t, wx, wy, c) { this.t=t; this.wx=wx; this.wy=wy; this.c=c; this.life=30; this.active=true; }
+        update() { this.wy-=1; this.life--; if(this.life<=0) this.active=false; }
+        draw() {
+            const sx = this.wx - player.wx + CW/2;
+            const sy = this.wy - player.wy + CH/2;
+            ctx.fillStyle=this.c; ctx.font="bold 12px Arial"; ctx.fillText(this.t, sx, sy);
+        }
+    }
+
+    function spawnText(t, wx, wy, c) { getObj(texts, FloatText).spawn(t, wx, wy, c); }
+    function spawnBullet(wx, wy, a) { getObj(bullets, Bullet).spawn(wx, wy, a); }
+
+    // Logic
+    function addCombo(n) {
+        player.combo += n;
+        player.comboTimer = 100;
+        comboEl.style.display = 'block';
+        comboEl.innerText = player.combo + " COMBO";
+        comboEl.style.transform = 'scale(1.3)';
+        setTimeout(()=>comboEl.style.transform='scale(1)', 100);
+    }
+    
+    function addHyper(n) {
+        if(player.isHyper) return;
+        player.hyperGauge = Math.min(100, player.hyperGauge+n);
+        if(player.hyperGauge>=100) {
+            player.isHyper=true; player.hyperTime=300;
+            document.body.classList.add('hyper-active');
+            spawnText("HYPER!", player.wx, player.wy-30, "#fffa65");
+        }
+        updateUI();
+    }
+
+    function addExp(n) {
+        player.exp += n;
+        if(player.exp >= player.nextExp) {
+            player.level++;
+            player.exp=0; 
+            player.nextExp = Math.floor(player.nextExp*1.3);
+            levelUp();
+        }
+        updateUI();
+    }
+
+    function updateUI() {
+        expBar.style.width = (player.exp/player.nextExp)*100 + "%";
+        lvText.innerText = "LV. " + player.level;
+        hpText.innerText = "HP: " + Math.floor(player.hp);
+        hyperBar.style.width = player.hyperGauge + "%";
+        hyperText.innerText = player.isHyper ? "!!! RUN !!!" : Math.floor(player.hyperGauge)+"%";
+    }
+
+    function drawGrid() {
+        // 안전한 그리드 계산 (음수 모듈러 문제 해결)
+        ctx.fillStyle = '#111';
+        ctx.fillRect(0, 0, CW, CH);
+        
+        ctx.strokeStyle = '#222';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+
+        const sz = 50;
+        // 양수로 변환 후 나머지 계산
+        const offX = ((player.wx % sz) + sz) % sz;
+        const offY = ((player.wy % sz) + sz) % sz;
+
+        for(let x = -offX; x < CW; x += sz) {
+            ctx.moveTo(x, 0); ctx.lineTo(x, CH);
+        }
+        for(let y = -offY; y < CH; y += sz) {
+            ctx.moveTo(0, y); ctx.lineTo(CW, y);
+        }
+        ctx.stroke();
+    }
+
+    function update() {
+        if(gameState!=='PLAY') return;
+        frameCount++;
+
+        // Move
+        const spd = player.isHyper ? player.baseSpeed*1.5 : player.baseSpeed;
+        player.wx += moveVx * spd;
+        player.wy += moveVy * spd;
+
+        // Hyper & Combo
+        if(player.isHyper) {
+            player.hyperTime--;
+            player.hyperGauge = (player.hyperTime/300)*100;
+            if(player.hyperTime<=0) {
+                player.isHyper=false; player.hyperGauge=0;
+                document.body.classList.remove('hyper-active');
+            }
+            updateUI();
+        }
+        if(player.combo>0) {
+            player.comboTimer--;
+            if(player.comboTimer<=0) {
+                player.combo=0; comboEl.style.display='none';
             }
         }
 
-        update() {
-            // 추적 로직
-            const angle = Math.atan2(player.wy - this.wy, player.wx - this.wx);
-            this.wx += Math.cos(angle) * this.speed;
-            this.wy += Math.sin(angle) * this.speed;
+        // Fire
+        const fr = player.isHyper ? 5 : player.baseFireRate;
+        if(frameCount - player.lastShot > fr) {
+            // Find target
+            let t=null, min=Infinity;
+            enemies.forEach(e=>{
+                if(!e.active) return;
+                const d = Math.hypot(player.wx-e.wx, player.wy-e.wy);
+                if(d<min) { min=d; t=e; }
+            });
+            if(t && min<350) {
+                const a = Math.atan2(t.wy-player.wy, t.wx-player.wx);
+                const spread = 0.2;
+                const startA = a - (spread*(player.bulletCount-1))/2;
+                for(let i=0; i<player.bulletCount; i++) {
+                    spawnBullet(player.wx, player.wy, startA + spread*i);
+                }
+                player.lastShot = frameCount;
+            }
+        }
 
-            if(this.grazedCooldown > 0)
+        // Spawn
+        const rate = player.isHyper ? 5 : Math.max(10, 60-player.level);
+        if(frameCount % rate === 0) getObj(enemies, Enemy).spawn(false);
+        
+        // Elite (15초 = 900프레임)
+        if(frameCount % 900 === 0 && frameCount > 0) {
+            getObj(enemies, Enemy).spawn(true);
+            warnEl.style.display='block';
+            setTimeout(()=>warnEl.style.display='none', 3000);
+        }
+
+        // Update All
+        bullets.forEach(b=>{
+            if(b.active) {
+                b.update();
+                enemies.forEach(e=>{
+                    if(e.active) {
+                        const d = Math.hypot(b.wx-e.wx, b.wy-e.wy);
+                        if(d < b.r + e.r) {
+                            e.hp -= player.damage * (player.isHyper?2:1);
+                            spawnText(Math.floor(player.damage), e.wx, e.wy, 'white');
+                            if(e.hp<=0) {
+                                e.active=false;
+                                getObj(gems, Gem).spawn(e.wx, e.wy, e.xp);
+                            }
+                            b.active=false;
+                        }
+                    }
+                })
+            }
+        });
+        enemies.forEach(e=>{ if(e.active) e.update(); });
+        gems.forEach(e=>{ if(e.active) e.update(); });
+        texts.forEach(e=>{ if(e.active) e.update(); });
+    }
+
+    function draw() {
+        drawGrid();
+
+        // Graze Circle
+        ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+        ctx.beginPath(); ctx.arc(CW/2, CH/2, player.grazeR, 0, Math.PI*2); ctx.stroke();
+
+        gems.forEach(e=>{ if(e.active) e.draw(); });
+        bullets.forEach(e=>{ if(e.active) e.draw(); });
+        enemies.forEach(e=>{ if(e.active) e.draw(); });
+        texts.forEach(e=>{ if(e.active) e.draw(); });
+
+        // Player
+        ctx.fillStyle = player.isHyper ? '#fffa65' : player.color;
+        ctx.beginPath(); ctx.arc(CW/2, CH/2, player.r, 0, Math.PI*2); ctx.fill();
+    }
+
+    function loop() {
+        requestAnimationFrame(loop);
+        if(gameState==='PLAY') {
+            update();
+            draw();
+        }
+    }
+
+    function levelUp() {
+        gameState='PAUSE';
+        isTouch=false;
+        levelUpScreen.style.display='flex';
+        cardsBox.innerHTML='';
+        const opts = [
+            {t:"공격력 UP", d:"데미지 +5", f:()=>{player.damage+=5}},
+            {t:"공속 UP", d:"공격속도 +10%", f:()=>{player.baseFireRate*=0.9}},
+            {t:"멀티샷", d:"탄환 +1", f:()=>{player.bulletCount++}},
+            {t:"체력회복", d:"HP +30", f:()=>{player.hp=Math.min(player.maxHp, player.hp+30)}},
+            {t:"자석범위", d:"범위 증가", f:()=>{player.magnet+=50}},
+        ];
+        
+        // 3 Random
+        for(let i=0; i<3; i++) {
+            const r = Math.floor(Math.random()*opts.length);
+            const item = opts[r];
+            const div = document.createElement('div');
+            div.className='card';
+            div.innerHTML=`<h3>${item.t}</h3><p>${item.d}</p>`;
+            div.onclick=()=>{
+                item.f();
+                levelUpScreen.style.display='none';
+                gameState='PLAY';
+            };
+            cardsBox.appendChild(div);
+        }
+    }
+
+    function gameOver() {
+        gameState='GAMEOVER';
+        resultText.innerText = "최종 레벨: " + player.level;
+        gameOverScreen.style.display='flex';
+    }
+
+    // Start
+    loop();
+
+</script>
+</body>
+</html>
