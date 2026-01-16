@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Survival: Knockback Update</title>
+    <title>Survival: Elite Rush</title>
     <style>
         body {
             margin: 0; background: #000;
@@ -36,7 +36,7 @@
         #expBar { height: 100%; width: 0%; background: #00d2d3; transition: width 0.2s; }
         .stats { display: flex; justify-content: space-between; font-weight: bold; font-size: 14px; text-shadow: 1px 1px 2px black; }
 
-        /* Combo & Warning */
+        /* Combo */
         #centerMsg {
             position: absolute; top: 18%; left: 50%; transform: translateX(-50%);
             text-align: center; width: 100%; pointer-events: none;
@@ -46,13 +46,6 @@
             text-shadow: 0 0 10px rgba(255, 165, 2, 0.8);
             display: none; transition: transform 0.1s;
         }
-        #warningMsg {
-            color: #ff4757; font-size: 26px; font-weight: 900;
-            text-shadow: 0 0 15px red; display: none;
-            animation: blink 0.5s infinite alternate;
-            margin-top: 20px;
-        }
-        @keyframes blink { from { opacity: 1; transform: scale(1); } to { opacity: 0.5; transform: scale(1.1); } }
 
         /* Bottom UI */
         .bottom-ui { width: 100%; margin-bottom: 20px; }
@@ -102,7 +95,6 @@
         
         <div id="centerMsg">
             <div id="comboCount">0 COMBO</div>
-            <div id="warningMsg">⚠ WARNING ⚠<br>BOSS APPROACHING</div>
         </div>
 
         <div class="bottom-ui">
@@ -135,7 +127,6 @@
     const lvText = document.getElementById('lvText');
     const hpText = document.getElementById('hpText');
     const comboEl = document.getElementById('comboCount');
-    const warnEl = document.getElementById('warningMsg');
     const hyperBar = document.getElementById('hyperBar');
     const hyperText = document.getElementById('hyperText');
     const levelUpScreen = document.getElementById('levelUpScreen');
@@ -152,13 +143,13 @@
     let frameCount = 0;
 
     const player = {
-        wx: 0, wy: 0, // World Coord
-        r: 8, hitR: 4, grazeR: 40, // 그레이즈 범위 약간 상향
+        wx: 0, wy: 0,
+        r: 8, hitR: 4, grazeR: 40,
         color: '#00d2d3',
         hp: 100, maxHp: 100,
-        speed: 3.5, baseSpeed: 3.5, // 플레이어 기본 속도 약간 상향
+        speed: 3.5, baseSpeed: 3.5,
         damage: 10,
-        fireRate: 25, baseFireRate: 25, // 연사 속도 약간 상향
+        fireRate: 25, baseFireRate: 25,
         bulletCount: 1,
         magnet: 80,
         level: 1, exp: 0, nextExp: 10,
@@ -167,7 +158,7 @@
         lastShot: 0
     };
 
-    // Input (Virtual Joystick)
+    // Input
     let isTouch = false;
     let startX=0, startY=0;
     let moveVx=0, moveVy=0;
@@ -201,7 +192,6 @@
     const gems = [];
     const texts = [];
 
-    // Helper: Pool
     function getObj(arr, Class) {
         let o = arr.find(x=>!x.active);
         if(!o) { o=new Class(); arr.push(o); }
@@ -212,7 +202,7 @@
         constructor() { this.active=false; }
         spawn(isElite) {
             const angle = Math.random() * Math.PI * 2;
-            const dist = 480; // 화면 밖
+            const dist = 480;
             this.wx = player.wx + Math.cos(angle)*dist;
             this.wy = player.wy + Math.sin(angle)*dist;
             this.isElite = isElite;
@@ -220,13 +210,13 @@
             this.grazeCool = 0;
             
             if(isElite) {
-                // 너프된 보스 스펙
-                this.hp = 150 + player.level*20; // 체력 감소
+                // 엘리트: 느리지만 튼튼함
+                this.hp = 120 + player.level*20; 
                 this.maxHp = this.hp;
-                this.speed = player.baseSpeed * 0.85; // 중요: 플레이어보다 느림!
-                this.r = 25; // 덩치 키움 (맞추기 쉽게)
+                this.speed = player.baseSpeed * 0.8; // 플레이어보다 확실히 느리게
+                this.r = 28; 
                 this.color = '#e17055'; 
-                this.xp = 50;
+                this.xp = 100 + player.level*10; // 보상 대폭 상향
             } else {
                 this.hp = 15 + player.level*4;
                 this.speed = 1.5 + Math.random();
@@ -234,7 +224,6 @@
             }
         }
         update() {
-            // 추적
             const angle = Math.atan2(player.wy - this.wy, player.wx - this.wx);
             this.wx += Math.cos(angle)*this.speed;
             this.wy += Math.sin(angle)*this.speed;
@@ -242,15 +231,13 @@
 
             const dist = Math.hypot(player.wx-this.wx, player.wy-this.wy);
             
-            // Hit Player
             if(dist < player.hitR + this.r) {
-                player.hp -= (this.isElite?25:10); // 데미지 소폭 감소
+                player.hp -= (this.isElite?25:10);
                 spawnText("-HP", player.wx, player.wy, 'red');
                 if(!this.isElite) this.active=false;
                 player.combo=0; updateUI();
                 if(player.hp<=0) gameOver();
             }
-            // Graze
             else if(dist < player.grazeR + this.r && this.grazeCool<=0) {
                 addCombo(1);
                 addHyper(this.isElite?5:1);
@@ -267,7 +254,6 @@
             ctx.fillStyle = this.color; ctx.fill();
             if(this.isElite) {
                 ctx.lineWidth=3; ctx.strokeStyle='#fff'; ctx.stroke();
-                // 체력바
                 const pct = this.hp / this.maxHp;
                 ctx.fillStyle = 'red'; ctx.fillRect(sx-20, sy-40, 40, 6);
                 ctx.fillStyle = '#00d2d3'; ctx.fillRect(sx-20, sy-40, 40*pct, 6);
@@ -279,7 +265,7 @@
         constructor() { this.active=false; }
         spawn(wx, wy, a) {
             this.wx=wx; this.wy=wy; 
-            this.vx=Math.cos(a)*8; this.vy=Math.sin(a)*8; // 탄속 증가
+            this.vx=Math.cos(a)*8; this.vy=Math.sin(a)*8;
             this.active=true; this.life=50;
             this.r = player.isHyper ? 8 : 4;
         }
@@ -298,12 +284,17 @@
 
     class Gem {
         constructor() { this.active=false; }
-        spawn(wx, wy, v) { this.wx=wx; this.wy=wy; this.val=v; this.active=true; }
+        // isRare 인자 추가
+        spawn(wx, wy, v, isRare) { 
+            this.wx=wx; this.wy=wy; this.val=v; 
+            this.isRare = isRare; // 엘리트 드랍 여부
+            this.active=true; 
+        }
         update() {
             const dist = Math.hypot(player.wx-this.wx, player.wy-this.wy);
             let range = player.magnet;
             let spd = 7;
-            if(player.isHyper) { range=1200; spd=15; } // 하이퍼때 자석 강화
+            if(player.isHyper) { range=1200; spd=15; }
             
             if(dist < range) {
                 const a = Math.atan2(player.wy-this.wy, player.wx-this.wx);
@@ -319,9 +310,24 @@
         draw() {
             const sx = this.wx - player.wx + CW/2;
             const sy = this.wy - player.wy + CH/2;
-            if(sx<-10||sx>CW+10||sy<-10||sy>CH+10) return;
-            ctx.fillStyle='#55efc4';
-            ctx.beginPath(); ctx.arc(sx, sy, 6, 0, Math.PI*2); ctx.fill();
+            if(sx<-20||sx>CW+20||sy<-20||sy>CH+20) return;
+            
+            ctx.beginPath(); 
+            
+            if(this.isRare) {
+                // 레어(엘리트) 보석: 황금색, 큼
+                ctx.fillStyle='#f1c40f';
+                ctx.arc(sx, sy, 10, 0, Math.PI*2);
+                ctx.shadowColor = '#f39c12'; ctx.shadowBlur = 10;
+            } else {
+                // 일반 보석: 녹색, 작음
+                ctx.fillStyle='#55efc4';
+                ctx.arc(sx, sy, 6, 0, Math.PI*2);
+                ctx.shadowBlur = 0;
+            }
+            
+            ctx.fill();
+            ctx.shadowBlur = 0;
         }
     }
 
@@ -382,7 +388,6 @@
     function drawGrid() {
         ctx.fillStyle = '#111';
         ctx.fillRect(0, 0, CW, CH);
-        
         ctx.strokeStyle = '#222';
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -421,7 +426,6 @@
         // Fire
         const fr = player.isHyper ? 4 : player.baseFireRate;
         if(frameCount - player.lastShot > fr) {
-            // Target Nearest
             let t=null, min=Infinity;
             enemies.forEach(e=>{
                 if(!e.active) return;
@@ -443,11 +447,9 @@
         const rate = player.isHyper ? 5 : Math.max(15, 60-player.level);
         if(frameCount % rate === 0) getObj(enemies, Enemy).spawn(false);
         
-        // Elite Spawn (15초 주기)
-        if(frameCount % 900 === 0 && frameCount > 0) {
+        // Elite Spawn (10초 주기 = 600프레임)
+        if(frameCount % 600 === 0 && frameCount > 0) {
             getObj(enemies, Enemy).spawn(true);
-            warnEl.style.display='block';
-            setTimeout(()=>warnEl.style.display='none', 3000);
         }
 
         // Updates
@@ -458,22 +460,21 @@
                     if(e.active) {
                         const d = Math.hypot(b.wx-e.wx, b.wy-e.wy);
                         if(d < b.r + e.r) {
-                            // 데미지 계산
                             const dmg = player.damage * (player.isHyper?2:1);
                             e.hp -= dmg;
                             spawnText(Math.floor(dmg), e.wx, e.wy, 'white');
                             
-                            // 넉백 (Knockback) 효과 구현
-                            // 총알 방향대로 적을 밀어냄 (엘리트는 덜 밀림)
+                            // Knockback
                             const kbPower = e.isElite ? 0.5 : 4.0;
                             e.wx += b.vx * 0.5 * kbPower; 
                             e.wy += b.vy * 0.5 * kbPower;
 
                             if(e.hp<=0) {
                                 e.active=false;
-                                getObj(gems, Gem).spawn(e.wx, e.wy, e.xp);
+                                // 엘리트면 true (isRare) 전달
+                                getObj(gems, Gem).spawn(e.wx, e.wy, e.xp, e.isElite);
                                 if(e.isElite) {
-                                    spawnText("BOSS KILL!", e.wx, e.wy, "#fdcb6e");
+                                    spawnText("ELITE KILLED!", e.wx, e.wy, "#fdcb6e");
                                     addHyper(20);
                                 }
                             }
