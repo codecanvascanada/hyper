@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Survival: Elite Rush</title>
+    <title>Survival: Bullet Hell Boss</title>
     <style>
         body {
             margin: 0; background: #000;
@@ -210,13 +210,17 @@
             this.grazeCool = 0;
             
             if(isElite) {
-                // 엘리트: 느리지만 튼튼함
                 this.hp = 120 + player.level*20; 
                 this.maxHp = this.hp;
-                this.speed = player.baseSpeed * 0.8; // 플레이어보다 확실히 느리게
+                this.speed = player.baseSpeed * 0.7; // 탄막을 쏘므로 이속은 좀 더 느리게
                 this.r = 28; 
                 this.color = '#e17055'; 
-                this.xp = 100 + player.level*10; // 보상 대폭 상향
+                this.xp = 100 + player.level*10;
+                
+                // 보스 패턴 설정 (0: 부채꼴, 1: 회오리)
+                this.pattern = Math.random() > 0.5 ? 0 : 1; 
+                this.shootTimer = 0;
+                this.patternAngle = 0; // 회오리용 각도
             } else {
                 this.hp = 15 + player.level*4;
                 this.speed = 1.5 + Math.random();
@@ -224,11 +228,13 @@
             }
         }
         update() {
-            const angle = Math.atan2(player.wy - this.wy, player.wx - this.wx);
-            this.wx += Math.cos(angle)*this.speed;
-            this.wy += Math.sin(angle)*this.speed;
+            // Move
+            const angleToPlayer = Math.atan2(player.wy - this.wy, player.wx - this.wx);
+            this.wx += Math.cos(angleToPlayer)*this.speed;
+            this.wy += Math.sin(angleToPlayer)*this.speed;
+            
+            // Graze Logic
             if(this.grazeCool>0) this.grazeCool--;
-
             const dist = Math.hypot(player.wx-this.wx, player.wy-this.wy);
             
             if(dist < player.hitR + this.r) {
@@ -243,6 +249,36 @@
                 addHyper(this.isElite?5:1);
                 this.grazeCool=30;
             }
+
+            // Boss Shooting Logic
+            if(this.isElite) {
+                this.shootTimer--;
+                if(this.shootTimer <= 0) {
+                    if(this.pattern === 0) {
+                        // [부채꼴 샷] 플레이어 조준
+                        // 부채꼴 범위: -30도 ~ +30도, 5발
+                        const count = 5;
+                        const spread = 0.5; // 라디안 약 30도
+                        const startA = angleToPlayer - (spread * (count-1))/2;
+                        
+                        for(let i=0; i<count; i++) {
+                            // isEnemy = true
+                            spawnBullet(this.wx, this.wy, startA + spread*i, true); 
+                        }
+                        this.shootTimer = 90; // 1.5초 쿨타임
+                    } else {
+                        // [회오리 샷] 전방위 회전
+                        // 한번에 3방향 발사
+                        for(let i=0; i<3; i++) {
+                            const a = this.patternAngle + (Math.PI*2/3)*i;
+                            spawnBullet(this.wx, this.wy, a, true);
+                        }
+                        this.patternAngle += 0.2; // 각도 회전
+                        this.shootTimer = 10; // 0.16초마다 연사 (빠르게)
+                    }
+                }
+            }
+
             if(dist > 1000) this.active=false;
         }
         draw() {
@@ -263,11 +299,25 @@
 
     class Bullet {
         constructor() { this.active=false; }
-        spawn(wx, wy, a) {
+        // isEnemyBullet 플래그 추가
+        spawn(wx, wy, a, isEnemyBullet=false) {
             this.wx=wx; this.wy=wy; 
-            this.vx=Math.cos(a)*8; this.vy=Math.sin(a)*8;
-            this.active=true; this.life=50;
-            this.r = player.isHyper ? 8 : 4;
+            this.isEnemyBullet = isEnemyBullet;
+            
+            if(isEnemyBullet) {
+                this.vx = Math.cos(a) * 4; // 적 탄환은 조금 느리게 (피하기 쉽게)
+                this.vy = Math.sin(a) * 4;
+                this.life = 100; // 좀 더 오래 유지
+                this.r = 6;
+                this.color = '#ff9f43'; // 적 탄환 색 (주황)
+            } else {
+                this.vx = Math.cos(a) * 8;
+                this.vy = Math.sin(a) * 8;
+                this.life = 50;
+                this.r = player.isHyper ? 8 : 4;
+                this.color = player.isHyper ? '#fffa65' : '#00d2d3';
+            }
+            this.active=true;
         }
         update() {
             this.wx+=this.vx; this.wy+=this.vy;
@@ -276,18 +326,23 @@
         draw() {
             const sx = this.wx - player.wx + CW/2;
             const sy = this.wy - player.wy + CH/2;
-            if(sx<-10||sx>CW+10||sy<-10||sy>CH+10) return;
-            ctx.fillStyle = player.isHyper?'#fffa65':'#00d2d3';
+            if(sx<-20||sx>CW+20||sy<-20||sy>CH+20) return;
+            
+            ctx.fillStyle = this.color;
             ctx.beginPath(); ctx.arc(sx, sy, this.r, 0, Math.PI*2); ctx.fill();
+            
+            // 적 탄환은 테두리를 줘서 잘 보이게
+            if(this.isEnemyBullet) {
+                ctx.strokeStyle = '#fff'; ctx.lineWidth=1; ctx.stroke();
+            }
         }
     }
 
     class Gem {
         constructor() { this.active=false; }
-        // isRare 인자 추가
         spawn(wx, wy, v, isRare) { 
             this.wx=wx; this.wy=wy; this.val=v; 
-            this.isRare = isRare; // 엘리트 드랍 여부
+            this.isRare = isRare; 
             this.active=true; 
         }
         update() {
@@ -313,21 +368,14 @@
             if(sx<-20||sx>CW+20||sy<-20||sy>CH+20) return;
             
             ctx.beginPath(); 
-            
             if(this.isRare) {
-                // 레어(엘리트) 보석: 황금색, 큼
                 ctx.fillStyle='#f1c40f';
                 ctx.arc(sx, sy, 10, 0, Math.PI*2);
-                ctx.shadowColor = '#f39c12'; ctx.shadowBlur = 10;
             } else {
-                // 일반 보석: 녹색, 작음
                 ctx.fillStyle='#55efc4';
                 ctx.arc(sx, sy, 6, 0, Math.PI*2);
-                ctx.shadowBlur = 0;
             }
-            
             ctx.fill();
-            ctx.shadowBlur = 0;
         }
     }
 
@@ -343,7 +391,8 @@
     }
 
     function spawnText(t, wx, wy, c) { getObj(texts, FloatText).spawn(t, wx, wy, c); }
-    function spawnBullet(wx, wy, a) { getObj(bullets, Bullet).spawn(wx, wy, a); }
+    // 수정: spawnBullet 인자 추가
+    function spawnBullet(wx, wy, a, isEnemy=false) { getObj(bullets, Bullet).spawn(wx, wy, a, isEnemy); }
 
     // Logic
     function addCombo(n) {
@@ -423,7 +472,7 @@
             if(player.comboTimer<=0) { player.combo=0; comboEl.style.display='none'; }
         }
 
-        // Fire
+        // Fire (Player)
         const fr = player.isHyper ? 4 : player.baseFireRate;
         if(frameCount - player.lastShot > fr) {
             let t=null, min=Infinity;
@@ -437,7 +486,7 @@
                 const spread = 0.2;
                 const startA = a - (spread*(player.bulletCount-1))/2;
                 for(let i=0; i<player.bulletCount; i++) {
-                    spawnBullet(player.wx, player.wy, startA + spread*i);
+                    spawnBullet(player.wx, player.wy, startA + spread*i, false);
                 }
                 player.lastShot = frameCount;
             }
@@ -447,7 +496,7 @@
         const rate = player.isHyper ? 5 : Math.max(15, 60-player.level);
         if(frameCount % rate === 0) getObj(enemies, Enemy).spawn(false);
         
-        // Elite Spawn (10초 주기 = 600프레임)
+        // Elite Spawn (10초 주기)
         if(frameCount % 600 === 0 && frameCount > 0) {
             getObj(enemies, Enemy).spawn(true);
         }
@@ -456,32 +505,54 @@
         bullets.forEach(b=>{
             if(b.active) {
                 b.update();
-                enemies.forEach(e=>{
-                    if(e.active) {
-                        const d = Math.hypot(b.wx-e.wx, b.wy-e.wy);
-                        if(d < b.r + e.r) {
-                            const dmg = player.damage * (player.isHyper?2:1);
-                            e.hp -= dmg;
-                            spawnText(Math.floor(dmg), e.wx, e.wy, 'white');
-                            
-                            // Knockback
-                            const kbPower = e.isElite ? 0.5 : 4.0;
-                            e.wx += b.vx * 0.5 * kbPower; 
-                            e.wy += b.vy * 0.5 * kbPower;
-
-                            if(e.hp<=0) {
-                                e.active=false;
-                                // 엘리트면 true (isRare) 전달
-                                getObj(gems, Gem).spawn(e.wx, e.wy, e.xp, e.isElite);
-                                if(e.isElite) {
-                                    spawnText("ELITE KILLED!", e.wx, e.wy, "#fdcb6e");
-                                    addHyper(20);
-                                }
-                            }
-                            b.active=false;
-                        }
+                
+                if(b.isEnemyBullet) {
+                    // [적 총알 -> 플레이어 충돌]
+                    const d = Math.hypot(b.wx-player.wx, b.wy-player.wy);
+                    
+                    // 1. 피격
+                    if(d < player.hitR + b.r) {
+                        player.hp -= 10;
+                        spawnText("-10", player.wx, player.wy, 'red');
+                        player.combo=0; updateUI();
+                        b.active=false;
+                        if(player.hp<=0) gameOver();
                     }
-                })
+                    // 2. 그레이즈 (총알도 스치면 콤보 인정!)
+                    else if (d < player.grazeR + b.r) {
+                         // 총알은 너무 많으므로 쿨타임 없이 콤보만 주거나, 
+                         // 확률적으로 게이지를 채우게 할 수도 있음.
+                         // 여기선 단순화
+                    }
+
+                } else {
+                    // [내 총알 -> 적 충돌]
+                    enemies.forEach(e=>{
+                        if(e.active) {
+                            const d = Math.hypot(b.wx-e.wx, b.wy-e.wy);
+                            if(d < b.r + e.r) {
+                                const dmg = player.damage * (player.isHyper?2:1);
+                                e.hp -= dmg;
+                                spawnText(Math.floor(dmg), e.wx, e.wy, 'white');
+                                
+                                // Knockback
+                                const kbPower = e.isElite ? 0.3 : 4.0;
+                                e.wx += b.vx * 0.5 * kbPower; 
+                                e.wy += b.vy * 0.5 * kbPower;
+
+                                if(e.hp<=0) {
+                                    e.active=false;
+                                    getObj(gems, Gem).spawn(e.wx, e.wy, e.xp, e.isElite);
+                                    if(e.isElite) {
+                                        spawnText("ELITE KILLED!", e.wx, e.wy, "#fdcb6e");
+                                        addHyper(20);
+                                    }
+                                }
+                                b.active=false;
+                            }
+                        }
+                    })
+                }
             }
         });
         enemies.forEach(e=>{ if(e.active) e.update(); });
