@@ -2,8 +2,8 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Easy Start, Hard Mastery</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mobile Optimized Bullet Hell</title>
     <style>
         body {
             margin: 0;
@@ -16,6 +16,7 @@
             color: white;
             font-family: 'Segoe UI', sans-serif;
             user-select: none;
+            touch-action: none; /* 브라우저 기본 제스처 차단 */
         }
 
         #gameContainer {
@@ -97,6 +98,14 @@
             display: flex; align-items: center; justify-content: center;
             font-size: 11px; font-weight: bold; color: rgba(255,255,255,0.7);
         }
+        
+        /* 모바일 안내 문구 */
+        #touchGuide {
+            position: absolute; bottom: 80px; width: 100%; 
+            text-align: center; color: #555; font-size: 12px;
+            animation: blink 2s infinite;
+        }
+        @keyframes blink { 0%,100%{opacity:0.3} 50%{opacity:0.8} }
 
         /* 이펙트 레이어 */
         #effectLayer {
@@ -157,6 +166,8 @@
             <div id="comboLabel">COMBO</div>
         </div>
 
+        <div id="touchGuide">화면 아무 곳이나 드래그하여 이동</div>
+
         <div class="bottom-ui">
             <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
                 <span class="label" style="color:#ff9f43;">HYPER GAUGE</span>
@@ -173,7 +184,7 @@
 
     <div id="gameOverScreen">
         <h1 style="color: #ff6b81; font-size: 48px; margin-bottom: 0;">GAME OVER</h1>
-        <p style="color: #888; margin-bottom: 10px;">난이도 적응 완료?</p>
+        <p style="color: #888; margin-bottom: 10px;">Relative Touch Control</p>
         <h2 id="finalScore" style="font-size: 32px; color: white;">0</h2>
         <button onclick="restartGame()">RETRY</button>
     </div>
@@ -193,6 +204,7 @@
     const gameOverScreen = document.getElementById('gameOverScreen');
     const finalScoreEl = document.getElementById('finalScore');
     const phaseLabel = document.getElementById('phaseLabel');
+    const touchGuide = document.getElementById('touchGuide');
 
     // Resolution
     const GAME_WIDTH = 360;
@@ -213,14 +225,15 @@
     const player = {
         x: GAME_WIDTH / 2,
         y: GAME_HEIGHT / 2,
-        hitRadius: 3,       // 피격 범위 (아주 작음!)
-        grazeRadius: 30,    // 콤보 범위 (넉넉함!)
+        hitRadius: 3,       
+        grazeRadius: 30,    
         visualRadius: 8,
         color: '#00d2d3'
     };
 
-    let mouseX = GAME_WIDTH / 2;
-    let mouseY = GAME_HEIGHT / 2;
+    // Target Position (for smoothing)
+    let targetX = GAME_WIDTH / 2;
+    let targetY = GAME_HEIGHT / 2;
 
     // Bullet Pooling
     const MAX_BULLETS = 600;
@@ -241,14 +254,12 @@
             this.vy = Math.sin(angle) * speed;
             this.active = true;
             this.grazed = false;
-            // 속도가 빠르면 색을 더 진하게
             this.color = speed > 5 ? '#ff4757' : '#ff6b81';
         }
         update() {
             if (!this.active) return;
             this.x += this.vx;
             this.y += this.vy;
-            // 화면 밖 제거
             if (this.x < -50 || this.x > GAME_WIDTH+50 || this.y < -50 || this.y > GAME_HEIGHT+50) {
                 this.active = false;
             }
@@ -257,34 +268,86 @@
             if (!this.active) return;
             ctx.beginPath();
             ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-            ctx.fillStyle = this.grazed ? '#535c68' : this.color; // 스친 탄은 회색으로
+            ctx.fillStyle = this.grazed ? '#535c68' : this.color; 
             ctx.fill();
         }
     }
 
     for (let i = 0; i < MAX_BULLETS; i++) bullets.push(new Bullet());
-
     function getInactiveBullet() { return bullets.find(b => !b.active); }
 
-    // Input
-    function updatePos(cx, cy) {
+    // --- Input Handling (Relative Touch & Mouse) ---
+    
+    // Mouse: Absolute (PC)
+    function updateMousePos(clientX, clientY) {
         if (isGameOver) return;
         const rect = canvas.getBoundingClientRect();
         const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;
-        mouseX = (cx - rect.left) * scaleX;
-        mouseY = (cy - rect.top) * scaleY;
+        targetX = (clientX - rect.left) * scaleX;
+        targetY = (clientY - rect.top) * scaleY;
+        touchGuide.style.display = 'none'; // 마우스 쓰면 가이드 숨김
     }
-    window.addEventListener('mousemove', e => updatePos(e.clientX, e.clientY));
-    window.addEventListener('touchmove', e => {e.preventDefault(); updatePos(e.touches[0].clientX, e.touches[0].clientY);}, {passive:false});
+    
+    window.addEventListener('mousemove', e => {
+        // 터치 중이 아닐 때만 마우스 입력 받음
+        if (!isTouchActive) updateMousePos(e.clientX, e.clientY);
+    });
+
+    // Touch: Relative (Mobile)
+    let isTouchActive = false;
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let playerStartX = 0;
+    let playerStartY = 0;
+
+    canvas.addEventListener('touchstart', e => {
+        if (isGameOver) return;
+        e.preventDefault(); // 스크롤 방지
+        isTouchActive = true;
+        
+        const touch = e.touches[0];
+        touchStartX = touch.clientX;
+        touchStartY = touch.clientY;
+        
+        // 터치 시작 시, 현재 플레이어 위치를 기준으로 잡음 (점프 방지)
+        playerStartX = player.x;
+        playerStartY = player.y;
+        
+        // 타겟도 현재 위치로 초기화하여 튀는 현상 방지
+        targetX = player.x;
+        targetY = player.y;
+        
+        touchGuide.style.display = 'none';
+    }, {passive: false});
+
+    canvas.addEventListener('touchmove', e => {
+        if (isGameOver || !isTouchActive) return;
+        e.preventDefault();
+        
+        const touch = e.touches[0];
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+
+        // 이동량 계산 (Delta)
+        const dx = (touch.clientX - touchStartX) * scaleX;
+        const dy = (touch.clientY - touchStartY) * scaleY;
+
+        // 초기 플레이어 위치 + 이동량
+        targetX = playerStartX + dx;
+        targetY = playerStartY + dy;
+    }, {passive: false});
+
+    canvas.addEventListener('touchend', () => {
+        isTouchActive = false;
+    });
+
 
     // --- Game Logic ---
 
     function getDifficulty() {
-        // 게임 시작 후 초(second) 계산 (60프레임 기준)
         const seconds = frameCount / 60;
-        
-        // 0~1 사이의 난이도 계수 (120초가 지나면 Max)
         const factor = Math.min(seconds / 120, 1.0); 
         return factor;
     }
@@ -292,20 +355,14 @@
     function spawnPattern() {
         const factor = getDifficulty();
         
-        // 난이도 UI 표시
         if (factor < 0.2) phaseLabel.innerText = "PHASE 1 (WARMING UP)";
         else if (factor < 0.5) phaseLabel.innerText = "PHASE 2 (NORMAL)";
         else if (factor < 0.8) phaseLabel.innerText = "PHASE 3 (HARD)";
         else phaseLabel.innerText = "PHASE 4 (HELL)";
         phaseLabel.style.color = factor > 0.8 ? "#ff4757" : "#888";
 
-        // 1. 탄속: 2.0(아주 느림) ~ 7.0(빠름)
         const speed = 2.0 + (factor * 5.0);
-
-        // 2. 발사 빈도: 50프레임(약 0.8초)마다 ~ 8프레임(0.1초)마다
         const spawnRate = Math.floor(50 - (factor * 42));
-
-        // 3. 발사 개수: 1발 ~ 5발
         const count = 1 + Math.floor(factor * 4);
 
         if (frameCount % spawnRate === 0) {
@@ -313,7 +370,6 @@
                 const b = getInactiveBullet();
                 if(!b) return;
 
-                // 랜덤 위치 (화면 밖)
                 const side = Math.floor(Math.random()*4);
                 let sx, sy;
                 const margin = 20;
@@ -322,7 +378,6 @@
                 else if(side===2) { sx=Math.random()*GAME_WIDTH; sy=GAME_HEIGHT+margin; }
                 else { sx=-margin; sy=Math.random()*GAME_HEIGHT; }
 
-                // 플레이어 조준 (약간의 오차 추가하여 자연스럽게)
                 const angle = Math.atan2(player.y - sy, player.x - sx) + (Math.random()-0.5)*0.2;
                 b.spawn(sx, sy, angle, speed);
             }
@@ -331,36 +386,26 @@
 
     function checkCollisions() {
         const p = player;
-        const pR2 = p.hitRadius * p.hitRadius;
-        const gR2 = p.grazeRadius * p.grazeRadius;
-
         bullets.forEach(b => {
             if (!b.active) return;
             
             const dx = p.x - b.x;
             const dy = p.y - b.y;
             const distSq = dx*dx + dy*dy;
-            const combinedR = p.hitRadius + b.radius; // 충돌 반지름 합
+            const combinedR = p.hitRadius + b.radius;
             
-            // 1. 충돌(사망) 판정
             if (distSq < combinedR * combinedR) {
                 endGame();
                 return;
             }
 
-            // 2. 그레이즈(스침) 판정
-            // 이미 스친 총알은 무시
             if (!b.grazed) {
                 const grazeDist = p.grazeRadius + b.radius;
                 if (distSq < grazeDist * grazeDist) {
-                    b.grazed = true; // 처리됨
+                    b.grazed = true;
                     combo++;
-                    
-                    // 게이지 충전: 콤보가 높을수록 덜 차게 할 수도 있지만, 
-                    // 지금은 스침 1회당 2.5% 충전 (약 40개 스치면 만땅)
                     hyperGauge += 2.5; 
                     if(hyperGauge > MAX_GAUGE) hyperGauge = MAX_GAUGE;
-                    
                     updateUI();
                 }
             }
@@ -368,14 +413,9 @@
     }
 
     function triggerScore() {
-        // 점수 계산: (기본점수 + 콤보보너스)
-        // 콤보가 높을수록 기하급수적으로 점수가 커짐
         const bonus = combo * combo * 10; 
         score += bonus;
-        
         showFloatingText(bonus);
-
-        // 리셋
         combo = 0;
         hyperGauge = 0;
         updateUI();
@@ -393,18 +433,13 @@
 
     function updateUI() {
         scoreEl.innerText = score.toLocaleString();
-        
-        // 콤보 UI
         if (combo > 0) {
             comboContainer.style.opacity = 1;
             comboCountEl.innerText = combo;
-            // 콤보가 오를 때마다 살짝 커지는 효과
             comboCountEl.style.transform = `scale(${1 + Math.min(combo/200, 0.3)})`;
         } else {
             comboContainer.style.opacity = 0;
         }
-
-        // 게이지 UI
         hyperBar.style.width = `${hyperGauge}%`;
         
         if (hyperGauge >= 100) {
@@ -422,9 +457,10 @@
         if (isGameOver) return;
         frameCount++;
 
-        // 플레이어 이동 (반응속도 0.2로 상향 - 더 빠릿함)
-        player.x += (mouseX - player.x) * 0.2;
-        player.y += (mouseY - player.y) * 0.2;
+        // 플레이어 이동 (마우스/터치 타겟으로 부드럽게 이동)
+        // Lerp 계수를 0.2 -> 0.3으로 올려 반응성 개선
+        player.x += (targetX - player.x) * 0.3;
+        player.y += (targetY - player.y) * 0.3;
         
         // 화면 제한
         player.x = Math.max(player.visualRadius, Math.min(GAME_WIDTH - player.visualRadius, player.x));
@@ -434,25 +470,17 @@
         bullets.forEach(b => b.update());
         checkCollisions();
 
-        // 자연 충전은 아주 조금만 (도망만 다녀서는 점수 못 얻게)
-        if (hyperGauge < MAX_GAUGE) {
-            hyperGauge += 0.02; 
-        }
-
-        // 만땅 차면 점수 획득
-        if (hyperGauge >= MAX_GAUGE) {
-            triggerScore();
-        }
+        if (hyperGauge < MAX_GAUGE) hyperGauge += 0.02; 
+        if (hyperGauge >= MAX_GAUGE) triggerScore();
         
         updateUI();
     }
 
     function draw() {
-        // 배경 클리어 (잔상 없이 깔끔하게)
         ctx.fillStyle = '#050505'; 
         ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
-        // 그레이즈 범위 (반투명 원)
+        // Graze Range
         ctx.beginPath();
         ctx.arc(player.x, player.y, player.grazeRadius, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
@@ -461,18 +489,14 @@
         ctx.lineWidth = 1;
         ctx.stroke();
 
-        // 총알
         bullets.forEach(b => b.draw(ctx));
 
-        // 플레이어
         if (!isGameOver) {
-            // 외형
             ctx.beginPath();
             ctx.arc(player.x, player.y, player.visualRadius, 0, Math.PI*2);
             ctx.fillStyle = player.color;
             ctx.fill();
-
-            // 실제 히트박스 (핵심)
+            // Hitbox
             ctx.beginPath();
             ctx.arc(player.x, player.y, player.hitRadius, 0, Math.PI*2);
             ctx.fillStyle = '#fff';
@@ -504,9 +528,9 @@
         
         player.x = GAME_WIDTH/2;
         player.y = GAME_HEIGHT/2;
-        mouseX = GAME_WIDTH/2;
-        mouseY = GAME_HEIGHT/2;
-
+        targetX = GAME_WIDTH/2; // 타겟도 리셋
+        targetY = GAME_HEIGHT/2;
+        
         bullets.forEach(b => b.active = false);
 
         loop();
