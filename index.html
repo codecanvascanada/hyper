@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Survival: Hardcore Balance</title>
+    <title>Survival: Pure Stats</title>
     <style>
         /* 선택 방지 */
         * { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
@@ -210,7 +210,7 @@
         critChance: 0.15, critDamage: 2.0,
         fireRate: 25, baseFireRate: 25,
         bulletCount: 1,
-        // 자석 초기값 20 (몸 크기 정도만 먹음)
+        // 자석 초기값 20 (기본 몸체 범위 수준)
         magnet: 20, 
         level: 1, exp: 0, nextExp: 10,
         score: 0,
@@ -270,6 +270,7 @@
         updateDashUI();
     }
 
+    // --- Entities ---
     const enemies = []; const bullets = []; const gems = []; const texts = []; const effects = [];
     function getObj(arr, Class) { let o = arr.find(x=>!x.active); if(!o) { o=new Class(); arr.push(o); } return o; }
 
@@ -363,9 +364,9 @@
         spawn(wx, wy, v, isRare) { this.wx=wx; this.wy=wy; this.val=v; this.isRare = isRare; this.active=true; }
         update() {
             const dist = Math.hypot(player.wx-this.wx, player.wy-this.wy);
-            // 자석 로직 변경: 업그레이드 안하면 거의 안먹음
             let range = player.magnet; 
-            let spd = 7; if(player.isHyper) { range=1200; spd=18; }
+            let spd = 7;
+            // 하이퍼 자석 기능 삭제됨 (오직 스탯에 의존)
             if(dist < range) {
                 const a = Math.atan2(player.wy-this.wy, player.wx-this.wx);
                 this.wx += Math.cos(a)*spd; this.wy += Math.sin(a)*spd; if(dist < 20) { addExp(this.val); this.active=false; }
@@ -490,10 +491,8 @@
         }
         if(player.combo>0) { player.comboTimer--; if(player.comboTimer<=0) { player.combo=0; comboEl.style.display='none'; comboLabel.style.display='none'; } }
 
-        // Spawn Rate Logic (Aggressive scaling)
-        let spawnRate = Math.max(5, 60 - player.level * 2);
-        if(frameCount % spawnRate === 0) getObj(enemies, Enemy).spawn(false);
-        
+        const rate = (player.isHyper && player.hyperType===HYPER_RAPID) ? 5 : Math.max(15, 60-player.level);
+        if(frameCount % rate === 0) getObj(enemies, Enemy).spawn(false);
         if(frameCount % 900 === 0 && player.level >= 3) {
             const activeBosses = enemies.filter(e => e.active && e.isElite).length; let maxBosses = 1; if(player.level >= 9) maxBosses = 2; if(player.level >= 18) maxBosses = 3;
             if(activeBosses < maxBosses) getObj(enemies, Enemy).spawn(true);
