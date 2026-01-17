@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Survival: Energy Drain FX</title>
+    <title>Survival: 1-Coin Limit</title>
     <style>
         /* 선택 방지 */
         * { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; box-sizing: border-box; }
@@ -30,6 +30,9 @@
         #currentType { color: #fff; font-size: 9px; margin-top: 5px; font-weight: 900; letter-spacing: 1px; text-shadow: 0 0 3px rgba(0,0,0,0.8); }
         #hyperContainer { width: 14px; flex: 1; background: rgba(0,0,0,0.6); border: 1px solid #555; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column-reverse; box-shadow: 0 0 8px rgba(0,0,0,0.5); }
         #hyperFill { width: 100%; height: 0%; background: linear-gradient(to top, #6c5ce7, #a29bfe); transition: height 0.1s linear; }
+        
+        .gauge-charging #hyperContainer { box-shadow: 0 0 15px #00f3ff, 0 0 5px #fff inset; border-color: #fff; }
+        .gauge-charging #hyperFill { filter: brightness(1.5); background: linear-gradient(to top, #00f3ff, #fff); }
 
         #dashZone { position: absolute; right: 30px; bottom: 100px; pointer-events: auto; display: flex; flex-direction: column; align-items: center; }
         #dashIcon { width: 70px; height: 70px; border-radius: 50%; border: 3px solid #fff; background: rgba(241, 196, 15, 0.2); display: flex; justify-content: center; align-items: center; color: white; font-weight: bold; font-size: 14px; box-shadow: 0 0 10px rgba(241, 196, 15, 0.3); transition: opacity 0.2s; cursor: pointer; }
@@ -46,9 +49,16 @@
         #newRecordMsg { color: #fffa65; font-size: 18px; font-weight: bold; margin-bottom: 20px; display: none; animation: blink 0.5s infinite alternate; }
         @keyframes blink { from { opacity: 1; } to { opacity: 0.5; } }
         #rushTimerBox { margin-top: 20px; text-align: center; }
-        #rushCount { font-size: 40px; font-weight: bold; color: #ff7675; }
-        #rushBtn { margin-top: 10px; padding: 15px 30px; font-size: 18px; font-weight: bold; background: #6c5ce7; color: white; border: 2px solid #fff; cursor: pointer; box-shadow: 0 0 15px #6c5ce7; transition: transform 0.1s; }
+        #rushCount { font-size: 40px; font-weight: bold; color: #ff7675; min-height: 48px; }
+        #rushBtn {
+            margin-top: 10px; padding: 15px 30px; font-size: 18px; font-weight: bold;
+            background: #6c5ce7; color: white; border: 2px solid #fff;
+            cursor: pointer; box-shadow: 0 0 15px #6c5ce7;
+            transition: transform 0.1s;
+        }
         #rushBtn:active { transform: scale(0.95); }
+        #rushSubText { font-size: 12px; color: #666; margin-top: 5px; }
+
         .hyper-active #gameContainer { animation: shake 0.2s infinite; }
         @keyframes shake { 0% { transform: translate(1px, 1px); } 50% { transform: translate(-1px, -1px); } 100% { transform: translate(1px, -1px); } }
     </style>
@@ -82,10 +92,10 @@
         <div id="newRecordMsg">🏆 NEW RECORD! 🏆</div>
         <h3 id="resultText" style="color:#fff; margin-bottom: 10px;"></h3>
         <div id="rushTimerBox">
-            <div style="font-size:12px; color:#aaa;">RUSH MODE AVAILABLE</div>
+            <div id="rushLabel" style="font-size:12px; color:#aaa;">RUSH MODE AVAILABLE</div>
             <div id="rushCount">5</div>
             <button id="rushBtn" onclick="rushStart()">⚡ RUSH START</button>
-            <div style="font-size:10px; color:#666; margin-top:5px;">(Stat Keep / Lv.1 Start)</div>
+            <div id="rushSubText">(Keep Stats / Lv.1 Start)</div>
         </div>
     </div>
 </div>
@@ -118,16 +128,19 @@
     const comboEl = document.getElementById('comboCount');
     const comboLabel = document.getElementById('comboLabel');
     const hyperFill = document.getElementById('hyperFill');
+    const rightHud = document.getElementById('rightHud');
     const typeLabel = document.getElementById('currentType');
     const dashIcon = document.getElementById('dashIcon');
     const levelUpScreen = document.getElementById('levelUpScreen');
     const levelUpTitle = document.getElementById('levelUpTitle');
     const cardsBox = document.getElementById('cardsBox');
     const gameOverScreen = document.getElementById('gameOverScreen');
-    const gameOverTitle = document.getElementById('gameOverTitle');
     const resultText = document.getElementById('resultText');
     const newRecordMsg = document.getElementById('newRecordMsg');
     const rushCountEl = document.getElementById('rushCount');
+    const rushBtn = document.getElementById('rushBtn');
+    const rushSubText = document.getElementById('rushSubText');
+    const rushLabel = document.getElementById('rushLabel');
 
     const CW = 360, CH = 640;
     canvas.width = CW; canvas.height = CH;
@@ -139,6 +152,7 @@
     let frameCount = 0;
     let screenShake = 0;
     let rushTimerInterval = null;
+    let hasRushed = false; // [핵심] 이번 판에 Rush를 썼는지 체크하는 플래그
 
     const HYPER_RAPID = 0;
     const HYPER_EMP = 1;
@@ -164,7 +178,8 @@
         dashReady: true, dashCool: 0, dashMaxCool: 600, 
         isDashing: false, dashTime: 0, dashDuration: 15, dashVx: 0, dashVy: 0,
         pendingLevelUps: 0,
-        shieldAngle: 0, shieldPulse: 0 
+        shieldAngle: 0, shieldPulse: 0,
+        isGrazingNow: false 
     };
 
     let joystick = { active: false, baseX: CW*0.2, baseY: CH*0.8, stickX: CW*0.2, stickY: CH*0.8, maxRadius: 30, vx: 0, vy: 0 };
@@ -234,19 +249,25 @@
             const angle = Math.random() * Math.PI * 2; const dist = 480;
             this.wx = player.wx + Math.cos(angle)*dist; this.wy = player.wy + Math.sin(angle)*dist;
             this.isElite = isElite; this.active = true; this.grazeCool = 0;
-            let speedBonus = 0;
+            let speedBonus = 0; let hpBonus = 0;
             if(player.level > 5) speedBonus += (player.level * 0.05);
-            if(player.level >= 15) speedBonus += 0.8;
-            if(player.level >= 30) speedBonus += 1.2;
-            if(player.level >= 50) speedBonus += 2.0;
+            if(player.level >= 10) { speedBonus += 0.5; hpBonus += 20; }
+            if(player.level >= 20) { speedBonus += 1.0; hpBonus += 50; }
+            if(player.level >= 30) { speedBonus += 1.5; hpBonus += 100; }
+            if(player.level >= 50) { speedBonus += 2.0; hpBonus += 300; }
             if(isElite) {
-                this.hp = 120 + player.level*30; this.maxHp = this.hp; 
+                this.hp = 150 + (player.level * 50) + hpBonus; 
+                this.maxHp = this.hp; 
                 this.speed = Math.min(5.0, (player.baseSpeed * 0.40) + (speedBonus * 0.5)); 
                 this.r = 30; this.color = '#e17055'; this.xp = 200; this.scoreVal = 1000;
-                this.pattern = Math.random() > 0.5 ? 0 : 1; this.shootTimer = 0; this.patternAngle = 0;
+                this.pattern = 0; 
+                if(player.level >= 20) this.pattern = Math.floor(Math.random() * 3);
+                else if(player.level >= 10) this.pattern = Math.floor(Math.random() * 2);
+                this.shootTimer = 0; this.patternAngle = 0;
             } else {
-                this.hp = 15 + player.level*5; this.maxHp = this.hp;
-                this.speed = Math.min(6.0, (1.2 + Math.random() * 0.5) + speedBonus);
+                this.hp = 20 + (player.level * 8) + (hpBonus * 0.2); 
+                this.maxHp = this.hp;
+                this.speed = Math.min(6.5, (1.2 + Math.random() * 0.5) + speedBonus);
                 this.r = 10; this.color = '#ff6b81'; this.xp = 5; this.scoreVal = 10;
             }
         }
@@ -270,12 +291,24 @@
                 this.shootTimer--;
                 if(this.shootTimer <= 0) {
                     if(this.pattern === 0) {
-                        const count = 5; const spread = 0.5; const startA = angleToPlayer - (spread * (count-1))/2;
+                        const count = 5 + Math.floor(player.level / 10); 
+                        const spread = 0.5; const startA = angleToPlayer - (spread * (count-1))/2;
                         for(let i=0; i<count; i++) spawnBullet(this.wx, this.wy, startA + spread*i, true); 
-                        this.shootTimer = 90;
-                    } else {
-                        for(let i=0; i<3; i++) { const a = this.patternAngle + (Math.PI*2/3)*i; spawnBullet(this.wx, this.wy, a, true); }
-                        this.patternAngle += 0.2; this.shootTimer = 10; 
+                        this.shootTimer = Math.max(40, 90 - player.level); 
+                    } 
+                    else if(this.pattern === 1) {
+                        const count = 12;
+                        for(let i=0; i<count; i++) {
+                            const a = (Math.PI*2 / count) * i + this.patternAngle;
+                            spawnBullet(this.wx, this.wy, a, true);
+                        }
+                        this.patternAngle += 0.5; this.shootTimer = 60;
+                    }
+                    else if(this.pattern === 2) {
+                        spawnBullet(this.wx, this.wy, angleToPlayer, true);
+                        spawnBullet(this.wx, this.wy, angleToPlayer + 0.2, true);
+                        spawnBullet(this.wx, this.wy, angleToPlayer - 0.2, true);
+                        this.shootTimer = 10;
                     }
                 }
             }
@@ -358,27 +391,20 @@
     function spawnBullet(wx, wy, a, isEnemy=false) { getObj(bullets, Bullet).spawn(wx, wy, a, isEnemy); }
     function spawnEffect() { return getObj(effects, Effect); }
 
-    // [New Function] Lightning Effect for Graze
     function drawLightning(x1, y1, x2, y2) {
         ctx.save();
-        ctx.strokeStyle = '#00f3ff'; // Electric Cyan
+        ctx.strokeStyle = '#00f3ff'; 
         ctx.lineWidth = 2;
         ctx.shadowBlur = 10;
         ctx.shadowColor = '#00f3ff';
-        
         ctx.beginPath();
         ctx.moveTo(x1, y1);
-        
         const dist = Math.hypot(x2 - x1, y2 - y1);
-        const steps = Math.floor(dist / 10); // Segments
-        let cx = x1; let cy = y1;
-        
+        const steps = Math.floor(dist / 10); 
         for (let i = 1; i < steps; i++) {
             const t = i / steps;
-            // Linear interpolation
             const tx = x1 + (x2 - x1) * t;
             const ty = y1 + (y2 - y1) * t;
-            // Random jitter
             const jitter = (Math.random() - 0.5) * 20; 
             ctx.lineTo(tx + jitter, ty + jitter);
         }
@@ -425,7 +451,15 @@
     }
 
     function addScore(val) { player.score += val; scoreVal.innerText = player.score.toLocaleString(); }
-    function updateUI() { expBar.style.width = (player.exp/player.nextExp)*100 + "%"; lvText.innerText = "LV. " + player.level; hpText.innerText = "HP: " + Math.floor(player.hp); hyperFill.style.height = player.hyperGauge + "%"; }
+    
+    function updateUI() { 
+        expBar.style.width = (player.exp/player.nextExp)*100 + "%"; 
+        lvText.innerText = "LV. " + player.level; 
+        hpText.innerText = "HP: " + Math.floor(player.hp); 
+        hyperFill.style.height = player.hyperGauge + "%"; 
+        if(player.isGrazingNow) { rightHud.classList.add('gauge-charging'); } else { rightHud.classList.remove('gauge-charging'); }
+    }
+    
     function updateDashUI() { if(player.dashReady) { dashIcon.classList.remove('cooldown'); dashIcon.classList.add('ready'); dashIcon.innerText = "DASH"; } else { dashIcon.classList.remove('ready'); dashIcon.classList.add('cooldown'); dashIcon.innerText = Math.ceil(player.dashCool/60); } }
     function updateTypeLabel() { if(player.hyperType === HYPER_RAPID) { typeLabel.innerText = "RAPID"; hyperFill.style.background = 'linear-gradient(to top, #ff9f43, #ff6b81)'; } else if(player.hyperType === HYPER_EMP) { typeLabel.innerText = "EMP"; hyperFill.style.background = 'linear-gradient(to top, #00d2d3, #54a0ff)'; } else { typeLabel.innerText = "SHIELD"; hyperFill.style.background = 'linear-gradient(to top, #6c5ce7, #a29bfe)'; } }
 
@@ -447,6 +481,8 @@
     function update() {
         if(gameState!=='PLAY') return;
         frameCount++;
+        player.isGrazingNow = false;
+
         if(screenShake > 0) screenShake *= 0.9; if(screenShake < 0.5) screenShake = 0;
         if(player.killTimer > 0) { player.killTimer--; if(player.killTimer <= 0) { player.killCount = 0; } }
         if(!player.dashReady) { player.dashCool--; if(player.dashCool <= 0) { player.dashReady = true; updateDashUI(); } else if (frameCount % 60 === 0) updateDashUI(); }
@@ -546,19 +582,18 @@
         if(player.isDashing) { ctx.shadowColor = '#f1c40f'; ctx.shadowBlur = 20; ctx.fillStyle = '#fff'; } else if(player.isHyper) { ctx.shadowColor=ctx.fillStyle; ctx.shadowBlur=15; }
         ctx.beginPath(); ctx.arc(CW/2, CH/2, player.r, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur=0;
 
-        // [NEW] Draw Lightning for Enemies inside Graze Radius
         enemies.forEach(e => {
             if (e.active) {
                 const dist = Math.hypot(e.wx - player.wx, e.wy - player.wy);
-                // Graze 범위 안이고, 충돌 범위 밖일 때만 스파크
                 if (dist < player.grazeR + e.r && dist > player.hitR + e.r) {
-                    // 캔버스 좌표로 변환
                     const sx = e.wx - player.wx + CW/2;
                     const sy = e.wy - player.wy + CH/2;
                     drawLightning(CW/2, CH/2, sx, sy);
+                    player.isGrazingNow = true; 
                 }
             }
         });
+        updateUI();
 
         if(player.showHpTimer > 0) {
             player.showHpTimer--; const hpPct = Math.max(0, player.hp / player.maxHp); const bx = CW/2, by = CH/2 - 25; const bw = 30, bh = 4;
@@ -606,6 +641,7 @@
         }
     }
 
+    // --- [Logic Update] 1-Time Rush Mode ---
     function gameOver() {
         gameState='GAMEOVER';
         let isNewRecord = false;
@@ -617,35 +653,54 @@
         newRecordMsg.style.display = isNewRecord ? 'block' : 'none';
         resultText.innerText = `SCORE: ${player.score.toLocaleString()}\nBEST: ${parseInt(highScore).toLocaleString()}`;
         
-        let timeLeft = 5;
-        rushCountEl.innerText = timeLeft;
-        document.getElementById('rushBtn').innerText = "⚡ RUSH START";
-        gameOverScreen.style.display='flex';
-
-        if(rushTimerInterval) clearInterval(rushTimerInterval);
-        rushTimerInterval = setInterval(() => {
-            timeLeft--;
+        // 1회 한정 Rush 체크
+        if (!hasRushed) {
+            rushCountEl.style.display = "block";
+            rushBtn.innerText = "⚡ RUSH START";
+            rushSubText.innerText = "(Keep Stats / Lv.1 Start)";
+            rushLabel.style.display = "block";
+            
+            let timeLeft = 5;
             rushCountEl.innerText = timeLeft;
-            if(timeLeft <= 0) {
-                clearInterval(rushTimerInterval);
-                document.getElementById('rushBtn').innerText = "RESTART (Lv.1)";
-                rushCountEl.innerText = "";
-            }
-        }, 1000);
+            
+            if(rushTimerInterval) clearInterval(rushTimerInterval);
+            rushTimerInterval = setInterval(() => {
+                timeLeft--;
+                rushCountEl.innerText = timeLeft;
+                if(timeLeft <= 0) {
+                    clearInterval(rushTimerInterval);
+                    // 타임아웃 -> 일반 리셋으로 변경
+                    rushBtn.innerText = "↻ RESTART";
+                    rushSubText.innerText = "(New Game)";
+                    rushCountEl.innerText = "";
+                    rushCountEl.style.display = "none";
+                }
+            }, 1000);
+        } else {
+            // 이미 Rush를 씀 -> 바로 리셋 버튼
+            rushCountEl.style.display = "none";
+            rushLabel.style.display = "none";
+            rushBtn.innerText = "↻ RESTART";
+            rushSubText.innerText = "(New Game)";
+            if(rushTimerInterval) clearInterval(rushTimerInterval);
+        }
+        
+        gameOverScreen.style.display='flex';
     }
 
     function rushStart() {
         if(rushTimerInterval) clearInterval(rushTimerInterval);
-        const btnText = document.getElementById('rushBtn').innerText;
+        const btnText = rushBtn.innerText;
         const canRush = btnText.includes("RUSH");
         
         enemies.length = 0; bullets.length = 0; gems.length = 0; texts.length = 0; effects.length = 0;
         player.wx = 0; player.wy = 0; joystick.active = false;
         
         if(canRush) {
-            // New Game+: Stats retained, Level/Score reset
+            // New Game+ (Stats Keep)
             player.level = 1; player.exp = 0; player.nextExp = 10; player.score = 0;
             player.hp = player.maxHp; 
+            hasRushed = true; // 플래그 설정 (다음엔 못씀)
         } else {
             // Hard Reset
             player.hp = 100; player.maxHp = 100; player.level = 1; player.exp = 0; player.nextExp = 10;
@@ -653,6 +708,7 @@
             player.bulletCount = 1; player.critChance = 0.15; player.magnet = 20;
             player.hyperGauge = 0; player.isHyper = false; player.hyperType = HYPER_RAPID;
             player.dashMaxCool = 600;
+            hasRushed = false; // 플래그 리셋 (새 게임이니 다시 기회 줌)
         }
         
         player.lastShot = -100; 
