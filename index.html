@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Survival: BGM Only</title>
+    <title>Survival: Mixed Audio</title>
     <style>
         /* 선택 방지 */
         * { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
@@ -167,20 +167,38 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     
-    // --- [AUDIO SYSTEM: BGM ONLY] ---
-    const bgm = new Audio('hyper.mp3');
-    bgm.loop = true; // 무한 반복
-    bgm.volume = 0.5; // 볼륨 조절
+    // --- [AUDIO SYSTEM] ---
+    const sounds = {
+        shoot: new Audio('shoot.ogg'), // OGG
+        hit: new Audio('hit.ogg'),     // OGG
+        bgm: new Audio('hyper.mp3')    // MP3
+    };
+
+    // BGM 설정
+    sounds.bgm.loop = true; 
+    sounds.bgm.volume = 0.5;
 
     let bgmStarted = false;
 
-    // 브라우저 정책상 사용자 입력(클릭/터치/키다운)이 있어야 오디오 재생 가능
+    // 효과음 재생 함수 (겹쳐서 재생 가능)
+    function playSound(name) {
+        const s = sounds[name];
+        if (s) {
+            // 복제본을 만들어서 재생하면 소리가 겹칠 때 끊기지 않음
+            // 하지만 성능을 위해 currentTime 초기화 방식 사용
+            s.currentTime = 0; 
+            s.volume = 0.4;
+            s.play().catch(() => {});
+        }
+    }
+
+    // BGM 시작 (사용자 인터랙션 필요)
     function startBgm() {
         if (!bgmStarted) {
-            bgm.play().then(() => {
+            sounds.bgm.play().then(() => {
                 bgmStarted = true;
             }).catch(e => {
-                console.log("Audio play failed (waiting for interaction):", e);
+                console.log("Waiting for interaction...");
             });
         }
     }
@@ -288,6 +306,8 @@
         player.dashVx = dx; player.dashVy = dy;
         player.dashReady = false; player.dashCool = player.dashMaxCool;
         spawnText("DASH!", player.wx, player.wy, "#f1c40f", 12);
+        // Dash Sound Effect (Optional, using shoot as placeholder if dash sound not available, or remove)
+        // playSound('shoot'); 
         updateDashUI();
     }
 
@@ -442,6 +462,10 @@
     function killEnemy(e, isEmp=false) {
         e.hp = 0; e.active = false; addScore(e.scoreVal); getObj(gems, Gem).spawn(e.wx, e.wy, e.xp, e.isElite);
         if(e.isElite && !isEmp) { spawnText("SHUTDOWN", e.wx, e.wy, "#fdcb6e", 20); addHyper(20); }
+        
+        // [SOUND] Play Hit Sound
+        playSound('hit');
+
         player.killCount++; player.killTimer = 180; updateKillStreak();
     }
 
@@ -499,6 +523,10 @@
                 if(t && min<450) {
                     const a = Math.atan2(t.wy-player.wy, t.wx-player.wx); const spread = 0.2; const startA = a - (spread*(player.bulletCount-1))/2;
                     for(let i=0; i<player.bulletCount; i++) spawnBullet(player.wx, player.wy, startA + spread*i, false);
+                    
+                    // [SOUND] Play Shoot Sound
+                    playSound('shoot');
+
                     player.lastShot = frameCount;
                 }
             }
