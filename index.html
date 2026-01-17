@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Survival: Action Dash</title>
+    <title>Survival: Refined Action</title>
     <style>
         body {
             margin: 0; background: #0a0a12;
@@ -40,10 +40,9 @@
             border: 1px solid #c8aa6e; margin-top: 2px;
         }
         #expBar { height: 100%; width: 0%; background: #0acde5; transition: width 0.1s; }
-        
         .stats { display: flex; justify-content: space-between; font-size: 12px; color: #a0a0a0; margin-top: 4px; }
 
-        /* Kill Streak Message */
+        /* Kill Streak (Left Top) */
         #killMsg {
             position: absolute; top: 85px; left: 15px; 
             text-align: left; pointer-events: none; display: none;
@@ -56,44 +55,60 @@
         }
         @keyframes slideIn { 0% { opacity: 0; transform: translateX(-10px); } 100% { opacity: 1; transform: translateX(0); } }
 
+        /* Center Combo (Revived & Bigger) */
+        #centerMsg {
+            position: absolute; top: 20%; left: 50%; transform: translateX(-50%);
+            text-align: center; width: 100%; pointer-events: none;
+            z-index: 5;
+        }
+        #comboCount { 
+            font-size: 48px; font-weight: 900; color: #fffa65; 
+            text-shadow: 0 0 15px rgba(255, 165, 2, 0.8);
+            display: none; transition: transform 0.05s;
+        }
+        #comboLabel { font-size: 14px; color: #fff; letter-spacing: 2px; display:none;}
+
         /* Right Side HUD */
         #rightHud {
-            position: absolute; right: 15px; top: 40%; transform: translateY(-50%);
-            height: 30%; display: flex; flex-direction: column; align-items: center; gap: 5px;
+            position: absolute; right: 20px; top: 50%; transform: translateY(-50%);
+            height: 40%; display: flex; flex-direction: column; align-items: center; gap: 5px;
         }
         #hyperLabel {
-            color: #0acde5; font-size: 9px; font-weight: bold; letter-spacing: 1px;
-            text-shadow: 1px 1px 2px black; text-align: center;
+            color: #0acde5; font-size: 10px; font-weight: 900;
+            letter-spacing: 1px; text-shadow: 1px 1px 2px black; text-align: center;
         }
         #currentType {
-            color: #c8aa6e; font-size: 8px; margin-top: 5px; font-weight: bold;
-            background: rgba(0,0,0,0.7); padding: 2px 4px; border: 1px solid #c8aa6e;
+            color: #c8aa6e; font-size: 9px; margin-top: 5px; font-weight: bold;
+            background: rgba(0,0,0,0.5); padding: 2px 4px; border-radius: 4px;
         }
         #hyperContainer {
-            width: 12px; flex: 1; 
-            background: rgba(0,0,0,0.8); border: 1px solid #444; 
+            width: 16px; flex: 1; 
+            background: rgba(0,0,0,0.6); border: 2px solid #555; border-radius: 10px;
             overflow: hidden; display: flex; flex-direction: column-reverse;
+            box-shadow: 0 0 8px rgba(0,0,0,0.8);
         }
         #hyperFill {
             width: 100%; height: 0%; 
-            background: linear-gradient(to top, #005a82, #0acde5);
+            background: linear-gradient(to top, #6c5ce7, #a29bfe);
             transition: height 0.1s linear;
         }
 
-        /* Dash Indicator (Right Side Overlay) */
+        /* Dash Indicator (Right Bottom Overlay) */
         #dashZone {
-            position: absolute; right: 0; bottom: 0; width: 40%; height: 30%;
-            pointer-events: none; /* 터치는 캔버스에서 처리, 시각적 표시만 */
-            display: flex; flex-direction: column; justify-content: center; align-items: center;
-            opacity: 0.3;
+            position: absolute; right: 20px; bottom: 40px; 
+            pointer-events: none;
+            display: flex; flex-direction: column; align-items: center;
         }
         #dashIcon {
-            width: 50px; height: 50px; border-radius: 50%;
-            border: 2px solid #fff; background: rgba(255,255,255,0.1);
+            width: 60px; height: 60px; border-radius: 50%;
+            border: 3px solid #fff; background: rgba(241, 196, 15, 0.2);
             display: flex; justify-content: center; align-items: center;
-            color: white; font-weight: bold; font-size: 10px;
+            color: white; font-weight: bold; font-size: 12px;
+            box-shadow: 0 0 10px rgba(241, 196, 15, 0.3);
+            transition: opacity 0.2s;
         }
-        .cooldown-overlay { opacity: 0.2; }
+        #dashIcon.ready { background: rgba(241, 196, 15, 0.8); opacity: 1; border-color: #fff; }
+        #dashIcon.cooldown { background: rgba(0,0,0,0.5); opacity: 0.4; border-color: #555; font-size: 20px;}
 
         /* Modals */
         .modal {
@@ -109,7 +124,7 @@
             transition: transform 0.1s;
         }
         .card:active { transform: scale(0.98); background: #1e2328; }
-        .card.hyper-card { border: 1px solid #0acde5; color: #0acde5; }
+        .card.hyper-card { border: 1px solid #0acde5; color: #0acde5; background: #0a1a20;}
 
         .hyper-active #gameContainer { animation: shake 0.2s infinite; }
         @keyframes shake { 0% { transform: translate(1px, 1px); } 50% { transform: translate(-1px, -1px); } 100% { transform: translate(1px, -1px); } }
@@ -136,6 +151,11 @@
         
         <div id="killMsg"><div id="killText">DOUBLE KILL</div></div>
 
+        <div id="centerMsg">
+            <div id="comboCount">0</div>
+            <div id="comboLabel">COMBO</div>
+        </div>
+
         <div id="rightHud">
             <div id="hyperLabel">R<br>GAUGE</div>
             <div id="hyperContainer">
@@ -145,8 +165,8 @@
         </div>
 
         <div id="dashZone">
-            <div id="dashIcon">DASH</div>
-            <div style="font-size:10px; margin-top:5px; color:#aaa;">TAP RIGHT SIDE</div>
+            <div id="dashIcon" class="ready">READY</div>
+            <div style="font-size:9px; margin-top:5px; color:#aaa; text-align:center;">TAP RIGHT<br>TO DASH</div>
         </div>
     </div>
 
@@ -174,6 +194,8 @@
     const bestVal = document.getElementById('bestVal');
     const killMsg = document.getElementById('killMsg');
     const killText = document.getElementById('killText');
+    const comboEl = document.getElementById('comboCount');
+    const comboLabel = document.getElementById('comboLabel');
     const hyperFill = document.getElementById('hyperFill');
     const typeLabel = document.getElementById('currentType');
     const dashIcon = document.getElementById('dashIcon');
@@ -198,7 +220,7 @@
 
     const player = {
         wx: 0, wy: 0,
-        r: 10, hitR: 5, grazeR: 40,
+        r: 10, hitR: 5, grazeR: 45, // 그레이즈 범위 약간 확대
         color: '#0acde5',
         hp: 100, maxHp: 100,
         speed: 3.2, baseSpeed: 3.2, 
@@ -209,13 +231,16 @@
         magnet: 80,
         level: 1, exp: 0, nextExp: 10,
         score: 0,
+        // Hyper
         hyperGauge: 0, isHyper: false, hyperTime: 0, hyperType: HYPER_RAPID,
+        // Combo
+        combo: 0, comboTimer: 0,
+        // Stats
         lastShot: 0, showHpTimer: 0,
         killCount: 0, killTimer: 0,
-        // Dash Stats
-        dashReady: true, dashCool: 0, dashMaxCool: 180, // 3초 쿨타임
-        isDashing: false, dashTime: 0, dashDuration: 15, // 0.25초 지속
-        dashVx: 0, dashVy: 0
+        // Dash
+        dashReady: true, dashCool: 0, dashMaxCool: 180, 
+        isDashing: false, dashTime: 0, dashDuration: 15, dashVx: 0, dashVy: 0
     };
 
     let joystick = { active: false, baseX: 0, baseY: 0, stickX: 0, stickY: 0, maxRadius: 25, vx: 0, vy: 0 };
@@ -223,16 +248,12 @@
     // --- Input (Left Stick, Right Tap) ---
     function inputStart(x, y) {
         if(gameState!=='PLAY') return;
-        
-        // 화면 절반 기준
         const rect = canvas.getBoundingClientRect();
         const touchX = (x - rect.left) * (CW / rect.width);
 
         if (touchX > CW / 2) {
-            // Right Side Tap -> DASH
-            useDash();
+            useDash(); // Right Side Tap
         } else {
-            // Left Side -> JOYSTICK
             joystick.active=true; joystick.baseX=x; joystick.baseY=y; joystick.stickX=x; joystick.stickY=y;
             joystick.vx=0; joystick.vy=0;
         }
@@ -255,14 +276,12 @@
     function useDash() {
         if(!player.dashReady || player.isDashing) return;
         
-        // 이동 중이면 이동 방향, 정지 중이면 위쪽
         let dx = joystick.vx; let dy = joystick.vy;
         if(dx === 0 && dy === 0) { dy = -1; }
 
         player.isDashing = true;
         player.dashTime = player.dashDuration;
-        player.dashVx = dx;
-        player.dashVy = dy;
+        player.dashVx = dx; player.dashVy = dy;
         player.dashReady = false;
         player.dashCool = player.dashMaxCool;
         
@@ -270,33 +289,22 @@
         updateDashUI();
     }
 
-    // Event Listeners
     canvas.addEventListener('mousedown', e=>inputStart(e.clientX, e.clientY));
     window.addEventListener('mousemove', e=>inputMove(e.clientX, e.clientY));
     window.addEventListener('mouseup', inputEnd);
     canvas.addEventListener('touchstart', e=>{
         e.preventDefault(); 
-        // 멀티터치 지원 (이동하면서 대시 가능)
-        for(let i=0; i<e.changedTouches.length; i++) {
-            inputStart(e.changedTouches[i].clientX, e.changedTouches[i].clientY);
-        }
+        for(let i=0; i<e.changedTouches.length; i++) inputStart(e.changedTouches[i].clientX, e.changedTouches[i].clientY);
     }, {passive:false});
     window.addEventListener('touchmove', e=>{
         e.preventDefault();
-        // 왼쪽 터치만 조이스틱 처리 (단순화: 첫번째 터치나 좌표 기준)
         for(let i=0; i<e.touches.length; i++) {
             const t = e.touches[i];
             const rect = canvas.getBoundingClientRect();
-            if(joystick.active && t.clientX < rect.left + rect.width/2 + 50) { // 약간의 여유
-                 inputMove(t.clientX, t.clientY);
-            }
+            if(joystick.active && t.clientX < rect.left + rect.width/2 + 50) inputMove(t.clientX, t.clientY);
         }
     }, {passive:false});
-    window.addEventListener('touchend', e=>{
-        // 왼쪽 터치가 떨어졌는지 확인해야 하지만 단순하게 모든 터치 끝날 때 리셋 방지
-        // 여기선 단순화: 조이스틱 터치가 끝나면 멈춤
-        if(e.touches.length === 0) inputEnd();
-    });
+    window.addEventListener('touchend', e=>{ if(e.touches.length === 0) inputEnd(); });
 
     // --- Entities ---
     const enemies = []; const bullets = []; const gems = []; const texts = []; const effects = [];
@@ -343,15 +351,10 @@
             const dist = Math.hypot(player.wx-this.wx, player.wy-this.wy);
             
             if(dist < player.hitR + this.r) {
-                // Dash Impact Logic
                 if(player.isDashing) {
-                    // 무적 + 적에게 데미지
-                    const dmg = 50 + (player.damage * 2); // 강력한 충돌 데미지
-                    this.hp -= dmg;
-                    spawnText("CRASH!", this.wx, this.wy, "#f1c40f", 16);
-                    // 넉백
-                    this.wx -= Math.cos(angleToPlayer) * 30;
-                    this.wy -= Math.sin(angleToPlayer) * 30;
+                    const dmg = 50 + (player.damage*2);
+                    this.hp -= dmg; spawnText("CRASH!", this.wx, this.wy, "#f1c40f", 16);
+                    this.wx -= Math.cos(angleToPlayer)*30; this.wy -= Math.sin(angleToPlayer)*30;
                     if(this.hp <= 0) killEnemy(this);
                 }
                 else if(player.isHyper && player.hyperType === HYPER_SHIELD) {
@@ -366,8 +369,12 @@
                     updateUI();
                     if(player.hp<=0) gameOver();
                 }
-            } else if(dist < player.grazeR + this.r && this.grazeCool<=0) {
-                addHyper(this.isElite?5:1); this.grazeCool=30;
+            } 
+            // Graze Logic (Enhanced)
+            else if(dist < player.grazeR + this.r && this.grazeCool<=0) {
+                addCombo(1); 
+                addHyper(this.isElite?8:3); // 게이지 획득량 증가
+                this.grazeCool=20; // 쿨타임 감소 (더 자주 획득)
             }
 
             if(this.isElite) {
@@ -483,6 +490,18 @@
     function spawnBullet(wx, wy, a, isEnemy=false) { getObj(bullets, Bullet).spawn(wx, wy, a, isEnemy); }
     function spawnEffect() { return getObj(effects, Effect); }
 
+    function addCombo(n) {
+        player.combo += n; 
+        player.comboTimer = 120;
+        
+        // Combo UI Update
+        comboEl.style.display = 'block';
+        comboLabel.style.display = 'block';
+        comboEl.innerText = player.combo;
+        comboEl.style.transform = 'scale(1.3)';
+        setTimeout(()=>comboEl.style.transform='scale(1)', 100);
+    }
+    
     function addHyper(n) {
         if(player.isHyper) return;
         player.hyperGauge = Math.min(100, player.hyperGauge+n);
@@ -509,7 +528,7 @@
         else if (player.hyperType === HYPER_SHIELD) {
             player.isHyper = true; player.hyperTime = 300;
             document.body.classList.add('hyper-active');
-            spawnText("SHIELD", player.wx, player.wy-40, "#a29bfe", 20);
+            spawnText("SHIELD ON", player.wx, player.wy-40, "#a29bfe", 20);
         }
     }
 
@@ -564,12 +583,12 @@
     
     function updateDashUI() {
         if(player.dashReady) {
-            dashIcon.style.opacity = 1;
-            dashIcon.style.borderColor = '#fff';
+            dashIcon.classList.remove('cooldown');
+            dashIcon.classList.add('ready');
             dashIcon.innerText = "DASH";
         } else {
-            dashIcon.style.opacity = 0.3;
-            dashIcon.style.borderColor = '#555';
+            dashIcon.classList.remove('ready');
+            dashIcon.classList.add('cooldown');
             dashIcon.innerText = Math.ceil(player.dashCool/60);
         }
     }
@@ -615,31 +634,23 @@
             if(player.killTimer <= 0) { player.killCount = 0; killMsg.style.display = 'none'; }
         }
 
-        // Dash Cooldown
         if(!player.dashReady) {
             player.dashCool--;
             if(player.dashCool <= 0) { player.dashReady = true; updateDashUI(); } 
             else if (frameCount % 60 === 0) { updateDashUI(); }
         }
 
-        // Dashing Logic
         if(player.isDashing) {
-            player.wx += player.dashVx * 15; // 고속 이동
+            player.wx += player.dashVx * 15;
             player.wy += player.dashVy * 15;
             player.dashTime--;
-            // 잔상 효과 (Trail)
-            if(frameCount % 2 === 0) {
-                // 이펙트 추가 (여기선 간소화)
-            }
             if(player.dashTime <= 0) player.isDashing = false;
         } else {
-            // Normal Move
             const isMoving = joystick.active && (joystick.vx !== 0 || joystick.vy !== 0);
             const spd = (player.isHyper && player.hyperType===HYPER_RAPID) ? player.baseSpeed*1.5 : player.baseSpeed;
             player.wx += joystick.vx * spd;
             player.wy += joystick.vy * spd;
-            
-            // Fire
+
             const fr = (player.isHyper && player.hyperType===HYPER_RAPID) ? 4 : player.baseFireRate;
             if(isMoving && frameCount - player.lastShot > fr) {
                 let t=null, min=Infinity;
@@ -666,6 +677,14 @@
                 document.body.classList.remove('hyper-active');
             }
             updateUI();
+        }
+        if(player.combo>0) {
+            player.comboTimer--;
+            if(player.comboTimer<=0) { 
+                player.combo=0; 
+                comboEl.style.display='none'; 
+                comboLabel.style.display='none';
+            }
         }
 
         const rate = (player.isHyper && player.hyperType===HYPER_RAPID) ? 5 : Math.max(15, 60-player.level);
@@ -719,8 +738,11 @@
 
     function draw() {
         drawGrid();
-        ctx.strokeStyle = 'rgba(10, 205, 229, 0.1)'; ctx.lineWidth = 1;
-        ctx.beginPath(); ctx.arc(CW/2, CH/2, 450, 0, Math.PI*2); ctx.stroke();
+        
+        // Graze Circle Visibility (Enhanced)
+        ctx.strokeStyle = 'rgba(255, 250, 101, 0.2)'; 
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(CW/2, CH/2, player.grazeR, 0, Math.PI*2); ctx.stroke();
 
         gems.forEach(e=>{ if(e.active) e.draw(); });
         effects.forEach(e=>{ if(e.active) e.draw(); });
@@ -733,12 +755,10 @@
             ctx.beginPath(); ctx.arc(CW/2, CH/2, player.r + 5, 0, Math.PI*2); ctx.stroke();
         }
         
-        // Player Draw
         ctx.fillStyle = (player.isHyper && player.hyperType===HYPER_RAPID) ? '#fffa65' : player.color;
         if(player.isDashing) {
-            // Dash Effect
             ctx.shadowColor = '#f1c40f'; ctx.shadowBlur = 20;
-            ctx.fillStyle = '#fff'; // White while dashing
+            ctx.fillStyle = '#fff';
         } else if(player.isHyper) { 
             ctx.shadowColor=ctx.fillStyle; ctx.shadowBlur=15; 
         }
@@ -763,10 +783,14 @@
     function levelUp() {
         gameState='PAUSE';
         joystick.active=false; joystick.vx=0; joystick.vy=0;
+        
+        // FIX: 하이퍼 모드 중에는 하이퍼 교체 카드 안 뜨게 (충돌 방지)
+        const canSwitchHyper = (player.level % 3 === 0) && !player.isHyper;
+
         levelUpScreen.style.display='flex';
         cardsBox.innerHTML='';
         
-        if(player.level % 3 === 0) {
+        if(canSwitchHyper) {
             levelUpTitle.innerText = "TACTICAL UPGRADE";
             const hyperOpts = [
                 {t:"HYPER: RAPID", d:"[고속 연사] 모드로 전환", c:'hyper-card', f:()=>{player.hyperType=HYPER_RAPID; updateTypeLabel();}},
