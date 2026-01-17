@@ -3,113 +3,86 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Survival: Audio Pooling</title>
+    <title>Survival: Rush Mode</title>
     <style>
-        /* 선택 방지 */
-        * { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
-
-        body {
-            margin: 0; background: #000;
-            display: flex; justify-content: center; align-items: center;
-            height: 100vh; overflow: hidden;
-            font-family: 'Segoe UI', sans-serif; color: white; touch-action: none;
-        }
-
+        /* 기본 설정 */
+        * { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; box-sizing: border-box; }
+        body { margin: 0; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; font-family: 'Segoe UI', sans-serif; color: white; touch-action: none; }
+        
         #gameContainer {
             position: relative; width: 100vh; max-width: 56.25vh; height: 100vh;
             background: #0f1218; overflow: hidden; box-shadow: 0 0 30px rgba(0,210,211,0.2);
         }
-
         canvas { display: block; width: 100%; height: 100%; }
 
         #uiLayer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; padding: 15px; box-sizing: border-box;
+            pointer-events: none; padding: 15px;
             display: flex; flex-direction: column;
         }
 
-        /* Header */
+        /* 상단 UI */
         .header-ui { width: 100%; display: flex; flex-direction: column; gap: 5px; }
-        .score-row { 
-            display: flex; justify-content: space-between; font-size: 14px; font-weight: bold; color: #c8aa6e; 
-            text-shadow: 1px 1px 2px #000;
-        }
+        .score-row { display: flex; justify-content: space-between; font-size: 14px; font-weight: bold; color: #c8aa6e; text-shadow: 1px 1px 2px #000; }
         #expBarContainer { width: 100%; height: 6px; background: #1e2328; border: 1px solid #c8aa6e; margin-top: 2px; }
         #expBar { height: 100%; width: 0%; background: #0acde5; transition: width 0.1s; }
         .stats { display: flex; justify-content: space-between; font-size: 12px; color: #a0a0a0; margin-top: 4px; }
 
-        /* Kill Message */
-        #killMsg { position: absolute; top: 90px; left: 15px; text-align: left; pointer-events: none; display: none; }
-        #killText {
-            font-size: 20px; font-weight: bold; color: #ff6b81; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-            font-family: 'Segoe UI', sans-serif; letter-spacing: 0.5px; animation: slideIn 0.15s ease-out;
+        /* [수정 1, 5] 통합 메시지 시스템 (Info Msg) */
+        #infoMsg { 
+            position: absolute; top: 80px; left: 15px; text-align: left; 
+            pointer-events: none; opacity: 0; transition: opacity 0.1s;
         }
-        @keyframes slideIn { 0% { opacity: 0; transform: translateX(-20px); } 100% { opacity: 1; transform: translateX(0); } }
+        #infoText {
+            font-size: 18px; font-weight: 800; color: #fff; 
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.9);
+            font-family: 'Segoe UI', sans-serif; letter-spacing: 0.5px;
+        }
+        /* 메시지 등장 애니메이션 */
+        .pop-in { animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes popIn { 0% { transform: scale(0.8) translateX(-20px); opacity: 0; } 100% { transform: scale(1) translateX(0); opacity: 1; } }
 
-        /* Graze */
+        /* Graze UI */
         #centerMsg { position: absolute; top: 20%; left: 50%; transform: translateX(-50%); text-align: center; width: 100%; pointer-events: none; z-index: 5; }
-        #comboCount { 
-            font-size: 48px; font-weight: 900; color: #fffa65; text-shadow: 0 0 15px rgba(255, 165, 2, 0.8);
-            display: none; transition: transform 0.05s;
-        }
-        #comboLabel { 
-            font-size: 12px; color: #81ecec; letter-spacing: 3px; font-weight: bold; display:none;
-            text-shadow: 0 0 5px #00cec9;
-        }
+        #comboCount { font-size: 48px; font-weight: 900; color: #fffa65; text-shadow: 0 0 15px rgba(255, 165, 2, 0.8); display: none; transition: transform 0.05s; }
+        #comboLabel { font-size: 12px; color: #81ecec; letter-spacing: 3px; font-weight: bold; display:none; text-shadow: 0 0 5px #00cec9; }
 
         /* Right HUD */
-        #rightHud {
-            position: absolute; right: 15px; top: 130px; height: 30%; 
-            display: flex; flex-direction: column; align-items: center; gap: 5px;
-        }
-        #currentType { 
-            color: #fff; font-size: 9px; margin-top: 5px; font-weight: 900; letter-spacing: 1px;
-            text-shadow: 0 0 3px rgba(0,0,0,0.8);
-        }
-        #hyperContainer {
-            width: 14px; flex: 1; background: rgba(0,0,0,0.6); border: 1px solid #555; border-radius: 8px;
-            overflow: hidden; display: flex; flex-direction: column-reverse; box-shadow: 0 0 8px rgba(0,0,0,0.5);
-        }
+        #rightHud { position: absolute; right: 15px; top: 130px; height: 30%; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+        #currentType { color: #fff; font-size: 9px; margin-top: 5px; font-weight: 900; letter-spacing: 1px; text-shadow: 0 0 3px rgba(0,0,0,0.8); }
+        #hyperContainer { width: 14px; flex: 1; background: rgba(0,0,0,0.6); border: 1px solid #555; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column-reverse; box-shadow: 0 0 8px rgba(0,0,0,0.5); }
         #hyperFill { width: 100%; height: 0%; background: linear-gradient(to top, #6c5ce7, #a29bfe); transition: height 0.1s linear; }
 
         /* Dash Button */
-        #dashZone {
-            position: absolute; right: 30px; bottom: 100px;
-            pointer-events: auto; display: flex; flex-direction: column; align-items: center;
-        }
-        #dashIcon {
-            width: 70px; height: 70px; border-radius: 50%;
-            border: 3px solid #fff; background: rgba(241, 196, 15, 0.2);
-            display: flex; justify-content: center; align-items: center;
-            color: white; font-weight: bold; font-size: 14px;
-            box-shadow: 0 0 10px rgba(241, 196, 15, 0.3);
-            transition: opacity 0.2s; cursor: pointer;
-        }
+        #dashZone { position: absolute; right: 30px; bottom: 100px; pointer-events: auto; display: flex; flex-direction: column; align-items: center; }
+        #dashIcon { width: 70px; height: 70px; border-radius: 50%; border: 3px solid #fff; background: rgba(241, 196, 15, 0.2); display: flex; justify-content: center; align-items: center; color: white; font-weight: bold; font-size: 14px; box-shadow: 0 0 10px rgba(241, 196, 15, 0.3); transition: opacity 0.2s; cursor: pointer; }
         #dashIcon.ready { background: rgba(241, 196, 15, 0.6); opacity: 1; border-color: #fff; }
         #dashIcon.cooldown { background: rgba(0,0,0,0.5); opacity: 0.4; border-color: #555; font-size: 24px;}
-        
         #pcGuide { position: absolute; bottom: 20px; width: 100%; text-align: center; color: #666; font-size: 11px; pointer-events: none; font-weight: bold; }
 
         /* Modals */
-        .modal {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9); display: none;
-            flex-direction: column; justify-content: center; align-items: center;
-            pointer-events: auto; z-index: 100;
-        }
-        .card {
-            background: #0f1218; color: #c8aa6e; width: 85%; margin: 8px; padding: 15px;
-            border: 1px solid #c8aa6e; text-align: center;
-            box-shadow: 0 0 10px rgba(200, 170, 110, 0.2);
-            transition: transform 0.1s; cursor: pointer;
-        }
+        .modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; flex-direction: column; justify-content: center; align-items: center; pointer-events: auto; z-index: 100; }
+        .card { background: #0f1218; color: #c8aa6e; width: 85%; margin: 8px; padding: 15px; border: 1px solid #c8aa6e; text-align: center; box-shadow: 0 0 10px rgba(200, 170, 110, 0.2); transition: transform 0.1s; cursor: pointer; }
         .card:active { transform: scale(0.98); background: #1e2328; }
         .card.hyper-card { border: 1px solid #0acde5; color: #0acde5; background: #0a1a20;}
 
-        /* FX */
+        /* [수정 2, 3, 4] Game Over Screen Styling */
+        #gameOverTitle { color: #a29bfe; font-size: 32px; font-weight: 900; margin-bottom: 10px; letter-spacing: 2px; }
+        #newRecordMsg { color: #fffa65; font-size: 18px; font-weight: bold; margin-bottom: 20px; display: none; animation: blink 0.5s infinite alternate; }
+        @keyframes blink { from { opacity: 1; } to { opacity: 0.5; } }
+        
+        #rushTimerBox { margin-top: 20px; text-align: center; }
+        #rushCount { font-size: 40px; font-weight: bold; color: #ff7675; }
+        #rushBtn {
+            margin-top: 10px; padding: 15px 30px; font-size: 18px; font-weight: bold;
+            background: #6c5ce7; color: white; border: 2px solid #fff;
+            cursor: pointer; box-shadow: 0 0 15px #6c5ce7;
+            transition: transform 0.1s;
+        }
+        #rushBtn:active { transform: scale(0.95); }
+
         .hyper-active #gameContainer { animation: shake 0.2s infinite; }
         @keyframes shake { 0% { transform: translate(1px, 1px); } 50% { transform: translate(-1px, -1px); } 100% { transform: translate(1px, -1px); } }
-
     </style>
 </head>
 <body>
@@ -130,7 +103,7 @@
             </div>
         </div>
         
-        <div id="killMsg"><div id="killText">DOUBLE KILL</div></div>
+        <div id="infoMsg"><div id="infoText"></div></div>
 
         <div id="centerMsg">
             <div id="comboCount">0</div>
@@ -138,16 +111,10 @@
         </div>
 
         <div id="rightHud">
-            <div id="hyperContainer">
-                <div id="hyperFill"></div>
-            </div>
+            <div id="hyperContainer"><div id="hyperFill"></div></div>
             <div id="currentType">RAPID</div>
         </div>
-
-        <div id="dashZone">
-            <div id="dashIcon" class="ready">DASH</div>
-        </div>
-
+        <div id="dashZone"><div id="dashIcon" class="ready">DASH</div></div>
         <div id="pcGuide">[PC] Mouse: Move / Space: Dash</div>
     </div>
 
@@ -157,9 +124,16 @@
     </div>
 
     <div id="gameOverScreen" class="modal">
-        <h1 style="color: #ff7675;">DEFEAT</h1>
-        <h3 id="resultText" style="color:#c8aa6e; margin-bottom: 30px;"></h3>
-        <button onclick="location.reload()" style="padding:15px 40px; font-size:20px; border:1px solid #c8aa6e; background:#1e2328; color:#c8aa6e; font-weight:bold; cursor:pointer;">PLAY AGAIN</button>
+        <div id="gameOverTitle">MISSION ENDED</div>
+        <div id="newRecordMsg">🏆 NEW RECORD! 🏆</div>
+        <h3 id="resultText" style="color:#fff; margin-bottom: 10px;"></h3>
+        
+        <div id="rushTimerBox">
+            <div style="font-size:12px; color:#aaa;">RUSH MODE AVAILABLE</div>
+            <div id="rushCount">5</div>
+            <button id="rushBtn" onclick="rushStart()">⚡ RUSH START</button>
+            <div style="font-size:10px; color:#666; margin-top:5px;">(Keep Level & Stats)</div>
+        </div>
     </div>
 </div>
 
@@ -167,83 +141,27 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     
-    // ==========================================
-    // [Sound System: Audio Pooling]
-    // 렉 없이 연사하기 위해 미리 채널을 만들어두는 방식
-    // ==========================================
-    
-    class SoundPool {
-        constructor(src, count, vol) {
-            this.pool = [];
-            this.index = 0;
-            // 지정된 개수(count)만큼 미리 Audio 객체를 생성해서 메모리에 로드
-            for (let i = 0; i < count; i++) {
-                const audio = new Audio(src);
-                audio.volume = vol;
-                // 미리 로드 유도 (모바일/네트워크 환경 대응)
-                audio.preload = 'auto'; 
-                this.pool.push(audio);
-            }
-        }
-
-        play() {
-            // 현재 인덱스의 오디오를 가져옴
-            const audio = this.pool[this.index];
-            
-            // 재생 중이라도 강제로 처음으로 돌려서 재생 (반응성 최우선)
-            // 혹은 재생 중이면 다음 채널을 쓸 수도 있지만, 
-            // 여기서는 단순 회전 방식을 사용합니다.
-            if (!audio.paused) {
-                audio.currentTime = 0;
-            }
-            
-            audio.play().catch(() => {
-                // 브라우저 정책으로 인해 첫 클릭 전에는 실패할 수 있음
-            });
-
-            // 다음 채널로 인덱스 이동 (순환)
-            this.index = (this.index + 1) % this.pool.length;
-        }
-    }
-
-    // 1. 효과음 풀 생성 (총알은 자주 쏘니까 5개, 타격은 5개)
-    // 주의: 파일명이 서버에 있는 것과 정확히 일치해야 함 (shoot.ogg)
-    const sfxShoot = new SoundPool('shoot.ogg', 5, 0.3);
-    const sfxHit = new SoundPool('hit.ogg', 5, 0.4);
-
-    // 2. 배경음악 (스트리밍)
+    // --- Audio ---
     const bgm = new Audio('hyper.mp3');
-    bgm.loop = true; 
-    bgm.volume = 0.5;
-
+    bgm.loop = true; bgm.volume = 0.5;
     let bgmStarted = false;
-
-    // 사용자 상호작용 시 BGM 시작 (크롬 정책 대응)
-    function initAudioContext() {
+    function startBgm() {
         if (!bgmStarted) {
-            bgm.play().then(() => {
-                bgmStarted = true;
-                console.log("BGM Started");
-            }).catch(e => console.log("Waiting for user interaction..."));
+            bgm.play().then(() => { bgmStarted = true; }).catch(e => {});
         }
     }
+    window.addEventListener('click', startBgm);
+    window.addEventListener('touchstart', startBgm);
+    window.addEventListener('keydown', startBgm);
 
-    window.addEventListener('click', initAudioContext);
-    window.addEventListener('touchstart', initAudioContext);
-    window.addEventListener('keydown', initAudioContext);
-
-    // ==========================================
-    // [Game Logic]
-    // ==========================================
-
-    // UI Refs
+    // --- Refs ---
     const expBar = document.getElementById('expBar');
     const lvText = document.getElementById('lvText');
     const hpText = document.getElementById('hpText');
     const scoreVal = document.getElementById('scoreVal');
     const bestVal = document.getElementById('bestVal');
-    const killMsg = document.getElementById('killMsg');
-    const killText = document.getElementById('killText');
+    const infoMsg = document.getElementById('infoMsg'); // killMsg -> infoMsg
+    const infoText = document.getElementById('infoText');
     const comboEl = document.getElementById('comboCount');
     const comboLabel = document.getElementById('comboLabel');
     const hyperFill = document.getElementById('hyperFill');
@@ -253,7 +171,10 @@
     const levelUpTitle = document.getElementById('levelUpTitle');
     const cardsBox = document.getElementById('cardsBox');
     const gameOverScreen = document.getElementById('gameOverScreen');
+    const gameOverTitle = document.getElementById('gameOverTitle');
     const resultText = document.getElementById('resultText');
+    const newRecordMsg = document.getElementById('newRecordMsg');
+    const rushCountEl = document.getElementById('rushCount');
 
     const CW = 360, CH = 640;
     canvas.width = CW; canvas.height = CH;
@@ -264,6 +185,7 @@
     let gameState = 'PLAY';
     let frameCount = 0;
     let screenShake = 0;
+    let rushTimerInterval = null;
 
     const HYPER_RAPID = 0;
     const HYPER_EMP = 1;
@@ -306,7 +228,7 @@
         const y = (cy - rect.top) * (CH / rect.height);
         if(x > CW*0.6 && y > CH*0.75) return; 
         joystick.active = true; joystick.baseX = x; joystick.baseY = y; joystick.stickX = x; joystick.stickY = y; joystick.vx = 0; joystick.vy = 0;
-        initAudioContext(); // 터치 시 오디오 시작 시도
+        startBgm();
     }
     function inputMove(cx, cy) {
         if(!joystick.active || gameState!=='PLAY') return;
@@ -334,12 +256,29 @@
         player.isDashing = true; player.dashTime = player.dashDuration;
         player.dashVx = dx; player.dashVy = dy;
         player.dashReady = false; player.dashCool = player.dashMaxCool;
-        spawnText("DASH!", player.wx, player.wy, "#f1c40f", 12);
-        // 대쉬 소리가 있다면 여기서 재생: sfxDash.play();
+        showMessage("DASH!", "#f1c40f");
         updateDashUI();
     }
 
-    const enemies = []; const bullets = []; const gems = []; const texts = []; const effects = [];
+    // --- [수정 1] 통합 메시지 표시 함수 ---
+    let msgTimer = null;
+    function showMessage(text, color) {
+        infoText.innerText = text;
+        infoText.style.color = color;
+        infoMsg.style.opacity = 1;
+        
+        // 애니메이션 리셋
+        infoText.classList.remove('pop-in');
+        void infoText.offsetWidth; // trigger reflow
+        infoText.classList.add('pop-in');
+
+        if(msgTimer) clearTimeout(msgTimer);
+        msgTimer = setTimeout(() => {
+            infoMsg.style.opacity = 0;
+        }, 600); // 0.6초 후 사라짐
+    }
+
+    let enemies = []; let bullets = []; let gems = []; let texts = []; let effects = [];
     function getObj(arr, Class) { let o = arr.find(x=>!x.active); if(!o) { o=new Class(); arr.push(o); } return o; }
 
     class Enemy {
@@ -348,13 +287,11 @@
             const angle = Math.random() * Math.PI * 2; const dist = 480;
             this.wx = player.wx + Math.cos(angle)*dist; this.wy = player.wy + Math.sin(angle)*dist;
             this.isElite = isElite; this.active = true; this.grazeCool = 0;
-            
             let speedBonus = 0;
             if(player.level > 5) speedBonus += (player.level * 0.05);
             if(player.level >= 15) speedBonus += 0.8;
             if(player.level >= 30) speedBonus += 1.2;
             if(player.level >= 50) speedBonus += 2.0;
-
             if(isElite) {
                 this.hp = 120 + player.level*30; this.maxHp = this.hp; 
                 this.speed = Math.min(5.0, (player.baseSpeed * 0.40) + (speedBonus * 0.5)); 
@@ -439,8 +376,7 @@
         spawn(wx, wy, v, isRare) { this.wx=wx; this.wy=wy; this.val=v; this.isRare = isRare; this.active=true; }
         update() {
             const dist = Math.hypot(player.wx-this.wx, player.wy-this.wy);
-            let range = player.magnet; 
-            let spd = 7;
+            let range = player.magnet; let spd = 7;
             if(dist < range) {
                 const a = Math.atan2(player.wy-this.wy, player.wx-this.wx);
                 this.wx += Math.cos(a)*spd; this.wy += Math.sin(a)*spd; if(dist < 20) { addExp(this.val); this.active=false; }
@@ -482,31 +418,31 @@
     function addHyper(n) { if(player.isHyper) return; player.hyperGauge = Math.min(100, player.hyperGauge+n); if(player.hyperGauge>=100) activateHyper(); updateUI(); }
 
     function activateHyper() {
-        if(player.hyperType === HYPER_RAPID) { player.isHyper = true; player.hyperTime = 300; document.body.classList.add('hyper-active'); spawnText("RAPID FIRE", player.wx, player.wy-40, "#fffa65", 20); } 
-        else if (player.hyperType === HYPER_EMP) { screenShake = 30; spawnEffect().spawnEMP(player.wx, player.wy); enemies.forEach(e => { if(e.active && Math.hypot(e.wx - player.wx, e.wy - player.wy) < 500) killEnemy(e, true); }); bullets.forEach(b => { if(b.active && b.isEnemyBullet) b.active = false; }); player.hyperGauge = 0; spawnText("EMP BLAST", player.wx, player.wy-40, "#00d2d3", 20); }
-        else if (player.hyperType === HYPER_SHIELD) { player.isHyper = true; player.hyperTime = 600; document.body.classList.add('hyper-active'); spawnText("SHIELD ON", player.wx, player.wy-40, "#a29bfe", 20); }
+        if(player.hyperType === HYPER_RAPID) { player.isHyper = true; player.hyperTime = 300; document.body.classList.add('hyper-active'); showMessage("RAPID FIRE!", "#fffa65"); } 
+        else if (player.hyperType === HYPER_EMP) { screenShake = 30; spawnEffect().spawnEMP(player.wx, player.wy); enemies.forEach(e => { if(e.active && Math.hypot(e.wx - player.wx, e.wy - player.wy) < 500) killEnemy(e, true); }); bullets.forEach(b => { if(b.active && b.isEnemyBullet) b.active = false; }); player.hyperGauge = 0; showMessage("EMP BLAST!", "#00d2d3"); }
+        else if (player.hyperType === HYPER_SHIELD) { player.isHyper = true; player.hyperTime = 600; document.body.classList.add('hyper-active'); showMessage("SHIELD ON", "#a29bfe"); }
     }
 
     function killEnemy(e, isEmp=false) {
         e.hp = 0; e.active = false; addScore(e.scoreVal); getObj(gems, Gem).spawn(e.wx, e.wy, e.xp, e.isElite);
-        if(e.isElite && !isEmp) { spawnText("SHUTDOWN", e.wx, e.wy, "#fdcb6e", 20); addHyper(20); }
-        
-        // [SOUND] Play Hit Sound via Pool
-        sfxHit.play();
-
+        if(e.isElite && !isEmp) { showMessage("SHUTDOWN", "#fdcb6e"); addHyper(20); }
         player.killCount++; player.killTimer = 180; updateKillStreak();
     }
 
     function updateKillStreak() {
-        let msg = ""; if(player.killCount === 2) msg = "DOUBLE KILL"; else if(player.killCount === 3) msg = "TRIPLE KILL"; else if(player.killCount === 4) msg = "QUADRA KILL"; else if(player.killCount >= 5) msg = "PENTA KILL";
-        if(msg) { killText.innerText = msg; killMsg.style.display = 'block'; killText.style.animation = 'none'; killText.offsetHeight; killText.style.animation = 'slideIn 0.15s ease-out'; setTimeout(() => { if(player.killTimer <= 0) killMsg.style.display = 'none'; }, 800); }
+        let msg = ""; let col = "#fff";
+        if(player.killCount === 2) { msg = "DOUBLE KILL"; col="#ff7675"; }
+        else if(player.killCount === 3) { msg = "TRIPLE KILL"; col="#fd79a8"; }
+        else if(player.killCount === 4) { msg = "QUADRA KILL"; col="#fab1a0"; }
+        else if(player.killCount >= 5) { msg = "PENTA KILL"; col="#ff0000"; }
+        if(msg) showMessage(msg, col);
     }
 
     function addExp(n) {
         player.exp += n;
         if(player.exp >= player.nextExp) {
             player.level++; player.exp=0; player.nextExp = Math.floor(player.nextExp*1.4);
-            if(player.hyperGauge >= 90 && !player.isHyper) { player.pendingLevelUps++; spawnText("LEVEL PENDING!", player.wx, player.wy-60, "#fff", 10); } 
+            if(player.hyperGauge >= 90 && !player.isHyper) { player.pendingLevelUps++; showMessage("LEVEL PENDING!", "#fff"); } 
             else { levelUp(); }
         }
         updateUI();
@@ -536,7 +472,7 @@
         if(gameState!=='PLAY') return;
         frameCount++;
         if(screenShake > 0) screenShake *= 0.9; if(screenShake < 0.5) screenShake = 0;
-        if(player.killTimer > 0) { player.killTimer--; if(player.killTimer <= 0) { player.killCount = 0; killMsg.style.display = 'none'; } }
+        if(player.killTimer > 0) { player.killTimer--; if(player.killTimer <= 0) { player.killCount = 0; } }
         if(!player.dashReady) { player.dashCool--; if(player.dashCool <= 0) { player.dashReady = true; updateDashUI(); } else if (frameCount % 60 === 0) updateDashUI(); }
 
         if(player.isDashing) {
@@ -552,10 +488,6 @@
                 if(t && min<450) {
                     const a = Math.atan2(t.wy-player.wy, t.wx-player.wx); const spread = 0.2; const startA = a - (spread*(player.bulletCount-1))/2;
                     for(let i=0; i<player.bulletCount; i++) spawnBullet(player.wx, player.wy, startA + spread*i, false);
-                    
-                    // [SOUND] Play Shoot Sound via Pool
-                    sfxShoot.play();
-
                     player.lastShot = frameCount;
                 }
             }
@@ -660,18 +592,19 @@
             ];
             hyperOpts.forEach(item => {
                 const div = document.createElement('div'); div.className = `card ${item.c}`; div.innerHTML = `<h3>${item.t}</h3><p>${item.d}</p>`;
-                div.onclick = () => { item.f(); levelUpScreen.style.display='none'; gameState='PLAY'; }; cardsBox.appendChild(div);
+                div.onclick = () => { item.f(); showMessage(item.t+" EQUIPPED", "#a29bfe"); levelUpScreen.style.display='none'; gameState='PLAY'; }; cardsBox.appendChild(div);
             });
         } else {
             levelUpTitle.innerText = "LEVEL UP!";
             const statOpts = [
-                {t:"공격력 UP", d:"데미지 +5", f:()=>{player.damage+=5}}, {t:"연사속도 UP", d:"공격속도 +10%", f:()=>{player.baseFireRate*=0.9}},
-                {t:"치명타 UP", d:"확률 +5%", f:()=>{player.critChance+=0.05}}, {t:"멀티샷", d:"탄환 +1", f:()=>{player.bulletCount++}},
-                {t:"대쉬 쿨다운", d:"재사용 대기시간 -1초", f:()=>{player.dashMaxCool = Math.max(180, player.dashMaxCool - 60);}}, 
-                {t:"체력회복", d:"HP +30", f:()=>{player.hp=Math.min(player.maxHp, player.hp+30)}},
-                {t:"자석 강화", d:"흡수 범위 +15", f:()=>{player.magnet += 15;}} 
+                {t:"공격력 UP", d:"데미지 +5", f:()=>{player.damage+=5; showMessage("DAMAGE UP!", "#e17055");}}, 
+                {t:"연사속도 UP", d:"공격속도 +10%", f:()=>{player.baseFireRate*=0.9; showMessage("FIRE RATE UP!", "#fdcb6e");}},
+                {t:"치명타 UP", d:"확률 +5%", f:()=>{player.critChance+=0.05; showMessage("CRIT CHANCE UP!", "#d63031");}}, 
+                {t:"멀티샷", d:"탄환 +1", f:()=>{player.bulletCount++; showMessage("MULTISHOT +1", "#0984e3");}},
+                {t:"대쉬 쿨다운", d:"재사용 대기시간 -1초", f:()=>{player.dashMaxCool = Math.max(180, player.dashMaxCool - 60); showMessage("DASH COOL DOWN", "#00b894");}}, 
+                {t:"체력회복", d:"HP +30", f:()=>{player.hp=Math.min(player.maxHp, player.hp+30); showMessage("HEALED!", "#55efc4");}},
+                {t:"자석 강화", d:"흡수 범위 +15", f:()=>{player.magnet += 15; showMessage("MAGNET UP!", "#a29bfe");}} 
             ];
-            
             let pool = [...statOpts];
             for(let i=0; i<3; i++) {
                 if(pool.length === 0) break;
@@ -683,9 +616,70 @@
         }
     }
 
+    // --- [수정 3] Rush Mode Logic ---
     function gameOver() {
-        gameState='GAMEOVER'; if(player.score > highScore) { highScore = player.score; localStorage.setItem('survival_highscore', highScore); }
-        resultText.innerText = `SCORE: ${player.score.toLocaleString()}\nBEST: ${parseInt(highScore).toLocaleString()}`; gameOverScreen.style.display='flex';
+        gameState='GAMEOVER';
+        
+        let isNewRecord = false;
+        if(player.score > highScore) { 
+            highScore = player.score; 
+            localStorage.setItem('survival_highscore', highScore);
+            isNewRecord = true;
+        }
+        
+        // UI Update
+        newRecordMsg.style.display = isNewRecord ? 'block' : 'none';
+        resultText.innerText = `SCORE: ${player.score.toLocaleString()}\nBEST: ${parseInt(highScore).toLocaleString()}`;
+        
+        // Rush Mode Timer
+        let timeLeft = 5;
+        rushCountEl.innerText = timeLeft;
+        document.getElementById('rushBtn').innerText = "⚡ RUSH START";
+        
+        gameOverScreen.style.display='flex';
+
+        if(rushTimerInterval) clearInterval(rushTimerInterval);
+        rushTimerInterval = setInterval(() => {
+            timeLeft--;
+            rushCountEl.innerText = timeLeft;
+            if(timeLeft <= 0) {
+                clearInterval(rushTimerInterval);
+                // Time Over -> Hard Reset logic next start
+                document.getElementById('rushBtn').innerText = "RESTART (Lv.1)";
+                rushCountEl.innerText = "";
+            }
+        }, 1000);
+    }
+
+    function rushStart() {
+        if(rushTimerInterval) clearInterval(rushTimerInterval);
+        const canRush = document.getElementById('rushBtn').innerText.includes("RUSH");
+        
+        // Reset Entities
+        enemies.length = 0; bullets.length = 0; gems.length = 0; texts.length = 0; effects.length = 0;
+        player.wx = 0; player.wy = 0; joystick.active = false;
+        
+        if(canRush) {
+            // Soft Reset (Keep Level, Gauge, Stats)
+            player.hp = player.maxHp;
+            // Gauge is kept
+        } else {
+            // Hard Reset
+            player.hp = 100; player.maxHp = 100; player.level = 1; player.exp = 0; player.nextExp = 10;
+            player.score = 0; player.damage = 15; player.fireRate = 25; player.baseFireRate = 25;
+            player.bulletCount = 1; player.critChance = 0.15; player.magnet = 20;
+            player.hyperGauge = 0; player.isHyper = false; player.hyperType = HYPER_RAPID;
+            player.dashMaxCool = 600;
+        }
+        
+        // Common Reset
+        player.dashReady = true; player.dashCool = 0;
+        player.combo = 0; player.killCount = 0;
+        frameCount = 0; 
+        
+        gameOverScreen.style.display = 'none';
+        gameState = 'PLAY';
+        updateUI(); updateTypeLabel(); updateDashUI();
     }
 
     updateTypeLabel(); loop();
