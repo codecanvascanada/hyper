@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Survival: Graze System</title>
+    <title>Survival: Hardcore Balance</title>
     <style>
         /* 선택 방지 */
         * { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
@@ -46,7 +46,7 @@
         }
         @keyframes slideIn { 0% { opacity: 0; transform: translateX(-20px); } 100% { opacity: 1; transform: translateX(0); } }
 
-        /* Graze (Center) */
+        /* Graze */
         #centerMsg { position: absolute; top: 20%; left: 50%; transform: translateX(-50%); text-align: center; width: 100%; pointer-events: none; z-index: 5; }
         #comboCount { 
             font-size: 48px; font-weight: 900; color: #fffa65; text-shadow: 0 0 15px rgba(255, 165, 2, 0.8);
@@ -57,7 +57,7 @@
             text-shadow: 0 0 5px #00cec9;
         }
 
-        /* Right HUD (Minimalist) */
+        /* Right HUD */
         #rightHud {
             position: absolute; right: 15px; top: 130px; height: 30%; 
             display: flex; flex-direction: column; align-items: center; gap: 5px;
@@ -167,6 +167,7 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     
+    // UI Refs
     const expBar = document.getElementById('expBar');
     const lvText = document.getElementById('lvText');
     const hpText = document.getElementById('hpText');
@@ -209,14 +210,16 @@
         critChance: 0.15, critDamage: 2.0,
         fireRate: 25, baseFireRate: 25,
         bulletCount: 1,
-        magnet: 80,
+        // 자석 초기값 20 (몸 크기 정도만 먹음)
+        magnet: 20, 
         level: 1, exp: 0, nextExp: 10,
         score: 0,
         hyperGauge: 0, isHyper: false, hyperTime: 0, hyperType: HYPER_RAPID,
         combo: 0, comboTimer: 0,
         lastShot: 0, showHpTimer: 0,
         killCount: 0, killTimer: 0,
-        dashReady: true, dashCool: 0, dashMaxCool: 300, 
+        // Dash: 10초(600프레임) 쿨타임 시작
+        dashReady: true, dashCool: 0, dashMaxCool: 600, 
         isDashing: false, dashTime: 0, dashDuration: 15, dashVx: 0, dashVy: 0,
         pendingLevelUps: 0,
         shieldAngle: 0, shieldPulse: 0 
@@ -276,13 +279,22 @@
             const angle = Math.random() * Math.PI * 2; const dist = 480;
             this.wx = player.wx + Math.cos(angle)*dist; this.wy = player.wy + Math.sin(angle)*dist;
             this.isElite = isElite; this.active = true; this.grazeCool = 0;
+            
+            // --- 난이도 스케일링 로직 ---
+            let speedBonus = 0;
+            if(player.level > 5) speedBonus += (player.level * 0.05); // 기본 증가
+            if(player.level >= 15) speedBonus += 0.8; // 1차 벽
+            if(player.level >= 30) speedBonus += 1.2; // 2차 벽
+            if(player.level >= 50) speedBonus += 2.0; // 3차 벽
+
             if(isElite) {
-                this.hp = 120 + player.level*20; this.maxHp = this.hp; this.speed = player.baseSpeed * 0.40; 
+                this.hp = 120 + player.level*30; this.maxHp = this.hp; 
+                this.speed = Math.min(5.0, (player.baseSpeed * 0.40) + (speedBonus * 0.5)); 
                 this.r = 30; this.color = '#e17055'; this.xp = 200; this.scoreVal = 1000;
                 this.pattern = Math.random() > 0.5 ? 0 : 1; this.shootTimer = 0; this.patternAngle = 0;
             } else {
-                this.hp = 15 + player.level*4; this.maxHp = this.hp;
-                this.speed = (1.2 + Math.random() * 0.5) + player.level * 0.05;
+                this.hp = 15 + player.level*5; this.maxHp = this.hp;
+                this.speed = Math.min(6.0, (1.2 + Math.random() * 0.5) + speedBonus);
                 this.r = 10; this.color = '#ff6b81'; this.xp = 5; this.scoreVal = 10;
             }
         }
@@ -351,7 +363,9 @@
         spawn(wx, wy, v, isRare) { this.wx=wx; this.wy=wy; this.val=v; this.isRare = isRare; this.active=true; }
         update() {
             const dist = Math.hypot(player.wx-this.wx, player.wy-this.wy);
-            let range = player.magnet; let spd = 7; if(player.isHyper) { range=1200; spd=18; }
+            // 자석 로직 변경: 업그레이드 안하면 거의 안먹음
+            let range = player.magnet; 
+            let spd = 7; if(player.isHyper) { range=1200; spd=18; }
             if(dist < range) {
                 const a = Math.atan2(player.wy-this.wy, player.wx-this.wx);
                 this.wx += Math.cos(a)*spd; this.wy += Math.sin(a)*spd; if(dist < 20) { addExp(this.val); this.active=false; }
@@ -476,8 +490,10 @@
         }
         if(player.combo>0) { player.comboTimer--; if(player.comboTimer<=0) { player.combo=0; comboEl.style.display='none'; comboLabel.style.display='none'; } }
 
-        const rate = (player.isHyper && player.hyperType===HYPER_RAPID) ? 5 : Math.max(15, 60-player.level);
-        if(frameCount % rate === 0) getObj(enemies, Enemy).spawn(false);
+        // Spawn Rate Logic (Aggressive scaling)
+        let spawnRate = Math.max(5, 60 - player.level * 2);
+        if(frameCount % spawnRate === 0) getObj(enemies, Enemy).spawn(false);
+        
         if(frameCount % 900 === 0 && player.level >= 3) {
             const activeBosses = enemies.filter(e => e.active && e.isElite).length; let maxBosses = 1; if(player.level >= 9) maxBosses = 2; if(player.level >= 18) maxBosses = 3;
             if(activeBosses < maxBosses) getObj(enemies, Enemy).spawn(true);
@@ -518,7 +534,7 @@
 
         if(player.isHyper && player.hyperType === HYPER_SHIELD) {
             const pulseOffset = Math.sin(player.shieldPulse) * 3;
-            const baseRadius = player.r + 25; // 쉴드 크기 확대 (+8 -> +25)
+            const baseRadius = player.r + 25;
             ctx.strokeStyle = 'rgba(162, 155, 254, 0.8)'; ctx.lineWidth = 2;
             ctx.beginPath(); ctx.arc(CW/2, CH/2, baseRadius + pulseOffset, 0, Math.PI*2); ctx.stroke();
             ctx.save(); ctx.translate(CW/2, CH/2); ctx.rotate(player.shieldAngle);
@@ -561,10 +577,17 @@
             const statOpts = [
                 {t:"공격력 UP", d:"데미지 +5", f:()=>{player.damage+=5}}, {t:"연사속도 UP", d:"공격속도 +10%", f:()=>{player.baseFireRate*=0.9}},
                 {t:"치명타 UP", d:"확률 +5%", f:()=>{player.critChance+=0.05}}, {t:"멀티샷", d:"탄환 +1", f:()=>{player.bulletCount++}},
-                {t:"대쉬 쿨다운", d:"재사용 대기시간 -0.5초", f:()=>{player.dashMaxCool = Math.max(60, player.dashMaxCool - 30);}}, {t:"체력회복", d:"HP +30", f:()=>{player.hp=Math.min(player.maxHp, player.hp+30)}},
+                {t:"대쉬 쿨다운", d:"재사용 대기시간 -1초", f:()=>{player.dashMaxCool = Math.max(180, player.dashMaxCool - 60);}}, // 쿨감 강화
+                {t:"체력회복", d:"HP +30", f:()=>{player.hp=Math.min(player.maxHp, player.hp+30)}},
+                {t:"자석 강화", d:"아이템 흡수 범위 증가", f:()=>{player.magnet += 30;}} // 자석 추가
             ];
+            
+            // 중복 없는 3개 뽑기
+            let pool = [...statOpts];
             for(let i=0; i<3; i++) {
-                const r = Math.floor(Math.random()*statOpts.length); const item = statOpts[r];
+                if(pool.length === 0) break;
+                const r = Math.floor(Math.random()*pool.length);
+                const item = pool.splice(r, 1)[0]; // 뽑아서 제거 (중복방지)
                 const div = document.createElement('div'); div.className = 'card'; div.innerHTML=`<h3>${item.t}</h3><p>${item.d}</p>`;
                 div.onclick=()=>{ item.f(); levelUpScreen.style.display='none'; gameState='PLAY'; }; cardsBox.appendChild(div);
             }
