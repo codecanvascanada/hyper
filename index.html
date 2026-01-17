@@ -3,86 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Survival: Unselectable UI</title>
+    <title>Survival: Advanced Shield FX</title>
     <style>
-        /* [핵심] 모든 요소 선택 방지 */
+        /* 모든 요소 선택 방지 */
         * {
-            user-select: none;
-            -webkit-user-select: none; /* Chrome, Safari */
-            -moz-user-select: none;    /* Firefox */
-            -ms-user-select: none;     /* IE/Edge */
-            -webkit-touch-callout: none; /* iOS Long press menu disable */
+            user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; -webkit-touch-callout: none;
         }
 
         body {
             margin: 0; background: #000;
             display: flex; justify-content: center; align-items: center;
             height: 100vh; overflow: hidden;
-            font-family: 'Segoe UI', sans-serif;
-            color: white;
-            touch-action: none; /* 모바일 스크롤/줌 방지 */
+            font-family: 'Segoe UI', sans-serif; color: white; touch-action: none;
         }
 
         #gameContainer {
             position: relative; width: 100vh; max-width: 56.25vh; height: 100vh;
-            background: #0f1218;
-            overflow: hidden; box-shadow: 0 0 30px rgba(0,210,211,0.2);
+            background: #0f1218; overflow: hidden; box-shadow: 0 0 30px rgba(0,210,211,0.2);
         }
 
         canvas { display: block; width: 100%; height: 100%; }
 
         #uiLayer {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            pointer-events: none; /* 클릭 통과 (캔버스 조작 위해) */
-            padding: 15px; box-sizing: border-box;
+            pointer-events: none; padding: 15px; box-sizing: border-box;
             display: flex; flex-direction: column;
         }
 
         /* Header */
         .header-ui { width: 100%; display: flex; flex-direction: column; gap: 5px; }
         .score-row { 
-            display: flex; justify-content: space-between; 
-            font-size: 14px; font-weight: bold; color: #c8aa6e; 
-            text-shadow: 1px 1px 2px #000;
+            display: flex; justify-content: space-between; font-size: 14px; font-weight: bold; color: #c8aa6e; text-shadow: 1px 1px 2px #000;
         }
-        #expBarContainer {
-            width: 100%; height: 6px; background: #1e2328;
-            border: 1px solid #c8aa6e; margin-top: 2px;
-        }
+        #expBarContainer { width: 100%; height: 6px; background: #1e2328; border: 1px solid #c8aa6e; margin-top: 2px; }
         #expBar { height: 100%; width: 0%; background: #0acde5; transition: width 0.1s; }
         .stats { display: flex; justify-content: space-between; font-size: 12px; color: #a0a0a0; margin-top: 4px; }
 
         /* Kill Message */
-        #killMsg {
-            position: absolute; top: 90px; left: 15px; 
-            text-align: left; pointer-events: none; display: none;
-        }
+        #killMsg { position: absolute; top: 90px; left: 15px; text-align: left; pointer-events: none; display: none; }
         #killText {
-            font-size: 20px; font-weight: bold; color: #ff6b81;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-            font-family: 'Segoe UI', sans-serif; letter-spacing: 0.5px;
-            animation: slideIn 0.15s ease-out;
+            font-size: 20px; font-weight: bold; color: #ff6b81; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            font-family: 'Segoe UI', sans-serif; letter-spacing: 0.5px; animation: slideIn 0.15s ease-out;
         }
         @keyframes slideIn { 0% { opacity: 0; transform: translateX(-20px); } 100% { opacity: 1; transform: translateX(0); } }
 
         /* Combo */
-        #centerMsg {
-            position: absolute; top: 20%; left: 50%; transform: translateX(-50%);
-            text-align: center; width: 100%; pointer-events: none; z-index: 5;
-        }
+        #centerMsg { position: absolute; top: 20%; left: 50%; transform: translateX(-50%); text-align: center; width: 100%; pointer-events: none; z-index: 5; }
         #comboCount { 
-            font-size: 48px; font-weight: 900; color: #fffa65; 
-            text-shadow: 0 0 15px rgba(255, 165, 2, 0.8);
+            font-size: 48px; font-weight: 900; color: #fffa65; text-shadow: 0 0 15px rgba(255, 165, 2, 0.8);
             display: none; transition: transform 0.05s;
         }
         #comboLabel { font-size: 14px; color: #fff; letter-spacing: 2px; display:none;}
 
         /* Right HUD */
         #rightHud {
-            position: absolute; 
-            right: 15px; 
-            top: 130px; 
-            height: 30%; 
+            position: absolute; right: 15px; top: 130px; height: 30%; 
             display: flex; flex-direction: column; align-items: center; gap: 5px;
         }
         #hyperLabel { color: #0acde5; font-size: 10px; font-weight: 900; letter-spacing: 1px; text-shadow: 1px 1px 2px black; text-align: center; }
@@ -95,10 +70,8 @@
 
         /* Dash Button */
         #dashZone {
-            position: absolute; right: 30px; 
-            bottom: 100px;
-            pointer-events: auto; /* 버튼은 클릭 되어야 함 */
-            display: flex; flex-direction: column; align-items: center;
+            position: absolute; right: 30px; bottom: 100px;
+            pointer-events: auto; display: flex; flex-direction: column; align-items: center;
         }
         #dashIcon {
             width: 70px; height: 70px; border-radius: 50%;
@@ -111,10 +84,7 @@
         #dashIcon.ready { background: rgba(241, 196, 15, 0.6); opacity: 1; border-color: #fff; }
         #dashIcon.cooldown { background: rgba(0,0,0,0.5); opacity: 0.4; border-color: #555; font-size: 24px;}
         
-        #pcGuide {
-            position: absolute; bottom: 20px; width: 100%; text-align: center;
-            color: #666; font-size: 11px; pointer-events: none; font-weight: bold;
-        }
+        #pcGuide { position: absolute; bottom: 20px; width: 100%; text-align: center; color: #666; font-size: 11px; pointer-events: none; font-weight: bold; }
 
         /* Modals */
         .modal {
@@ -246,16 +216,16 @@
         killCount: 0, killTimer: 0,
         dashReady: true, dashCool: 0, dashMaxCool: 300, 
         isDashing: false, dashTime: 0, dashDuration: 15, dashVx: 0, dashVy: 0,
-        pendingLevelUps: 0 
+        pendingLevelUps: 0,
+        // Shield FX vars
+        shieldAngle: 0, shieldPulse: 0 
     };
 
     let joystick = { active: false, baseX: CW*0.2, baseY: CH*0.8, stickX: CW*0.2, stickY: CH*0.8, maxRadius: 30, vx: 0, vy: 0 };
 
     // --- Input Handling ---
     const dashZone = document.getElementById('dashZone');
-    
     window.addEventListener('keydown', e => { if(e.code === 'Space') useDash(); });
-
     dashZone.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); useDash(); }, {passive:false});
     dashZone.addEventListener('mousedown', e => { e.preventDefault(); e.stopPropagation(); useDash(); });
 
@@ -264,55 +234,26 @@
         const rect = canvas.getBoundingClientRect();
         const x = (cx - rect.left) * (CW / rect.width);
         const y = (cy - rect.top) * (CH / rect.height);
-        
-        // 조이스틱 영역 필터링 (대쉬 버튼 근처 제외)
         if(x > CW*0.6 && y > CH*0.75) return; 
-
-        joystick.active = true;
-        joystick.baseX = x; joystick.baseY = y;
-        joystick.stickX = x; joystick.stickY = y;
-        joystick.vx = 0; joystick.vy = 0;
+        joystick.active = true; joystick.baseX = x; joystick.baseY = y; joystick.stickX = x; joystick.stickY = y; joystick.vx = 0; joystick.vy = 0;
     }
-
     function inputMove(cx, cy) {
         if(!joystick.active || gameState!=='PLAY') return;
         const rect = canvas.getBoundingClientRect();
         const x = (cx - rect.left) * (CW / rect.width);
         const y = (cy - rect.top) * (CH / rect.height);
-
-        const dx = x - joystick.baseX; 
-        const dy = y - joystick.baseY;
-        const dist = Math.hypot(dx, dy);
-        const limit = Math.min(dist, joystick.maxRadius);
-        const angle = Math.atan2(dy, dx);
-
-        joystick.stickX = joystick.baseX + Math.cos(angle)*limit;
-        joystick.stickY = joystick.baseY + Math.sin(angle)*limit;
-
-        if (dist > 5) { joystick.vx=Math.cos(angle); joystick.vy=Math.sin(angle); } 
-        else { joystick.vx=0; joystick.vy=0; }
+        const dx = x - joystick.baseX; const dy = y - joystick.baseY;
+        const dist = Math.hypot(dx, dy); const limit = Math.min(dist, joystick.maxRadius); const angle = Math.atan2(dy, dx);
+        joystick.stickX = joystick.baseX + Math.cos(angle)*limit; joystick.stickY = joystick.baseY + Math.sin(angle)*limit;
+        if (dist > 5) { joystick.vx=Math.cos(angle); joystick.vy=Math.sin(angle); } else { joystick.vx=0; joystick.vy=0; }
     }
-
-    function inputEnd() {
-        joystick.active = false; joystick.vx = 0; joystick.vy = 0;
-        joystick.baseX = CW*0.2; joystick.baseY = CH*0.8;
-        joystick.stickX = CW*0.2; joystick.stickY = CH*0.8;
-    }
+    function inputEnd() { joystick.active = false; joystick.vx = 0; joystick.vy = 0; }
 
     canvas.addEventListener('mousedown', e=>inputStart(e.clientX, e.clientY));
     window.addEventListener('mousemove', e=>inputMove(e.clientX, e.clientY));
     window.addEventListener('mouseup', inputEnd);
-    
-    canvas.addEventListener('touchstart', e=>{
-        e.preventDefault();
-        for(let i=0; i<e.changedTouches.length; i++) inputStart(e.changedTouches[i].clientX, e.changedTouches[i].clientY);
-    }, {passive:false});
-    
-    window.addEventListener('touchmove', e=>{
-        e.preventDefault();
-        if(joystick.active) inputMove(e.touches[0].clientX, e.touches[0].clientY);
-    }, {passive:false});
-    
+    canvas.addEventListener('touchstart', e=>{ e.preventDefault(); for(let i=0; i<e.changedTouches.length; i++) inputStart(e.changedTouches[i].clientX, e.changedTouches[i].clientY); }, {passive:false});
+    window.addEventListener('touchmove', e=>{ e.preventDefault(); if(joystick.active) inputMove(e.touches[0].clientX, e.touches[0].clientY); }, {passive:false});
     window.addEventListener('touchend', e=>{ if(e.touches.length === 0) inputEnd(); });
 
     function useDash() {
@@ -329,83 +270,49 @@
     // --- Entities ---
     const enemies = []; const bullets = []; const gems = []; const texts = []; const effects = [];
 
-    function getObj(arr, Class) {
-        let o = arr.find(x=>!x.active);
-        if(!o) { o=new Class(); arr.push(o); }
-        return o;
-    }
+    function getObj(arr, Class) { let o = arr.find(x=>!x.active); if(!o) { o=new Class(); arr.push(o); } return o; }
 
     class Enemy {
         constructor() { this.active=false; }
         spawn(isElite) {
-            const angle = Math.random() * Math.PI * 2;
-            const dist = 480;
-            this.wx = player.wx + Math.cos(angle)*dist;
-            this.wy = player.wy + Math.sin(angle)*dist;
-            this.isElite = isElite;
-            this.active = true;
-            this.grazeCool = 0;
-            
+            const angle = Math.random() * Math.PI * 2; const dist = 480;
+            this.wx = player.wx + Math.cos(angle)*dist; this.wy = player.wy + Math.sin(angle)*dist;
+            this.isElite = isElite; this.active = true; this.grazeCool = 0;
             if(isElite) {
-                this.hp = 120 + player.level*20; 
-                this.maxHp = this.hp;
-                this.speed = player.baseSpeed * 0.40; 
-                this.r = 30; this.color = '#e17055'; 
-                this.xp = 200; this.scoreVal = 1000;
-                this.pattern = Math.random() > 0.5 ? 0 : 1; 
-                this.shootTimer = 0; this.patternAngle = 0;
+                this.hp = 120 + player.level*20; this.maxHp = this.hp; this.speed = player.baseSpeed * 0.40; 
+                this.r = 30; this.color = '#e17055'; this.xp = 200; this.scoreVal = 1000;
+                this.pattern = Math.random() > 0.5 ? 0 : 1; this.shootTimer = 0; this.patternAngle = 0;
             } else {
-                this.hp = 15 + player.level*4;
-                this.maxHp = this.hp;
-                const levelSpeedBonus = player.level * 0.05;
-                this.speed = (1.2 + Math.random() * 0.5) + levelSpeedBonus;
-                this.r = 10; this.color = '#ff6b81'; 
-                this.xp = 5; this.scoreVal = 10;
+                this.hp = 15 + player.level*4; this.maxHp = this.hp;
+                this.speed = (1.2 + Math.random() * 0.5) + player.level * 0.05;
+                this.r = 10; this.color = '#ff6b81'; this.xp = 5; this.scoreVal = 10;
             }
         }
         update() {
             const angleToPlayer = Math.atan2(player.wy - this.wy, player.wx - this.wx);
-            this.wx += Math.cos(angleToPlayer)*this.speed;
-            this.wy += Math.sin(angleToPlayer)*this.speed;
+            this.wx += Math.cos(angleToPlayer)*this.speed; this.wy += Math.sin(angleToPlayer)*this.speed;
             if(this.grazeCool>0) this.grazeCool--;
             const dist = Math.hypot(player.wx-this.wx, player.wy-this.wy);
-            
             if(dist < player.hitR + this.r) {
                 if(player.isDashing) {
-                    const dmg = 50 + (player.damage*2);
-                    this.hp -= dmg; spawnText("CRASH!", this.wx, this.wy, "#f1c40f", 16);
-                    this.wx -= Math.cos(angleToPlayer)*30; this.wy -= Math.sin(angleToPlayer)*30;
-                    if(this.hp <= 0) killEnemy(this);
-                }
-                else if(player.isHyper && player.hyperType === HYPER_SHIELD) {
-                    spawnText("BLOCK", player.wx, player.wy, '#a29bfe');
-                    this.wx -= Math.cos(angleToPlayer)*15;
-                    this.wy -= Math.sin(angleToPlayer)*15;
+                    const dmg = 50 + (player.damage*2); this.hp -= dmg; spawnText("CRASH!", this.wx, this.wy, "#f1c40f", 16);
+                    this.wx -= Math.cos(angleToPlayer)*30; this.wy -= Math.sin(angleToPlayer)*30; if(this.hp <= 0) killEnemy(this);
+                } else if(player.isHyper && player.hyperType === HYPER_SHIELD) {
+                    spawnText("BLOCK", player.wx, player.wy, '#a29bfe'); this.wx -= Math.cos(angleToPlayer)*15; this.wy -= Math.sin(angleToPlayer)*15;
                 } else {
-                    const dmg = this.isElite?20:10;
-                    player.hp -= dmg; player.showHpTimer = 60;
-                    spawnText(`-${dmg}`, player.wx, player.wy, 'red');
-                    if(!this.isElite) this.active=false;
-                    updateUI();
-                    if(player.hp<=0) gameOver();
+                    const dmg = this.isElite?20:10; player.hp -= dmg; player.showHpTimer = 60; spawnText(`-${dmg}`, player.wx, player.wy, 'red');
+                    if(!this.isElite) this.active=false; updateUI(); if(player.hp<=0) gameOver();
                 }
-            } else if(dist < player.grazeR + this.r && this.grazeCool<=0) {
-                addCombo(1); addHyper(this.isElite?5:1); this.grazeCool=20;
-            }
-
+            } else if(dist < player.grazeR + this.r && this.grazeCool<=0) { addCombo(1); addHyper(this.isElite?5:1); this.grazeCool=20; }
             if(this.isElite) {
                 this.shootTimer--;
                 if(this.shootTimer <= 0) {
                     if(this.pattern === 0) {
-                        const count = 5; const spread = 0.5; 
-                        const startA = angleToPlayer - (spread * (count-1))/2;
+                        const count = 5; const spread = 0.5; const startA = angleToPlayer - (spread * (count-1))/2;
                         for(let i=0; i<count; i++) spawnBullet(this.wx, this.wy, startA + spread*i, true); 
                         this.shootTimer = 90;
                     } else {
-                        for(let i=0; i<3; i++) {
-                            const a = this.patternAngle + (Math.PI*2/3)*i;
-                            spawnBullet(this.wx, this.wy, a, true);
-                        }
+                        for(let i=0; i<3; i++) { const a = this.patternAngle + (Math.PI*2/3)*i; spawnBullet(this.wx, this.wy, a, true); }
                         this.patternAngle += 0.2; this.shootTimer = 10; 
                     }
                 }
@@ -413,17 +320,11 @@
             if(dist > 1000) this.active=false;
         }
         draw() {
-            const sx = this.wx - player.wx + CW/2;
-            const sy = this.wy - player.wy + CH/2;
+            const sx = this.wx - player.wx + CW/2; const sy = this.wy - player.wy + CH/2;
             if(sx<-60||sx>CW+60||sy<-60||sy>CH+60) return;
-            
-            ctx.beginPath(); ctx.arc(sx, sy, this.r, 0, Math.PI*2);
-            ctx.fillStyle = this.color; ctx.fill();
-            
+            ctx.beginPath(); ctx.arc(sx, sy, this.r, 0, Math.PI*2); ctx.fillStyle = this.color; ctx.fill();
             const hpPct = Math.max(0, this.hp / this.maxHp);
-            let barW = this.isElite ? 40 : 18;
-            let barH = this.isElite ? 6 : 3;
-            let barY = this.isElite ? 40 : 20;
+            let barW = this.isElite ? 40 : 18; let barH = this.isElite ? 6 : 3; let barY = this.isElite ? 40 : 20;
             if(this.isElite) { ctx.lineWidth=3; ctx.strokeStyle='#fff'; ctx.stroke(); }
             ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(sx - barW/2, sy - barY, barW, barH);
             ctx.fillStyle = this.isElite ? '#0acde5' : '#ff7675'; ctx.fillRect(sx - barW/2, sy - barY, barW * hpPct, barH);
@@ -434,14 +335,8 @@
         constructor() { this.active=false; }
         spawn(wx, wy, a, isEnemyBullet=false) {
             this.wx=wx; this.wy=wy; this.isEnemyBullet = isEnemyBullet;
-            if(isEnemyBullet) {
-                this.vx = Math.cos(a)*4; this.vy = Math.sin(a)*4;
-                this.life = 300; this.r = 6; this.color = '#ff9f43';
-            } else {
-                this.vx = Math.cos(a)*8; this.vy = Math.sin(a)*8;
-                this.life = 50; this.r = (player.isHyper && player.hyperType===HYPER_RAPID) ? 8 : 4;
-                this.color = (player.isHyper && player.hyperType===HYPER_RAPID) ? '#fffa65' : '#0acde5';
-            }
+            if(isEnemyBullet) { this.vx = Math.cos(a)*4; this.vy = Math.sin(a)*4; this.life = 300; this.r = 6; this.color = '#ff9f43'; } 
+            else { this.vx = Math.cos(a)*8; this.vy = Math.sin(a)*8; this.life = 50; this.r = (player.isHyper && player.hyperType===HYPER_RAPID) ? 8 : 4; this.color = (player.isHyper && player.hyperType===HYPER_RAPID) ? '#fffa65' : '#0acde5'; }
             this.active=true;
         }
         update() { this.wx+=this.vx; this.wy+=this.vy; this.life--; if(this.life<=0) this.active=false; }
@@ -458,22 +353,17 @@
         spawn(wx, wy, v, isRare) { this.wx=wx; this.wy=wy; this.val=v; this.isRare = isRare; this.active=true; }
         update() {
             const dist = Math.hypot(player.wx-this.wx, player.wy-this.wy);
-            let range = player.magnet; let spd = 7;
-            if(player.isHyper) { range=1200; spd=18; }
+            let range = player.magnet; let spd = 7; if(player.isHyper) { range=1200; spd=18; }
             if(dist < range) {
                 const a = Math.atan2(player.wy-this.wy, player.wx-this.wx);
-                this.wx += Math.cos(a)*spd; this.wy += Math.sin(a)*spd;
-                if(dist < 20) { addExp(this.val); this.active=false; }
+                this.wx += Math.cos(a)*spd; this.wy += Math.sin(a)*spd; if(dist < 20) { addExp(this.val); this.active=false; }
             }
             if(dist > 1200) this.active=false;
         }
         draw() {
             const sx = this.wx - player.wx + CW/2; const sy = this.wy - player.wy + CH/2;
             if(sx<-20||sx>CW+20||sy<-20||sy>CH+20) return;
-            ctx.beginPath(); 
-            if(this.isRare) { ctx.fillStyle='#f1c40f'; ctx.arc(sx, sy, 10, 0, Math.PI*2); } 
-            else { ctx.fillStyle='#0acde5'; ctx.arc(sx, sy, 6, 0, Math.PI*2); }
-            ctx.fill();
+            ctx.beginPath(); if(this.isRare) { ctx.fillStyle='#f1c40f'; ctx.arc(sx, sy, 10, 0, Math.PI*2); } else { ctx.fillStyle='#0acde5'; ctx.arc(sx, sy, 6, 0, Math.PI*2); } ctx.fill();
         }
     }
 
@@ -483,22 +373,15 @@
         update() { this.r += 40; if(this.r > this.maxR) this.active = false; }
         draw() {
             const sx = this.wx - player.wx + CW/2; const sy = this.wy - player.wy + CH/2;
-            ctx.strokeStyle = '#0acde5'; ctx.lineWidth = 10;
-            ctx.beginPath(); ctx.arc(sx, sy, this.r, 0, Math.PI*2); ctx.stroke();
+            ctx.strokeStyle = '#0acde5'; ctx.lineWidth = 10; ctx.beginPath(); ctx.arc(sx, sy, this.r, 0, Math.PI*2); ctx.stroke();
         }
     }
 
     class FloatText {
         constructor() { this.active=false; }
-        spawn(t, wx, wy, c, size=14) { 
-            this.t=t; this.wx=wx; this.wy=wy; this.c=c; this.size=size; 
-            this.life=40; this.active=true; 
-        }
+        spawn(t, wx, wy, c, size=14) { this.t=t; this.wx=wx; this.wy=wy; this.c=c; this.size=size; this.life=40; this.active=true; }
         update() { this.wy-=1; this.life--; if(this.life<=0) this.active=false; }
-        draw() {
-            const sx = this.wx - player.wx + CW/2; const sy = this.wy - player.wy + CH/2;
-            ctx.fillStyle=this.c; ctx.font=`bold ${this.size}px Arial`; ctx.fillText(this.t, sx, sy);
-        }
+        draw() { const sx = this.wx - player.wx + CW/2; const sy = this.wy - player.wy + CH/2; ctx.fillStyle=this.c; ctx.font=`bold ${this.size}px Arial`; ctx.fillText(this.t, sx, sy); }
     }
 
     function spawnText(t, wx, wy, c, s) { getObj(texts, FloatText).spawn(t, wx, wy, c, s); }
@@ -506,185 +389,76 @@
     function spawnEffect() { return getObj(effects, Effect); }
 
     function addCombo(n) {
-        player.combo += n; player.comboTimer = 120;
-        comboEl.style.display = 'block'; comboLabel.style.display = 'block';
-        comboEl.innerText = player.combo;
-        comboEl.style.transform = 'scale(1.3)';
-        setTimeout(()=>comboEl.style.transform='scale(1)', 100);
+        player.combo += n; player.comboTimer = 120; comboEl.style.display = 'block'; comboLabel.style.display = 'block';
+        comboEl.innerText = player.combo; comboEl.style.transform = 'scale(1.3)'; setTimeout(()=>comboEl.style.transform='scale(1)', 100);
     }
-    
-    function addHyper(n) {
-        if(player.isHyper) return;
-        player.hyperGauge = Math.min(100, player.hyperGauge+n);
-        if(player.hyperGauge>=100) activateHyper();
-        updateUI();
-    }
+    function addHyper(n) { if(player.isHyper) return; player.hyperGauge = Math.min(100, player.hyperGauge+n); if(player.hyperGauge>=100) activateHyper(); updateUI(); }
 
     function activateHyper() {
-        if(player.hyperType === HYPER_RAPID) {
-            player.isHyper = true; player.hyperTime = 300;
-            document.body.classList.add('hyper-active');
-            spawnText("RAPID FIRE", player.wx, player.wy-40, "#fffa65", 20);
-        } 
-        else if (player.hyperType === HYPER_EMP) {
-            screenShake = 30;
-            spawnEffect().spawnEMP(player.wx, player.wy);
-            enemies.forEach(e => {
-                if(e.active && Math.hypot(e.wx - player.wx, e.wy - player.wy) < 500) {
-                    killEnemy(e, true);
-                }
-            });
-            bullets.forEach(b => { if(b.active && b.isEnemyBullet) b.active = false; });
-            player.hyperGauge = 0; spawnText("EMP BLAST", player.wx, player.wy-40, "#00d2d3", 20);
-        }
-        else if (player.hyperType === HYPER_SHIELD) {
-            player.isHyper = true; player.hyperTime = 300;
-            document.body.classList.add('hyper-active');
-            spawnText("SHIELD ON", player.wx, player.wy-40, "#a29bfe", 20);
-        }
+        if(player.hyperType === HYPER_RAPID) { player.isHyper = true; player.hyperTime = 300; document.body.classList.add('hyper-active'); spawnText("RAPID FIRE", player.wx, player.wy-40, "#fffa65", 20); } 
+        else if (player.hyperType === HYPER_EMP) { screenShake = 30; spawnEffect().spawnEMP(player.wx, player.wy); enemies.forEach(e => { if(e.active && Math.hypot(e.wx - player.wx, e.wy - player.wy) < 500) killEnemy(e, true); }); bullets.forEach(b => { if(b.active && b.isEnemyBullet) b.active = false; }); player.hyperGauge = 0; spawnText("EMP BLAST", player.wx, player.wy-40, "#00d2d3", 20); }
+        else if (player.hyperType === HYPER_SHIELD) { player.isHyper = true; player.hyperTime = 300; document.body.classList.add('hyper-active'); spawnText("SHIELD ON", player.wx, player.wy-40, "#a29bfe", 20); }
     }
 
     function killEnemy(e, isEmp=false) {
-        e.hp = 0; e.active = false;
-        addScore(e.scoreVal);
-        getObj(gems, Gem).spawn(e.wx, e.wy, e.xp, e.isElite);
+        e.hp = 0; e.active = false; addScore(e.scoreVal); getObj(gems, Gem).spawn(e.wx, e.wy, e.xp, e.isElite);
         if(e.isElite && !isEmp) { spawnText("SHUTDOWN", e.wx, e.wy, "#fdcb6e", 20); addHyper(20); }
-        
-        player.killCount++;
-        player.killTimer = 180;
-        updateKillStreak();
+        player.killCount++; player.killTimer = 180; updateKillStreak();
     }
 
     function updateKillStreak() {
-        let msg = "";
-        if(player.killCount === 2) msg = "DOUBLE KILL";
-        else if(player.killCount === 3) msg = "TRIPLE KILL";
-        else if(player.killCount === 4) msg = "QUADRA KILL";
-        else if(player.killCount >= 5) msg = "PENTA KILL";
-
-        if(msg) {
-            killText.innerText = msg;
-            killMsg.style.display = 'block';
-            killText.style.animation = 'none';
-            killText.offsetHeight; 
-            killText.style.animation = 'slideIn 0.15s ease-out';
-            setTimeout(() => { if(player.killTimer <= 0) killMsg.style.display = 'none'; }, 800);
-        }
+        let msg = ""; if(player.killCount === 2) msg = "DOUBLE KILL"; else if(player.killCount === 3) msg = "TRIPLE KILL"; else if(player.killCount === 4) msg = "QUADRA KILL"; else if(player.killCount >= 5) msg = "PENTA KILL";
+        if(msg) { killText.innerText = msg; killMsg.style.display = 'block'; killText.style.animation = 'none'; killText.offsetHeight; killText.style.animation = 'slideIn 0.15s ease-out'; setTimeout(() => { if(player.killTimer <= 0) killMsg.style.display = 'none'; }, 800); }
     }
 
     function addExp(n) {
         player.exp += n;
         if(player.exp >= player.nextExp) {
-            player.level++; player.exp=0; 
-            player.nextExp = Math.floor(player.nextExp*1.4);
-            
-            // SMART LEVEL UP: 하이퍼 발동 중이거나 게이지가 거의 찼으면 레벨업 보류
-            if(player.hyperGauge >= 90 || player.isHyper) {
-                player.pendingLevelUps++;
-                spawnText("LEVEL PENDING!", player.wx, player.wy-60, "#fff", 10);
-            } else {
-                levelUp();
-            }
+            player.level++; player.exp=0; player.nextExp = Math.floor(player.nextExp*1.4);
+            if(player.hyperGauge >= 90 || player.isHyper) { player.pendingLevelUps++; spawnText("LEVEL PENDING!", player.wx, player.wy-60, "#fff", 10); } else { levelUp(); }
         }
         updateUI();
     }
 
-    function addScore(val) {
-        player.score += val; scoreVal.innerText = player.score.toLocaleString();
-    }
-
-    function updateUI() {
-        expBar.style.width = (player.exp/player.nextExp)*100 + "%";
-        lvText.innerText = "LV. " + player.level;
-        hpText.innerText = "HP: " + Math.floor(player.hp);
-        hyperFill.style.height = player.hyperGauge + "%";
-    }
-    
-    function updateDashUI() {
-        if(player.dashReady) {
-            dashIcon.classList.remove('cooldown');
-            dashIcon.classList.add('ready');
-            dashIcon.innerText = "DASH";
-        } else {
-            dashIcon.classList.remove('ready');
-            dashIcon.classList.add('cooldown');
-            dashIcon.innerText = Math.ceil(player.dashCool/60);
-        }
-    }
-
-    function updateTypeLabel() {
-        if(player.hyperType === HYPER_RAPID) {
-            typeLabel.innerText = "TYPE: RAPID";
-            hyperFill.style.background = 'linear-gradient(to top, #ff9f43, #ff6b81)';
-        } else if(player.hyperType === HYPER_EMP) {
-            typeLabel.innerText = "TYPE: EMP";
-            hyperFill.style.background = 'linear-gradient(to top, #00d2d3, #54a0ff)';
-        } else {
-            typeLabel.innerText = "TYPE: SHIELD";
-            hyperFill.style.background = 'linear-gradient(to top, #6c5ce7, #a29bfe)';
-        }
-    }
+    function addScore(val) { player.score += val; scoreVal.innerText = player.score.toLocaleString(); }
+    function updateUI() { expBar.style.width = (player.exp/player.nextExp)*100 + "%"; lvText.innerText = "LV. " + player.level; hpText.innerText = "HP: " + Math.floor(player.hp); hyperFill.style.height = player.hyperGauge + "%"; }
+    function updateDashUI() { if(player.dashReady) { dashIcon.classList.remove('cooldown'); dashIcon.classList.add('ready'); dashIcon.innerText = "DASH"; } else { dashIcon.classList.remove('ready'); dashIcon.classList.add('cooldown'); dashIcon.innerText = Math.ceil(player.dashCool/60); } }
+    function updateTypeLabel() { if(player.hyperType === HYPER_RAPID) { typeLabel.innerText = "TYPE: RAPID"; hyperFill.style.background = 'linear-gradient(to top, #ff9f43, #ff6b81)'; } else if(player.hyperType === HYPER_EMP) { typeLabel.innerText = "TYPE: EMP"; hyperFill.style.background = 'linear-gradient(to top, #00d2d3, #54a0ff)'; } else { typeLabel.innerText = "TYPE: SHIELD"; hyperFill.style.background = 'linear-gradient(to top, #6c5ce7, #a29bfe)'; } }
 
     function drawGrid() {
         ctx.fillStyle = '#0f1218'; ctx.fillRect(0, 0, CW, CH);
         ctx.strokeStyle = '#1e2328'; ctx.lineWidth = 2; ctx.beginPath();
-        const sz = 60;
-        const offX = ((player.wx % sz) + sz) % sz;
-        const offY = ((player.wy % sz) + sz) % sz;
+        const sz = 60; const offX = ((player.wx % sz) + sz) % sz; const offY = ((player.wy % sz) + sz) % sz;
         for(let x = -offX; x < CW; x += sz) { ctx.moveTo(x, 0); ctx.lineTo(x, CH); }
         for(let y = -offY; y < CH; y += sz) { ctx.moveTo(0, y); ctx.lineTo(CW, y); }
         ctx.stroke();
     }
 
     function drawJoystick() {
-        if(!joystick.active) return;
-        ctx.beginPath(); ctx.arc(joystick.baseX, joystick.baseY, joystick.maxRadius, 0, Math.PI*2);
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)'; ctx.lineWidth = 4; ctx.stroke();
-        ctx.beginPath(); ctx.arc(joystick.stickX, joystick.stickY, 20, 0, Math.PI*2);
-        ctx.fillStyle = 'rgba(10, 205, 229, 0.3)'; ctx.fill();
+        if(!joystick.active) { if('ontouchstart' in window) { ctx.beginPath(); ctx.arc(CW*0.2, CH*0.8, 30, 0, Math.PI*2); ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)'; ctx.lineWidth = 2; ctx.stroke(); } return; }
+        ctx.beginPath(); ctx.arc(joystick.baseX, joystick.baseY, joystick.maxRadius, 0, Math.PI*2); ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)'; ctx.lineWidth = 4; ctx.stroke();
+        ctx.beginPath(); ctx.arc(joystick.stickX, joystick.stickY, 20, 0, Math.PI*2); ctx.fillStyle = 'rgba(10, 205, 229, 0.3)'; ctx.fill();
     }
 
     function update() {
         if(gameState!=='PLAY') return;
         frameCount++;
-
-        if(screenShake > 0) screenShake *= 0.9;
-        if(screenShake < 0.5) screenShake = 0;
-
-        if(player.killTimer > 0) {
-            player.killTimer--;
-            if(player.killTimer <= 0) { player.killCount = 0; killMsg.style.display = 'none'; }
-        }
-
-        if(!player.dashReady) {
-            player.dashCool--;
-            if(player.dashCool <= 0) { player.dashReady = true; updateDashUI(); } 
-            else if (frameCount % 60 === 0) { updateDashUI(); }
-        }
+        if(screenShake > 0) screenShake *= 0.9; if(screenShake < 0.5) screenShake = 0;
+        if(player.killTimer > 0) { player.killTimer--; if(player.killTimer <= 0) { player.killCount = 0; killMsg.style.display = 'none'; } }
+        if(!player.dashReady) { player.dashCool--; if(player.dashCool <= 0) { player.dashReady = true; updateDashUI(); } else if (frameCount % 60 === 0) updateDashUI(); }
 
         if(player.isDashing) {
-            player.wx += player.dashVx * 15;
-            player.wy += player.dashVy * 15;
-            player.dashTime--;
-            if(player.dashTime <= 0) player.isDashing = false;
+            player.wx += player.dashVx * 15; player.wy += player.dashVy * 15; player.dashTime--; if(player.dashTime <= 0) player.isDashing = false;
         } else {
             const isMoving = joystick.active && (joystick.vx !== 0 || joystick.vy !== 0);
             const spd = (player.isHyper && player.hyperType===HYPER_RAPID) ? player.baseSpeed*1.5 : player.baseSpeed;
-            player.wx += joystick.vx * spd;
-            player.wy += joystick.vy * spd;
-
+            player.wx += joystick.vx * spd; player.wy += joystick.vy * spd;
             const fr = (player.isHyper && player.hyperType===HYPER_RAPID) ? 4 : player.baseFireRate;
             if(isMoving && frameCount - player.lastShot > fr) {
                 let t=null, min=Infinity;
-                enemies.forEach(e=>{
-                    if(!e.active) return;
-                    const d = Math.hypot(player.wx-e.wx, player.wy-e.wy);
-                    if(d<min) { min=d; t=e; }
-                });
+                enemies.forEach(e=>{ if(!e.active) return; const d = Math.hypot(player.wx-e.wx, player.wy-e.wy); if(d<min) { min=d; t=e; } });
                 if(t && min<450) {
-                    const a = Math.atan2(t.wy-player.wy, t.wx-player.wx);
-                    const spread = 0.2;
-                    const startA = a - (spread*(player.bulletCount-1))/2;
+                    const a = Math.atan2(t.wy-player.wy, t.wx-player.wx); const spread = 0.2; const startA = a - (spread*(player.bulletCount-1))/2;
                     for(let i=0; i<player.bulletCount; i++) spawnBullet(player.wx, player.wy, startA + spread*i, false);
                     player.lastShot = frameCount;
                 }
@@ -692,35 +466,21 @@
         }
 
         if(player.isHyper) {
-            player.hyperTime--;
-            player.hyperGauge = (player.hyperTime/300)*100;
+            player.hyperTime--; player.hyperGauge = (player.hyperTime/300)*100;
+            // 쉴드 애니메이션 값 업데이트
+            if(player.hyperType === HYPER_SHIELD) { player.shieldAngle += 0.05; player.shieldPulse += 0.1; }
             if(player.hyperTime<=0) {
-                player.isHyper=false; player.hyperGauge=0;
-                document.body.classList.remove('hyper-active');
-                if(player.pendingLevelUps > 0) {
-                    player.pendingLevelUps--;
-                    levelUp();
-                }
+                player.isHyper=false; player.hyperGauge=0; document.body.classList.remove('hyper-active');
+                if(player.pendingLevelUps > 0) { player.pendingLevelUps--; levelUp(); }
             }
             updateUI();
         }
-        if(player.combo>0) {
-            player.comboTimer--;
-            if(player.comboTimer<=0) { 
-                player.combo=0; 
-                comboEl.style.display='none'; 
-                comboLabel.style.display='none';
-            }
-        }
+        if(player.combo>0) { player.comboTimer--; if(player.comboTimer<=0) { player.combo=0; comboEl.style.display='none'; comboLabel.style.display='none'; } }
 
         const rate = (player.isHyper && player.hyperType===HYPER_RAPID) ? 5 : Math.max(15, 60-player.level);
         if(frameCount % rate === 0) getObj(enemies, Enemy).spawn(false);
-        
         if(frameCount % 900 === 0 && player.level >= 3) {
-            const activeBosses = enemies.filter(e => e.active && e.isElite).length;
-            let maxBosses = 1;
-            if(player.level >= 9) maxBosses = 2;
-            if(player.level >= 18) maxBosses = 3;
+            const activeBosses = enemies.filter(e => e.active && e.isElite).length; let maxBosses = 1; if(player.level >= 9) maxBosses = 2; if(player.level >= 18) maxBosses = 3;
             if(activeBosses < maxBosses) getObj(enemies, Enemy).spawn(true);
         }
 
@@ -730,110 +490,72 @@
                 if(b.isEnemyBullet) {
                     const d = Math.hypot(b.wx-player.wx, b.wy-player.wy);
                     if(d < player.hitR + b.r) {
-                        if((player.isHyper && player.hyperType === HYPER_SHIELD) || player.isDashing) {
-                            spawnText("BLOCK", player.wx, player.wy, "#a29bfe"); b.active = false; 
-                        } else {
-                            player.hp -= 10; player.showHpTimer = 60;
-                            spawnText("-10", player.wx, player.wy, 'red');
-                            updateUI(); b.active=false;
-                            if(player.hp<=0) gameOver();
-                        }
+                        if((player.isHyper && player.hyperType === HYPER_SHIELD) || player.isDashing) { spawnText("BLOCK", player.wx, player.wy, "#a29bfe"); b.active = false; } 
+                        else { player.hp -= 10; player.showHpTimer = 60; spawnText("-10", player.wx, player.wy, 'red'); updateUI(); b.active=false; if(player.hp<=0) gameOver(); }
                     }
                 } else {
                     enemies.forEach(e=>{
                         if(e.active) {
                             const d = Math.hypot(b.wx-e.wx, b.wy-e.wy);
                             if(d < b.r + e.r) {
-                                let isCrit = Math.random() < player.critChance;
-                                let finalDmg = player.damage * ((player.isHyper && player.hyperType===HYPER_RAPID)?2:1);
-                                if(isCrit) finalDmg *= player.critDamage;
-                                e.hp -= finalDmg;
-                                let color = isCrit ? '#ff4757' : 'white';
-                                let size = isCrit ? 20 : 12;
-                                let txt = Math.floor(finalDmg) + (isCrit ? "!" : "");
-                                spawnText(txt, e.wx, e.wy, color, size);
-
-                                const kbPower = e.isElite ? 0.3 : 4.0;
-                                e.wx += b.vx * 0.5 * kbPower; e.wy += b.vy * 0.5 * kbPower;
-                                if(e.hp<=0) { killEnemy(e); }
-                                b.active=false;
+                                let isCrit = Math.random() < player.critChance; let finalDmg = player.damage * ((player.isHyper && player.hyperType===HYPER_RAPID)?2:1); if(isCrit) finalDmg *= player.critDamage;
+                                e.hp -= finalDmg; let color = isCrit ? '#ff4757' : 'white'; let size = isCrit ? 20 : 12; let txt = Math.floor(finalDmg) + (isCrit ? "!" : ""); spawnText(txt, e.wx, e.wy, color, size);
+                                const kbPower = e.isElite ? 0.3 : 4.0; e.wx += b.vx * 0.5 * kbPower; e.wy += b.vy * 0.5 * kbPower; if(e.hp<=0) killEnemy(e); b.active=false;
                             }
                         }
                     })
                 }
             }
         });
-        enemies.forEach(e=>{ if(e.active) e.update(); });
-        gems.forEach(e=>{ if(e.active) e.update(); });
-        texts.forEach(e=>{ if(e.active) e.update(); });
-        effects.forEach(e=>{ if(e.active) e.update(); });
+        enemies.forEach(e=>{ if(e.active) e.update(); }); gems.forEach(e=>{ if(e.active) e.update(); }); texts.forEach(e=>{ if(e.active) e.update(); }); effects.forEach(e=>{ if(e.active) e.update(); });
     }
 
     function draw() {
         ctx.save();
-        if(screenShake > 0) {
-            const rx = (Math.random() - 0.5) * screenShake;
-            const ry = (Math.random() - 0.5) * screenShake;
-            ctx.translate(rx, ry);
-        }
-        
+        if(screenShake > 0) { const rx = (Math.random() - 0.5) * screenShake; const ry = (Math.random() - 0.5) * screenShake; ctx.translate(rx, ry); }
         drawGrid();
-        
-        ctx.strokeStyle = 'rgba(255, 250, 101, 0.2)'; 
-        ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(CW/2, CH/2, player.grazeR, 0, Math.PI*2); ctx.stroke();
+        ctx.strokeStyle = 'rgba(255, 250, 101, 0.2)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(CW/2, CH/2, player.grazeR, 0, Math.PI*2); ctx.stroke();
+        gems.forEach(e=>{ if(e.active) e.draw(); }); effects.forEach(e=>{ if(e.active) e.draw(); }); bullets.forEach(e=>{ if(e.active) e.draw(); }); enemies.forEach(e=>{ if(e.active) e.draw(); }); texts.forEach(e=>{ if(e.active) e.draw(); });
 
-        gems.forEach(e=>{ if(e.active) e.draw(); });
-        effects.forEach(e=>{ if(e.active) e.draw(); });
-        bullets.forEach(e=>{ if(e.active) e.draw(); });
-        enemies.forEach(e=>{ if(e.active) e.draw(); });
-        texts.forEach(e=>{ if(e.active) e.draw(); });
-
+        // --- New Shield FX ---
         if(player.isHyper && player.hyperType === HYPER_SHIELD) {
-            ctx.strokeStyle = '#a29bfe'; ctx.lineWidth = 3;
-            ctx.beginPath(); ctx.arc(CW/2, CH/2, player.r + 5, 0, Math.PI*2); ctx.stroke();
+            const pulseOffset = Math.sin(player.shieldPulse) * 3; // 진동
+            const baseRadius = player.r + 8;
+            
+            // 1. Outer Pulsing Ring
+            ctx.strokeStyle = 'rgba(162, 155, 254, 0.8)'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.arc(CW/2, CH/2, baseRadius + pulseOffset, 0, Math.PI*2); ctx.stroke();
+            
+            // 2. Inner Rotating Energy segments (Flickering)
+            ctx.save(); ctx.translate(CW/2, CH/2); ctx.rotate(player.shieldAngle);
+            ctx.strokeStyle = `rgba(108, 92, 231, ${0.3 + Math.random()*0.3})`; ctx.lineWidth = 4;
+            for(let i=0; i<3; i++) {
+                ctx.beginPath(); ctx.arc(0, 0, baseRadius - 2, (Math.PI*2/3)*i, (Math.PI*2/3)*i + 1.5); ctx.stroke();
+            }
+            ctx.restore();
+
+            // 3. Faint Inner Glow fill
+            ctx.fillStyle = 'rgba(162, 155, 254, 0.1)';
+            ctx.beginPath(); ctx.arc(CW/2, CH/2, baseRadius + pulseOffset, 0, Math.PI*2); ctx.fill();
         }
         
         ctx.fillStyle = (player.isHyper && player.hyperType===HYPER_RAPID) ? '#fffa65' : player.color;
-        if(player.isDashing) {
-            ctx.shadowColor = '#f1c40f'; ctx.shadowBlur = 20;
-            ctx.fillStyle = '#fff';
-        } else if(player.isHyper) { 
-            ctx.shadowColor=ctx.fillStyle; ctx.shadowBlur=15; 
-        }
-        ctx.beginPath(); ctx.arc(CW/2, CH/2, player.r, 0, Math.PI*2); ctx.fill();
-        ctx.shadowBlur=0;
+        if(player.isDashing) { ctx.shadowColor = '#f1c40f'; ctx.shadowBlur = 20; ctx.fillStyle = '#fff'; } else if(player.isHyper) { ctx.shadowColor=ctx.fillStyle; ctx.shadowBlur=15; }
+        ctx.beginPath(); ctx.arc(CW/2, CH/2, player.r, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur=0;
 
         if(player.showHpTimer > 0) {
-            player.showHpTimer--;
-            const hpPct = Math.max(0, player.hp / player.maxHp);
-            const bx = CW/2, by = CH/2 - 25; const bw = 30, bh = 4;
-            ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(bx - bw/2, by, bw, bh);
-            ctx.fillStyle = '#ff7675'; ctx.fillRect(bx - bw/2, by, bw * hpPct, bh);
+            player.showHpTimer--; const hpPct = Math.max(0, player.hp / player.maxHp); const bx = CW/2, by = CH/2 - 25; const bw = 30, bh = 4;
+            ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(bx - bw/2, by, bw, bh); ctx.fillStyle = '#ff7675'; ctx.fillRect(bx - bw/2, by, bw * hpPct, bh);
         }
-        
-        if(screenShake > 20) {
-            ctx.fillStyle = `rgba(255,255,255, ${screenShake/100})`;
-            ctx.fillRect(0,0,CW,CH);
-        }
-
-        ctx.restore();
-        drawJoystick();
+        if(screenShake > 20) { ctx.fillStyle = `rgba(255,255,255, ${screenShake/100})`; ctx.fillRect(0,0,CW,CH); }
+        ctx.restore(); drawJoystick();
     }
 
-    function loop() {
-        requestAnimationFrame(loop);
-        if(gameState==='PLAY') { update(); draw(); }
-    }
+    function loop() { requestAnimationFrame(loop); if(gameState==='PLAY') { update(); draw(); } }
 
     function levelUp() {
-        gameState='PAUSE';
-        joystick.active=false; joystick.vx=0; joystick.vy=0;
-        levelUpScreen.style.display='flex';
-        cardsBox.innerHTML='';
-        
+        gameState='PAUSE'; joystick.active=false; joystick.vx=0; joystick.vy=0; levelUpScreen.style.display='flex'; cardsBox.innerHTML='';
         const canSwitchHyper = (player.level % 3 === 0) && !player.isHyper;
-
         if(canSwitchHyper) {
             levelUpTitle.innerText = "TACTICAL UPGRADE";
             const hyperOpts = [
@@ -842,49 +564,30 @@
                 {t:"HYPER: SHIELD", d:"[완전 방어] 모드로 전환", c:'hyper-card', f:()=>{player.hyperType=HYPER_SHIELD; updateTypeLabel();}},
             ];
             hyperOpts.forEach(item => {
-                const div = document.createElement('div');
-                div.className = `card ${item.c}`;
-                div.innerHTML = `<h3>${item.t}</h3><p>${item.d}</p>`;
-                div.onclick = () => { item.f(); levelUpScreen.style.display='none'; gameState='PLAY'; };
-                cardsBox.appendChild(div);
+                const div = document.createElement('div'); div.className = `card ${item.c}`; div.innerHTML = `<h3>${item.t}</h3><p>${item.d}</p>`;
+                div.onclick = () => { item.f(); levelUpScreen.style.display='none'; gameState='PLAY'; }; cardsBox.appendChild(div);
             });
-        } 
-        else {
+        } else {
             levelUpTitle.innerText = "LEVEL UP!";
             const statOpts = [
-                {t:"공격력 UP", d:"데미지 +5", f:()=>{player.damage+=5}},
-                {t:"연사속도 UP", d:"공격속도 +10%", f:()=>{player.baseFireRate*=0.9}},
-                {t:"치명타 UP", d:"확률 +5%", f:()=>{player.critChance+=0.05}},
-                {t:"멀티샷", d:"탄환 +1", f:()=>{player.bulletCount++}},
-                {t:"대쉬 쿨다운", d:"재사용 대기시간 -0.5초", f:()=>{player.dashMaxCool = Math.max(60, player.dashMaxCool - 30);}},
-                {t:"체력회복", d:"HP +30", f:()=>{player.hp=Math.min(player.maxHp, player.hp+30)}},
+                {t:"공격력 UP", d:"데미지 +5", f:()=>{player.damage+=5}}, {t:"연사속도 UP", d:"공격속도 +10%", f:()=>{player.baseFireRate*=0.9}},
+                {t:"치명타 UP", d:"확률 +5%", f:()=>{player.critChance+=0.05}}, {t:"멀티샷", d:"탄환 +1", f:()=>{player.bulletCount++}},
+                {t:"대쉬 쿨다운", d:"재사용 대기시간 -0.5초", f:()=>{player.dashMaxCool = Math.max(60, player.dashMaxCool - 30);}}, {t:"체력회복", d:"HP +30", f:()=>{player.hp=Math.min(player.maxHp, player.hp+30)}},
             ];
             for(let i=0; i<3; i++) {
-                const r = Math.floor(Math.random()*statOpts.length);
-                const item = statOpts[r];
-                const div = document.createElement('div');
-                div.className = 'card';
-                div.innerHTML=`<h3>${item.t}</h3><p>${item.d}</p>`;
-                div.onclick=()=>{
-                    item.f(); levelUpScreen.style.display='none'; gameState='PLAY';
-                };
-                cardsBox.appendChild(div);
+                const r = Math.floor(Math.random()*statOpts.length); const item = statOpts[r];
+                const div = document.createElement('div'); div.className = 'card'; div.innerHTML=`<h3>${item.t}</h3><p>${item.d}</p>`;
+                div.onclick=()=>{ item.f(); levelUpScreen.style.display='none'; gameState='PLAY'; }; cardsBox.appendChild(div);
             }
         }
     }
 
     function gameOver() {
-        gameState='GAMEOVER';
-        if(player.score > highScore) {
-            highScore = player.score;
-            localStorage.setItem('survival_highscore', highScore);
-        }
-        resultText.innerText = `SCORE: ${player.score.toLocaleString()}\nBEST: ${parseInt(highScore).toLocaleString()}`;
-        gameOverScreen.style.display='flex';
+        gameState='GAMEOVER'; if(player.score > highScore) { highScore = player.score; localStorage.setItem('survival_highscore', highScore); }
+        resultText.innerText = `SCORE: ${player.score.toLocaleString()}\nBEST: ${parseInt(highScore).toLocaleString()}`; gameOverScreen.style.display='flex';
     }
 
-    updateTypeLabel(); // Init label
-    loop();
+    updateTypeLabel(); loop();
 </script>
 </body>
 </html>
