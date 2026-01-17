@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Survival: Cross-Platform Control</title>
+    <title>Survival: Impact & Balance</title>
     <style>
         body {
-            margin: 0; background: #0a0a12;
+            margin: 0; background: #000;
             display: flex; justify-content: center; align-items: center;
             height: 100vh; overflow: hidden;
             font-family: 'Segoe UI', sans-serif;
@@ -54,7 +54,7 @@
         }
         @keyframes slideIn { 0% { opacity: 0; transform: translateX(-10px); } 100% { opacity: 1; transform: translateX(0); } }
 
-        /* Combo (Center) */
+        /* Combo */
         #centerMsg {
             position: absolute; top: 20%; left: 50%; transform: translateX(-50%);
             text-align: center; width: 100%; pointer-events: none; z-index: 5;
@@ -79,11 +79,10 @@
         }
         #hyperFill { width: 100%; height: 0%; background: linear-gradient(to top, #6c5ce7, #a29bfe); transition: height 0.1s linear; }
 
-        /* Dash Button (Mobile Only - Right Bottom) */
+        /* Dash Button (Mobile) */
         #dashZone {
             position: absolute; right: 30px; bottom: 50px; 
-            pointer-events: auto; /* Clickable */
-            display: flex; flex-direction: column; align-items: center;
+            pointer-events: auto; display: flex; flex-direction: column; align-items: center;
         }
         #dashIcon {
             width: 70px; height: 70px; border-radius: 50%;
@@ -96,10 +95,9 @@
         #dashIcon.ready { background: rgba(241, 196, 15, 0.6); opacity: 1; border-color: #fff; }
         #dashIcon.cooldown { background: rgba(0,0,0,0.5); opacity: 0.4; border-color: #555; font-size: 24px;}
         
-        /* PC Guide Text */
         #pcGuide {
             position: absolute; bottom: 10px; width: 100%; text-align: center;
-            color: #666; font-size: 11px; pointer-events: none;
+            color: #444; font-size: 10px; pointer-events: none;
         }
 
         /* Modals */
@@ -118,6 +116,7 @@
         .card:active { transform: scale(0.98); background: #1e2328; }
         .card.hyper-card { border: 1px solid #0acde5; color: #0acde5; background: #0a1a20;}
 
+        /* Hyper Shaking */
         .hyper-active #gameContainer { animation: shake 0.2s infinite; }
         @keyframes shake { 0% { transform: translate(1px, 1px); } 50% { transform: translate(-1px, -1px); } 100% { transform: translate(1px, -1px); } }
 
@@ -160,7 +159,7 @@
             <div id="dashIcon" class="ready">DASH</div>
         </div>
 
-        <div id="pcGuide">PC: Mouse Move / Space Dash</div>
+        <div id="pcGuide">Move: Drag / Dash: Space</div>
     </div>
 
     <div id="levelUpScreen" class="modal">
@@ -191,7 +190,6 @@
     const comboLabel = document.getElementById('comboLabel');
     const hyperFill = document.getElementById('hyperFill');
     const typeLabel = document.getElementById('currentType');
-    const dashZone = document.getElementById('dashZone');
     const dashIcon = document.getElementById('dashIcon');
     const levelUpScreen = document.getElementById('levelUpScreen');
     const levelUpTitle = document.getElementById('levelUpTitle');
@@ -207,6 +205,7 @@
 
     let gameState = 'PLAY';
     let frameCount = 0;
+    let screenShake = 0; // 화면 흔들림 강도
 
     const HYPER_RAPID = 0;
     const HYPER_EMP = 1;
@@ -233,81 +232,27 @@
         isDashing: false, dashTime: 0, dashDuration: 15, dashVx: 0, dashVy: 0
     };
 
-    // --- Input System ---
-    let joystick = { 
-        active: false, 
-        baseX: CW*0.2, baseY: CH*0.8, // Default Position (Left Bottom)
-        stickX: CW*0.2, stickY: CH*0.8, 
-        maxRadius: 30, 
-        vx: 0, vy: 0 
-    };
+    let joystick = { active: false, baseX: CW*0.2, baseY: CH*0.8, stickX: CW*0.2, stickY: CH*0.8, maxRadius: 30, vx: 0, vy: 0 };
 
-    // PC: Spacebar Dash
-    window.addEventListener('keydown', e => {
-        if(e.code === 'Space') useDash();
-    });
+    // --- Input Handling ---
+    const dashZone = document.getElementById('dashZone');
+    
+    // PC Keys
+    window.addEventListener('keydown', e => { if(e.code === 'Space') useDash(); });
 
-    // Mobile: Dash Button
-    dashZone.addEventListener('touchstart', e => {
-        e.preventDefault(); 
-        e.stopPropagation(); // 조이스틱 간섭 방지
-        useDash();
-    }, {passive:false});
-    dashZone.addEventListener('mousedown', e => {
-        e.preventDefault(); 
-        e.stopPropagation();
-        useDash();
-    });
+    // Mobile Dash
+    dashZone.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); useDash(); }, {passive:false});
+    dashZone.addEventListener('mousedown', e => { e.preventDefault(); e.stopPropagation(); useDash(); });
 
-    // Mouse Input (PC)
-    canvas.addEventListener('mousedown', e => {
+    // Global Movement Input
+    function inputStart(cx, cy) {
         if(gameState!=='PLAY') return;
         const rect = canvas.getBoundingClientRect();
-        // PC에서는 클릭한 곳이 바로 조이스틱 중심
-        startJoystick(e.clientX, e.clientY);
-    });
-    window.addEventListener('mousemove', e => {
-        moveJoystick(e.clientX, e.clientY);
-    });
-    window.addEventListener('mouseup', endJoystick);
-
-    // Touch Input (Mobile)
-    canvas.addEventListener('touchstart', e => {
-        e.preventDefault();
-        for(let i=0; i<e.changedTouches.length; i++) {
-            const t = e.changedTouches[i];
-            const rect = canvas.getBoundingClientRect();
-            // Check if touch is on Left Half
-            // (Right half is reserved for Dash button area mostly, but we strictly use dashZone div)
-            // But to be safe and allow "Floating Joystick" behavior:
-            // If it's NOT the dash zone, we treat it as joystick input on mobile
-            startJoystick(t.clientX, t.clientY);
-        }
-    }, {passive:false});
-
-    window.addEventListener('touchmove', e => {
-        e.preventDefault();
-        // 멀티터치 중 마지막 터치(혹은 첫번째)를 따라감. 단순화를 위해 첫번째 조이스틱 터치 추적
-        if(joystick.active) {
-            // Find the touch that started it? Here we just take the first one for simplicity
-            // In a robust engine we track touch IDs.
-            moveJoystick(e.touches[0].clientX, e.touches[0].clientY);
-        }
-    }, {passive:false});
-
-    window.addEventListener('touchend', e => {
-        if(e.touches.length === 0) endJoystick();
-    });
-
-    function startJoystick(cx, cy) {
-        if(gameState!=='PLAY') return;
-        const rect = canvas.getBoundingClientRect();
-        // 캔버스 내부 좌표로 변환
         const x = (cx - rect.left) * (CW / rect.width);
         const y = (cy - rect.top) * (CH / rect.height);
-
-        // 만약 오른쪽 하단 대쉬버튼 근처라면 조이스틱 발동 X (HTML 요소가 위에 있어서 이벤트 전파 안되겠지만 안전장치)
-        if(x > CW*0.6 && y > CH*0.7) return; 
+        
+        // 오른쪽 하단 대쉬 영역 제외하고는 조이스틱으로 인식
+        if(x > CW*0.6 && y > CH*0.75) return; 
 
         joystick.active = true;
         joystick.baseX = x; joystick.baseY = y;
@@ -315,7 +260,7 @@
         joystick.vx = 0; joystick.vy = 0;
     }
 
-    function moveJoystick(cx, cy) {
+    function inputMove(cx, cy) {
         if(!joystick.active || gameState!=='PLAY') return;
         const rect = canvas.getBoundingClientRect();
         const x = (cx - rect.left) * (CW / rect.width);
@@ -334,31 +279,40 @@
         else { joystick.vx=0; joystick.vy=0; }
     }
 
-    function endJoystick() {
-        joystick.active = false;
-        joystick.vx = 0; joystick.vy = 0;
-        // Reset Visual Position to default (Left Bottom)
-        joystick.baseX = CW*0.2; joystick.baseY = CH*0.85;
-        joystick.stickX = CW*0.2; joystick.stickY = CH*0.85;
+    function inputEnd() {
+        joystick.active = false; joystick.vx = 0; joystick.vy = 0;
+        joystick.baseX = CW*0.2; joystick.baseY = CH*0.8;
+        joystick.stickX = CW*0.2; joystick.stickY = CH*0.8;
     }
+
+    canvas.addEventListener('mousedown', e=>inputStart(e.clientX, e.clientY));
+    window.addEventListener('mousemove', e=>inputMove(e.clientX, e.clientY));
+    window.addEventListener('mouseup', inputEnd);
+    
+    canvas.addEventListener('touchstart', e=>{
+        e.preventDefault();
+        for(let i=0; i<e.changedTouches.length; i++) inputStart(e.changedTouches[i].clientX, e.changedTouches[i].clientY);
+    }, {passive:false});
+    
+    window.addEventListener('touchmove', e=>{
+        e.preventDefault();
+        if(joystick.active) inputMove(e.touches[0].clientX, e.touches[0].clientY);
+    }, {passive:false});
+    
+    window.addEventListener('touchend', e=>{ if(e.touches.length === 0) inputEnd(); });
 
     function useDash() {
         if(!player.dashReady || player.isDashing) return;
-        
         let dx = joystick.vx; let dy = joystick.vy;
         if(dx === 0 && dy === 0) { dy = -1; }
-
-        player.isDashing = true;
-        player.dashTime = player.dashDuration;
+        player.isDashing = true; player.dashTime = player.dashDuration;
         player.dashVx = dx; player.dashVy = dy;
-        player.dashReady = false;
-        player.dashCool = player.dashMaxCool;
-        
+        player.dashReady = false; player.dashCool = player.dashMaxCool;
         spawnText("DASH!", player.wx, player.wy, "#f1c40f", 12);
         updateDashUI();
     }
 
-    // --- Game Logic ---
+    // --- Entities ---
     const enemies = []; const bullets = []; const gems = []; const texts = []; const effects = [];
 
     function getObj(arr, Class) {
@@ -512,12 +466,12 @@
     class Effect {
         constructor() { this.active = false; }
         spawnEMP(wx, wy) { this.wx = wx; this.wy = wy; this.r = 0; this.maxR = 800; this.active = true; }
-        update() { this.r += 30; if(this.r > this.maxR) this.active = false; }
+        update() { this.r += 40; if(this.r > this.maxR) this.active = false; }
         draw() {
             const sx = this.wx - player.wx + CW/2; const sy = this.wy - player.wy + CH/2;
-            ctx.strokeStyle = '#0acde5'; ctx.lineWidth = 5;
+            ctx.strokeStyle = '#00d2d3'; ctx.lineWidth = 10;
             ctx.beginPath(); ctx.arc(sx, sy, this.r, 0, Math.PI*2); ctx.stroke();
-            ctx.fillStyle = 'rgba(10, 205, 229, 0.2)'; ctx.fill();
+            // Flash Effect (White Overlay on Canvas handled in main draw)
         }
     }
 
@@ -540,8 +494,7 @@
 
     function addCombo(n) {
         player.combo += n; player.comboTimer = 120;
-        comboEl.style.display = 'block';
-        comboLabel.style.display = 'block';
+        comboEl.style.display = 'block'; comboLabel.style.display = 'block';
         comboEl.innerText = player.combo;
         comboEl.style.transform = 'scale(1.3)';
         setTimeout(()=>comboEl.style.transform='scale(1)', 100);
@@ -557,10 +510,10 @@
     function activateHyper() {
         if(player.hyperType === HYPER_RAPID) {
             player.isHyper = true; player.hyperTime = 300;
-            document.body.classList.add('hyper-active');
             spawnText("RAPID FIRE", player.wx, player.wy-40, "#fffa65", 20);
         } 
         else if (player.hyperType === HYPER_EMP) {
+            screenShake = 30; // 지진 효과
             spawnEffect().spawnEMP(player.wx, player.wy);
             enemies.forEach(e => {
                 if(e.active && Math.hypot(e.wx - player.wx, e.wy - player.wy) < 500) {
@@ -572,7 +525,6 @@
         }
         else if (player.hyperType === HYPER_SHIELD) {
             player.isHyper = true; player.hyperTime = 300;
-            document.body.classList.add('hyper-active');
             spawnText("SHIELD ON", player.wx, player.wy-40, "#a29bfe", 20);
         }
     }
@@ -610,8 +562,6 @@
         if(player.exp >= player.nextExp) {
             player.level++; player.exp=0; 
             player.nextExp = Math.floor(player.nextExp*1.4);
-            // 하이퍼 모드 중에는 레벨업 창 안띄움 (버그 방지), 하이퍼 끝나면 체크? 
-            // 여기선 간단히 하이퍼 중이어도 레벨업은 하되, 하이퍼 교체 카드만 안나오게 처리했음.
             levelUp();
         }
         updateUI();
@@ -665,51 +615,50 @@
     }
 
     function drawJoystick() {
-        // Default visual (faint)
+        // Draw only on Mobile or when active
         if(!joystick.active) {
-            ctx.beginPath(); ctx.arc(CW*0.2, CH*0.85, 30, 0, Math.PI*2);
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)'; ctx.lineWidth = 2; ctx.stroke();
-            ctx.beginPath(); ctx.arc(CW*0.2, CH*0.85, 15, 0, Math.PI*2);
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.1)'; ctx.fill();
-        } else {
-            // Active visual (Bright)
-            ctx.beginPath(); ctx.arc(joystick.baseX, joystick.baseY, joystick.maxRadius, 0, Math.PI*2);
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'; ctx.lineWidth = 4; ctx.stroke();
-            ctx.beginPath(); ctx.arc(joystick.stickX, joystick.stickY, 20, 0, Math.PI*2);
-            ctx.fillStyle = '#0acde5'; ctx.fill();
+            // Draw faint hint on mobile
+            if('ontouchstart' in window) {
+                ctx.beginPath(); ctx.arc(CW*0.2, CH*0.8, 30, 0, Math.PI*2);
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)'; ctx.lineWidth = 2; ctx.stroke();
+            }
+            return;
         }
+        ctx.beginPath(); ctx.arc(joystick.baseX, joystick.baseY, joystick.maxRadius, 0, Math.PI*2);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)'; ctx.lineWidth = 4; ctx.stroke();
+        ctx.beginPath(); ctx.arc(joystick.stickX, joystick.stickY, 20, 0, Math.PI*2);
+        ctx.fillStyle = '#0acde5'; ctx.fill();
     }
 
     function update() {
         if(gameState!=='PLAY') return;
         frameCount++;
 
+        if(screenShake > 0) screenShake *= 0.9;
+        if(screenShake < 0.5) screenShake = 0;
+
         if(player.killTimer > 0) {
             player.killTimer--;
             if(player.killTimer <= 0) { player.killCount = 0; killMsg.style.display = 'none'; }
         }
 
-        // Dash Cooldown
         if(!player.dashReady) {
             player.dashCool--;
             if(player.dashCool <= 0) { player.dashReady = true; updateDashUI(); } 
             else if (frameCount % 60 === 0) { updateDashUI(); }
         }
 
-        // Dashing Logic
         if(player.isDashing) {
             player.wx += player.dashVx * 15;
             player.wy += player.dashVy * 15;
             player.dashTime--;
             if(player.dashTime <= 0) player.isDashing = false;
         } else {
-            // Normal Move
             const isMoving = joystick.active && (joystick.vx !== 0 || joystick.vy !== 0);
             const spd = (player.isHyper && player.hyperType===HYPER_RAPID) ? player.baseSpeed*1.5 : player.baseSpeed;
             player.wx += joystick.vx * spd;
             player.wy += joystick.vy * spd;
-            
-            // Fire
+
             const fr = (player.isHyper && player.hyperType===HYPER_RAPID) ? 4 : player.baseFireRate;
             if(isMoving && frameCount - player.lastShot > fr) {
                 let t=null, min=Infinity;
@@ -733,7 +682,6 @@
             player.hyperGauge = (player.hyperTime/300)*100;
             if(player.hyperTime<=0) {
                 player.isHyper=false; player.hyperGauge=0;
-                document.body.classList.remove('hyper-active');
             }
             updateUI();
         }
@@ -748,7 +696,16 @@
 
         const rate = (player.isHyper && player.hyperType===HYPER_RAPID) ? 5 : Math.max(15, 60-player.level);
         if(frameCount % rate === 0) getObj(enemies, Enemy).spawn(false);
-        if(frameCount % 600 === 0 && frameCount > 0) getObj(enemies, Enemy).spawn(true);
+        
+        // Boss Spawning Logic (Level Cap)
+        if(frameCount % 900 === 0 && player.level >= 3) {
+            const activeBosses = enemies.filter(e => e.active && e.isElite).length;
+            let maxBosses = 1;
+            if(player.level >= 9) maxBosses = 2;
+            if(player.level >= 18) maxBosses = 3;
+            
+            if(activeBosses < maxBosses) getObj(enemies, Enemy).spawn(true);
+        }
 
         bullets.forEach(b=>{
             if(b.active) {
@@ -764,9 +721,6 @@
                             updateUI(); b.active=false;
                             if(player.hp<=0) gameOver();
                         }
-                    } else if(d < player.grazeR + b.r && player.grazeCool<=0) {
-                        // Bullet Graze (Bonus)
-                        // 총알은 너무 많으니 가끔씩만 인정 or 점수만
                     }
                 } else {
                     enemies.forEach(e=>{
@@ -799,11 +753,19 @@
     }
 
     function draw() {
+        ctx.save();
+        
+        // EMP Screen Shake & Flash
+        if(screenShake > 0) {
+            const rx = (Math.random() - 0.5) * screenShake;
+            const ry = (Math.random() - 0.5) * screenShake;
+            ctx.translate(rx, ry);
+        }
+        
         drawGrid();
         
         // Graze Circle
-        ctx.strokeStyle = 'rgba(255, 250, 101, 0.2)'; 
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = 'rgba(255, 250, 101, 0.2)'; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.arc(CW/2, CH/2, player.grazeR, 0, Math.PI*2); ctx.stroke();
 
         gems.forEach(e=>{ if(e.active) e.draw(); });
@@ -834,6 +796,14 @@
             ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(bx - bw/2, by, bw, bh);
             ctx.fillStyle = '#ff7675'; ctx.fillRect(bx - bw/2, by, bw * hpPct, bh);
         }
+        
+        // White Flash Overlay
+        if(screenShake > 20) {
+            ctx.fillStyle = `rgba(255,255,255, ${screenShake/100})`;
+            ctx.fillRect(0,0,CW,CH);
+        }
+
+        ctx.restore();
         drawJoystick();
     }
 
@@ -848,7 +818,6 @@
         levelUpScreen.style.display='flex';
         cardsBox.innerHTML='';
         
-        // ** FIX: 하이퍼 모드 중에는 전술 교체 카드 안 뜨게 **
         const canSwitchHyper = (player.level % 3 === 0) && !player.isHyper;
 
         if(canSwitchHyper) {
