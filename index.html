@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Survival: 1-Coin Limit</title>
+    <title>Survival: Polished UI</title>
     <style>
         /* 선택 방지 */
         * { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; box-sizing: border-box; }
@@ -28,11 +28,20 @@
 
         #rightHud { position: absolute; right: 15px; top: 130px; height: 30%; display: flex; flex-direction: column; align-items: center; gap: 5px; }
         #currentType { color: #fff; font-size: 9px; margin-top: 5px; font-weight: 900; letter-spacing: 1px; text-shadow: 0 0 3px rgba(0,0,0,0.8); }
-        #hyperContainer { width: 14px; flex: 1; background: rgba(0,0,0,0.6); border: 1px solid #555; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column-reverse; box-shadow: 0 0 8px rgba(0,0,0,0.5); }
-        #hyperFill { width: 100%; height: 0%; background: linear-gradient(to top, #6c5ce7, #a29bfe); transition: height 0.1s linear; }
         
-        .gauge-charging #hyperContainer { box-shadow: 0 0 15px #00f3ff, 0 0 5px #fff inset; border-color: #fff; }
-        .gauge-charging #hyperFill { filter: brightness(1.5); background: linear-gradient(to top, #00f3ff, #fff); }
+        /* [수정 1] 게이지 스타일 & 충전 이펙트 완화 */
+        #hyperContainer { width: 14px; flex: 1; background: rgba(0,0,0,0.6); border: 1px solid #555; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column-reverse; box-shadow: 0 0 8px rgba(0,0,0,0.5); transition: box-shadow 0.1s; }
+        #hyperFill { width: 100%; height: 0%; background: linear-gradient(to top, #6c5ce7, #a29bfe); transition: height 0.1s linear, filter 0.1s; }
+        
+        /* 은은하게 빛나는 효과 (기존보다 약하게) */
+        .gauge-charging #hyperContainer { 
+            box-shadow: 0 0 10px rgba(0, 243, 255, 0.4), 0 0 2px rgba(255, 255, 255, 0.3) inset; 
+            border-color: rgba(255, 255, 255, 0.8); 
+        }
+        .gauge-charging #hyperFill { 
+            filter: brightness(1.2); /* 1.5 -> 1.2 로 감소 */
+            background: linear-gradient(to top, #00f3ff, #74b9ff); /* 색감 조정 */
+        }
 
         #dashZone { position: absolute; right: 30px; bottom: 100px; pointer-events: auto; display: flex; flex-direction: column; align-items: center; }
         #dashIcon { width: 70px; height: 70px; border-radius: 50%; border: 3px solid #fff; background: rgba(241, 196, 15, 0.2); display: flex; justify-content: center; align-items: center; color: white; font-weight: bold; font-size: 14px; box-shadow: 0 0 10px rgba(241, 196, 15, 0.3); transition: opacity 0.2s; cursor: pointer; }
@@ -40,8 +49,29 @@
         #dashIcon.cooldown { background: rgba(0,0,0,0.5); opacity: 0.4; border-color: #555; font-size: 24px;}
         #pcGuide { position: absolute; bottom: 20px; width: 100%; text-align: center; color: #666; font-size: 11px; pointer-events: none; font-weight: bold; }
 
-        .modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; flex-direction: column; justify-content: center; align-items: center; pointer-events: auto; z-index: 100; }
-        .card { background: #0f1218; color: #c8aa6e; width: 85%; margin: 8px; padding: 15px; border: 1px solid #c8aa6e; text-align: center; box-shadow: 0 0 10px rgba(200, 170, 110, 0.2); transition: transform 0.1s; cursor: pointer; }
+        /* [수정 3] 모달 배경 투명도 조절 & 블러 효과 */
+        .modal { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.4); /* 0.9 -> 0.4 로 투명하게 */
+            backdrop-filter: blur(4px);   /* 배경 블러 추가 */
+            display: none; flex-direction: column; justify-content: center; align-items: center; 
+            pointer-events: auto; z-index: 100; 
+        }
+
+        /* [수정 2] 카드 애니메이션 (촤라락) */
+        .card { 
+            background: #0f1218; color: #c8aa6e; width: 85%; margin: 8px; padding: 15px; 
+            border: 1px solid #c8aa6e; text-align: center; 
+            box-shadow: 0 0 10px rgba(200, 170, 110, 0.2); 
+            transition: transform 0.1s; cursor: pointer;
+            opacity: 0; /* 애니메이션 시작 전 숨김 */
+            transform: translateY(20px) scale(0.9);
+            animation: cardEntry 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+        @keyframes cardEntry {
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
         .card:active { transform: scale(0.98); background: #1e2328; }
         .card.hyper-card { border: 1px solid #0acde5; color: #0acde5; background: #0a1a20;}
 
@@ -57,7 +87,7 @@
             transition: transform 0.1s;
         }
         #rushBtn:active { transform: scale(0.95); }
-        #rushSubText { font-size: 12px; color: #666; margin-top: 5px; }
+        #rushSubText { font-size: 12px; color: #ccc; margin-top: 5px; } /* 밝은 배경 대비 색상 조정 */
 
         .hyper-active #gameContainer { animation: shake 0.2s infinite; }
         @keyframes shake { 0% { transform: translate(1px, 1px); } 50% { transform: translate(-1px, -1px); } 100% { transform: translate(1px, -1px); } }
@@ -83,19 +113,19 @@
     </div>
 
     <div id="levelUpScreen" class="modal">
-        <h2 id="levelUpTitle" style="color:#c8aa6e; margin-bottom:20px;">LEVEL UP!</h2>
+        <h2 id="levelUpTitle" style="color:#c8aa6e; margin-bottom:20px; text-shadow: 2px 2px 4px rgba(0,0,0,0.8);">LEVEL UP!</h2>
         <div id="cardsBox" style="width:100%; display:flex; flex-direction:column; align-items:center;"></div>
     </div>
 
     <div id="gameOverScreen" class="modal">
-        <div id="gameOverTitle">MISSION ENDED</div>
-        <div id="newRecordMsg">🏆 NEW RECORD! 🏆</div>
-        <h3 id="resultText" style="color:#fff; margin-bottom: 10px;"></h3>
+        <div id="gameOverTitle" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.8);">MISSION ENDED</div>
+        <div id="newRecordMsg" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">🏆 NEW RECORD! 🏆</div>
+        <h3 id="resultText" style="color:#fff; margin-bottom: 10px; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);"></h3>
         <div id="rushTimerBox">
-            <div id="rushLabel" style="font-size:12px; color:#aaa;">RUSH MODE AVAILABLE</div>
-            <div id="rushCount">5</div>
+            <div id="rushLabel" style="font-size:12px; color:#ddd; text-shadow: 1px 1px 1px rgba(0,0,0,0.5);">RUSH MODE AVAILABLE</div>
+            <div id="rushCount" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">5</div>
             <button id="rushBtn" onclick="rushStart()">⚡ RUSH START</button>
-            <div id="rushSubText">(Keep Stats / Lv.1 Start)</div>
+            <div id="rushSubText" style="text-shadow: 1px 1px 1px rgba(0,0,0,0.5);">(Keep Stats / Lv.1 Start)</div>
         </div>
     </div>
 </div>
@@ -135,6 +165,7 @@
     const levelUpTitle = document.getElementById('levelUpTitle');
     const cardsBox = document.getElementById('cardsBox');
     const gameOverScreen = document.getElementById('gameOverScreen');
+    const gameOverTitle = document.getElementById('gameOverTitle');
     const resultText = document.getElementById('resultText');
     const newRecordMsg = document.getElementById('newRecordMsg');
     const rushCountEl = document.getElementById('rushCount');
@@ -152,7 +183,7 @@
     let frameCount = 0;
     let screenShake = 0;
     let rushTimerInterval = null;
-    let hasRushed = false; // [핵심] 이번 판에 Rush를 썼는지 체크하는 플래그
+    let hasRushed = false; 
 
     const HYPER_RAPID = 0;
     const HYPER_EMP = 1;
@@ -617,6 +648,7 @@
             ];
             hyperOpts.forEach(item => {
                 const div = document.createElement('div'); div.className = `card ${item.c}`; div.innerHTML = `<h3>${item.t}</h3><p>${item.d}</p>`;
+                div.style.animationDelay = `${0.1}s`; 
                 div.onclick = () => { item.f(); showMessage(item.t+" EQUIPPED", "#a29bfe"); levelUpScreen.style.display='none'; gameState='PLAY'; }; cardsBox.appendChild(div);
             });
         } else {
@@ -636,12 +668,12 @@
                 const r = Math.floor(Math.random()*pool.length);
                 const item = pool.splice(r, 1)[0]; 
                 const div = document.createElement('div'); div.className = 'card'; div.innerHTML=`<h3>${item.t}</h3><p>${item.d}</p>`;
+                div.style.animationDelay = `${i * 0.1}s`; 
                 div.onclick=()=>{ item.f(); levelUpScreen.style.display='none'; gameState='PLAY'; }; cardsBox.appendChild(div);
             }
         }
     }
 
-    // --- [Logic Update] 1-Time Rush Mode ---
     function gameOver() {
         gameState='GAMEOVER';
         let isNewRecord = false;
