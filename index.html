@@ -3,12 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Survival: Ghost Joystick</title>
+    <title>Survival: Graze System</title>
     <style>
-        /* 모든 요소 선택 방지 */
-        * {
-            user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none; -webkit-touch-callout: none;
-        }
+        /* 선택 방지 */
+        * { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
 
         body {
             margin: 0; background: #000;
@@ -33,7 +31,8 @@
         /* Header */
         .header-ui { width: 100%; display: flex; flex-direction: column; gap: 5px; }
         .score-row { 
-            display: flex; justify-content: space-between; font-size: 14px; font-weight: bold; color: #c8aa6e; text-shadow: 1px 1px 2px #000;
+            display: flex; justify-content: space-between; font-size: 14px; font-weight: bold; color: #c8aa6e; 
+            text-shadow: 1px 1px 2px #000;
         }
         #expBarContainer { width: 100%; height: 6px; background: #1e2328; border: 1px solid #c8aa6e; margin-top: 2px; }
         #expBar { height: 100%; width: 0%; background: #0acde5; transition: width 0.1s; }
@@ -47,24 +46,29 @@
         }
         @keyframes slideIn { 0% { opacity: 0; transform: translateX(-20px); } 100% { opacity: 1; transform: translateX(0); } }
 
-        /* Combo */
+        /* Graze (Center) */
         #centerMsg { position: absolute; top: 20%; left: 50%; transform: translateX(-50%); text-align: center; width: 100%; pointer-events: none; z-index: 5; }
         #comboCount { 
             font-size: 48px; font-weight: 900; color: #fffa65; text-shadow: 0 0 15px rgba(255, 165, 2, 0.8);
             display: none; transition: transform 0.05s;
         }
-        #comboLabel { font-size: 14px; color: #fff; letter-spacing: 2px; display:none;}
+        #comboLabel { 
+            font-size: 12px; color: #81ecec; letter-spacing: 3px; font-weight: bold; display:none;
+            text-shadow: 0 0 5px #00cec9;
+        }
 
-        /* Right HUD */
+        /* Right HUD (Minimalist) */
         #rightHud {
             position: absolute; right: 15px; top: 130px; height: 30%; 
             display: flex; flex-direction: column; align-items: center; gap: 5px;
         }
-        #hyperLabel { color: #0acde5; font-size: 10px; font-weight: 900; letter-spacing: 1px; text-shadow: 1px 1px 2px black; text-align: center; }
-        #currentType { color: #c8aa6e; font-size: 9px; margin-top: 5px; font-weight: bold; background: rgba(0,0,0,0.5); padding: 2px 4px; border-radius: 4px; }
+        #currentType { 
+            color: #fff; font-size: 9px; margin-top: 5px; font-weight: 900; letter-spacing: 1px;
+            text-shadow: 0 0 3px rgba(0,0,0,0.8);
+        }
         #hyperContainer {
-            width: 16px; flex: 1; background: rgba(0,0,0,0.6); border: 2px solid #555; border-radius: 10px;
-            overflow: hidden; display: flex; flex-direction: column-reverse; box-shadow: 0 0 8px rgba(0,0,0,0.8);
+            width: 14px; flex: 1; background: rgba(0,0,0,0.6); border: 1px solid #555; border-radius: 8px;
+            overflow: hidden; display: flex; flex-direction: column-reverse; box-shadow: 0 0 8px rgba(0,0,0,0.5);
         }
         #hyperFill { width: 100%; height: 0%; background: linear-gradient(to top, #6c5ce7, #a29bfe); transition: height 0.1s linear; }
 
@@ -102,7 +106,7 @@
         .card:active { transform: scale(0.98); background: #1e2328; }
         .card.hyper-card { border: 1px solid #0acde5; color: #0acde5; background: #0a1a20;}
 
-        /* Hyper Shaking */
+        /* FX */
         .hyper-active #gameContainer { animation: shake 0.2s infinite; }
         @keyframes shake { 0% { transform: translate(1px, 1px); } 50% { transform: translate(-1px, -1px); } 100% { transform: translate(1px, -1px); } }
 
@@ -130,15 +134,14 @@
 
         <div id="centerMsg">
             <div id="comboCount">0</div>
-            <div id="comboLabel">COMBO</div>
+            <div id="comboLabel">GRAZE</div>
         </div>
 
         <div id="rightHud">
-            <div id="hyperLabel">R<br>GAUGE</div>
             <div id="hyperContainer">
                 <div id="hyperFill"></div>
             </div>
-            <div id="currentType">TYPE: RAPID</div>
+            <div id="currentType">RAPID</div>
         </div>
 
         <div id="dashZone">
@@ -164,7 +167,6 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     
-    // UI Refs
     const expBar = document.getElementById('expBar');
     const lvText = document.getElementById('lvText');
     const hpText = document.getElementById('hpText');
@@ -217,13 +219,11 @@
         dashReady: true, dashCool: 0, dashMaxCool: 300, 
         isDashing: false, dashTime: 0, dashDuration: 15, dashVx: 0, dashVy: 0,
         pendingLevelUps: 0,
-        // Shield FX vars
         shieldAngle: 0, shieldPulse: 0 
     };
 
     let joystick = { active: false, baseX: CW*0.2, baseY: CH*0.8, stickX: CW*0.2, stickY: CH*0.8, maxRadius: 30, vx: 0, vy: 0 };
 
-    // --- Input Handling ---
     const dashZone = document.getElementById('dashZone');
     window.addEventListener('keydown', e => { if(e.code === 'Space') useDash(); });
     dashZone.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); useDash(); }, {passive:false});
@@ -267,9 +267,7 @@
         updateDashUI();
     }
 
-    // --- Entities ---
     const enemies = []; const bullets = []; const gems = []; const texts = []; const effects = [];
-
     function getObj(arr, Class) { let o = arr.find(x=>!x.active); if(!o) { o=new Class(); arr.push(o); } return o; }
 
     class Enemy {
@@ -423,7 +421,7 @@
     function addScore(val) { player.score += val; scoreVal.innerText = player.score.toLocaleString(); }
     function updateUI() { expBar.style.width = (player.exp/player.nextExp)*100 + "%"; lvText.innerText = "LV. " + player.level; hpText.innerText = "HP: " + Math.floor(player.hp); hyperFill.style.height = player.hyperGauge + "%"; }
     function updateDashUI() { if(player.dashReady) { dashIcon.classList.remove('cooldown'); dashIcon.classList.add('ready'); dashIcon.innerText = "DASH"; } else { dashIcon.classList.remove('ready'); dashIcon.classList.add('cooldown'); dashIcon.innerText = Math.ceil(player.dashCool/60); } }
-    function updateTypeLabel() { if(player.hyperType === HYPER_RAPID) { typeLabel.innerText = "TYPE: RAPID"; hyperFill.style.background = 'linear-gradient(to top, #ff9f43, #ff6b81)'; } else if(player.hyperType === HYPER_EMP) { typeLabel.innerText = "TYPE: EMP"; hyperFill.style.background = 'linear-gradient(to top, #00d2d3, #54a0ff)'; } else { typeLabel.innerText = "TYPE: SHIELD"; hyperFill.style.background = 'linear-gradient(to top, #6c5ce7, #a29bfe)'; } }
+    function updateTypeLabel() { if(player.hyperType === HYPER_RAPID) { typeLabel.innerText = "RAPID"; hyperFill.style.background = 'linear-gradient(to top, #ff9f43, #ff6b81)'; } else if(player.hyperType === HYPER_EMP) { typeLabel.innerText = "EMP"; hyperFill.style.background = 'linear-gradient(to top, #00d2d3, #54a0ff)'; } else { typeLabel.innerText = "SHIELD"; hyperFill.style.background = 'linear-gradient(to top, #6c5ce7, #a29bfe)'; } }
 
     function drawGrid() {
         ctx.fillStyle = '#0f1218'; ctx.fillRect(0, 0, CW, CH);
@@ -435,7 +433,9 @@
     }
 
     function drawJoystick() {
+        // 투명도 극한 하향 (0.02)
         if(!joystick.active) { if('ontouchstart' in window) { ctx.beginPath(); ctx.arc(CW*0.2, CH*0.8, 30, 0, Math.PI*2); ctx.strokeStyle = 'rgba(255, 255, 255, 0.02)'; ctx.lineWidth = 2; ctx.stroke(); } return; }
+        // 활성 시에도 옅게 (0.1)
         ctx.beginPath(); ctx.arc(joystick.baseX, joystick.baseY, joystick.maxRadius, 0, Math.PI*2); ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)'; ctx.lineWidth = 4; ctx.stroke();
         ctx.beginPath(); ctx.arc(joystick.stickX, joystick.stickY, 20, 0, Math.PI*2); ctx.fillStyle = 'rgba(10, 205, 229, 0.1)'; ctx.fill();
     }
@@ -518,7 +518,7 @@
 
         if(player.isHyper && player.hyperType === HYPER_SHIELD) {
             const pulseOffset = Math.sin(player.shieldPulse) * 3;
-            const baseRadius = player.r + 25;
+            const baseRadius = player.r + 25; // 쉴드 크기 확대 (+8 -> +25)
             ctx.strokeStyle = 'rgba(162, 155, 254, 0.8)'; ctx.lineWidth = 2;
             ctx.beginPath(); ctx.arc(CW/2, CH/2, baseRadius + pulseOffset, 0, Math.PI*2); ctx.stroke();
             ctx.save(); ctx.translate(CW/2, CH/2); ctx.rotate(player.shieldAngle);
