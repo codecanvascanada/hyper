@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Survival: Perfect UI</title>
+    <title>Survival: Vertical UI</title>
     <style>
         body {
             margin: 0; background: #000;
@@ -44,7 +44,7 @@
         #expBar { height: 100%; width: 0%; background: #00d2d3; transition: width 0.1s; }
         .stats { display: flex; justify-content: space-between; font-weight: bold; font-size: 13px; text-shadow: 1px 1px 2px black; margin-top: 2px;}
 
-        /* Combo */
+        /* Center Combo */
         #centerMsg {
             position: absolute; top: 20%; left: 50%; transform: translateX(-50%);
             text-align: center; width: 100%; pointer-events: none;
@@ -55,30 +55,31 @@
             display: none; transition: transform 0.05s;
         }
 
-        /* Right Side HUD (Gauge + Text) */
+        /* Right Side HUD (Fixed) */
         #rightHud {
             position: absolute;
             right: 15px;
             bottom: 40px;
-            height: 35%; /* 게이지 높이 */
+            height: 35%; /* 전체 높이 */
             display: flex;
-            align-items: center; /* 수직 중앙 정렬 */
-            gap: 8px; /* 텍스트와 게이지 사이 간격 */
+            flex-direction: column; /* 세로 정렬 (글씨 위, 게이지 아래) */
+            align-items: center; /* 중앙 정렬 */
+            gap: 5px;
         }
 
         #hyperLabel {
             color: #a29bfe;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 900;
-            letter-spacing: 2px;
-            transform: rotate(-90deg); /* 세로로 회전 */
-            white-space: nowrap; /* 줄바꿈 방지 */
+            letter-spacing: 1px;
             text-shadow: 1px 1px 2px black;
+            text-align: center;
+            /* writing-mode: vertical-rl; 만약 글씨도 세로로 세우고 싶으면 주석 해제 */
         }
 
         #hyperContainer {
             width: 14px;
-            height: 100%;
+            flex: 1; /* 남은 높이 모두 사용 */
             background: rgba(0,0,0,0.6);
             border: 2px solid #555; border-radius: 10px;
             overflow: hidden; display: flex; flex-direction: column-reverse;
@@ -134,8 +135,7 @@
         </div>
 
         <div id="rightHud">
-            <div id="hyperLabel">HYPER GAUGE</div>
-            <div id="hyperContainer">
+            <div id="hyperLabel">HYPER<br>GAUGE</div> <div id="hyperContainer">
                 <div id="hyperFill"></div>
             </div>
         </div>
@@ -196,7 +196,6 @@
         showHpTimer: 0
     };
 
-    // --- ULTRA TIGHT JOYSTICK ---
     let joystick = {
         active: false,
         baseX: 0, baseY: 0,
@@ -218,7 +217,6 @@
         const dx = x - joystick.baseX;
         const dy = y - joystick.baseY;
         const dist = Math.hypot(dx, dy);
-        
         const limit = Math.min(dist, joystick.maxRadius);
         const angle = Math.atan2(dy, dx);
         joystick.stickX = joystick.baseX + Math.cos(angle) * limit;
@@ -245,7 +243,6 @@
     window.addEventListener('touchmove', e=>{if(joystick.active){e.preventDefault(); inputMove(e.touches[0].clientX, e.touches[0].clientY)}}, {passive:false});
     window.addEventListener('touchend', inputEnd);
 
-    // Entities
     const enemies = [];
     const bullets = [];
     const gems = [];
