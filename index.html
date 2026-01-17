@@ -3,40 +3,113 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Survival: Web Audio API</title>
+    <title>Survival: Audio Pooling</title>
     <style>
-        /* 선택 방지 및 스타일 유지 */
+        /* 선택 방지 */
         * { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
-        body { margin: 0; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; font-family: 'Segoe UI', sans-serif; color: white; touch-action: none; }
-        #gameContainer { position: relative; width: 100vh; max-width: 56.25vh; height: 100vh; background: #0f1218; overflow: hidden; box-shadow: 0 0 30px rgba(0,210,211,0.2); }
+
+        body {
+            margin: 0; background: #000;
+            display: flex; justify-content: center; align-items: center;
+            height: 100vh; overflow: hidden;
+            font-family: 'Segoe UI', sans-serif; color: white; touch-action: none;
+        }
+
+        #gameContainer {
+            position: relative; width: 100vh; max-width: 56.25vh; height: 100vh;
+            background: #0f1218; overflow: hidden; box-shadow: 0 0 30px rgba(0,210,211,0.2);
+        }
+
         canvas { display: block; width: 100%; height: 100%; }
-        #uiLayer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; padding: 15px; box-sizing: border-box; display: flex; flex-direction: column; }
+
+        #uiLayer {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; padding: 15px; box-sizing: border-box;
+            display: flex; flex-direction: column;
+        }
+
+        /* Header */
         .header-ui { width: 100%; display: flex; flex-direction: column; gap: 5px; }
-        .score-row { display: flex; justify-content: space-between; font-size: 14px; font-weight: bold; color: #c8aa6e; text-shadow: 1px 1px 2px #000; }
+        .score-row { 
+            display: flex; justify-content: space-between; font-size: 14px; font-weight: bold; color: #c8aa6e; 
+            text-shadow: 1px 1px 2px #000;
+        }
         #expBarContainer { width: 100%; height: 6px; background: #1e2328; border: 1px solid #c8aa6e; margin-top: 2px; }
         #expBar { height: 100%; width: 0%; background: #0acde5; transition: width 0.1s; }
         .stats { display: flex; justify-content: space-between; font-size: 12px; color: #a0a0a0; margin-top: 4px; }
+
+        /* Kill Message */
         #killMsg { position: absolute; top: 90px; left: 15px; text-align: left; pointer-events: none; display: none; }
-        #killText { font-size: 20px; font-weight: bold; color: #ff6b81; text-shadow: 1px 1px 2px rgba(0,0,0,0.8); font-family: 'Segoe UI', sans-serif; letter-spacing: 0.5px; animation: slideIn 0.15s ease-out; }
+        #killText {
+            font-size: 20px; font-weight: bold; color: #ff6b81; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            font-family: 'Segoe UI', sans-serif; letter-spacing: 0.5px; animation: slideIn 0.15s ease-out;
+        }
         @keyframes slideIn { 0% { opacity: 0; transform: translateX(-20px); } 100% { opacity: 1; transform: translateX(0); } }
+
+        /* Graze */
         #centerMsg { position: absolute; top: 20%; left: 50%; transform: translateX(-50%); text-align: center; width: 100%; pointer-events: none; z-index: 5; }
-        #comboCount { font-size: 48px; font-weight: 900; color: #fffa65; text-shadow: 0 0 15px rgba(255, 165, 2, 0.8); display: none; transition: transform 0.05s; }
-        #comboLabel { font-size: 12px; color: #81ecec; letter-spacing: 3px; font-weight: bold; display:none; text-shadow: 0 0 5px #00cec9; }
-        #rightHud { position: absolute; right: 15px; top: 130px; height: 30%; display: flex; flex-direction: column; align-items: center; gap: 5px; }
-        #currentType { color: #fff; font-size: 9px; margin-top: 5px; font-weight: 900; letter-spacing: 1px; text-shadow: 0 0 3px rgba(0,0,0,0.8); }
-        #hyperContainer { width: 14px; flex: 1; background: rgba(0,0,0,0.6); border: 1px solid #555; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column-reverse; box-shadow: 0 0 8px rgba(0,0,0,0.5); }
+        #comboCount { 
+            font-size: 48px; font-weight: 900; color: #fffa65; text-shadow: 0 0 15px rgba(255, 165, 2, 0.8);
+            display: none; transition: transform 0.05s;
+        }
+        #comboLabel { 
+            font-size: 12px; color: #81ecec; letter-spacing: 3px; font-weight: bold; display:none;
+            text-shadow: 0 0 5px #00cec9;
+        }
+
+        /* Right HUD */
+        #rightHud {
+            position: absolute; right: 15px; top: 130px; height: 30%; 
+            display: flex; flex-direction: column; align-items: center; gap: 5px;
+        }
+        #currentType { 
+            color: #fff; font-size: 9px; margin-top: 5px; font-weight: 900; letter-spacing: 1px;
+            text-shadow: 0 0 3px rgba(0,0,0,0.8);
+        }
+        #hyperContainer {
+            width: 14px; flex: 1; background: rgba(0,0,0,0.6); border: 1px solid #555; border-radius: 8px;
+            overflow: hidden; display: flex; flex-direction: column-reverse; box-shadow: 0 0 8px rgba(0,0,0,0.5);
+        }
         #hyperFill { width: 100%; height: 0%; background: linear-gradient(to top, #6c5ce7, #a29bfe); transition: height 0.1s linear; }
-        #dashZone { position: absolute; right: 30px; bottom: 100px; pointer-events: auto; display: flex; flex-direction: column; align-items: center; }
-        #dashIcon { width: 70px; height: 70px; border-radius: 50%; border: 3px solid #fff; background: rgba(241, 196, 15, 0.2); display: flex; justify-content: center; align-items: center; color: white; font-weight: bold; font-size: 14px; box-shadow: 0 0 10px rgba(241, 196, 15, 0.3); transition: opacity 0.2s; cursor: pointer; }
+
+        /* Dash Button */
+        #dashZone {
+            position: absolute; right: 30px; bottom: 100px;
+            pointer-events: auto; display: flex; flex-direction: column; align-items: center;
+        }
+        #dashIcon {
+            width: 70px; height: 70px; border-radius: 50%;
+            border: 3px solid #fff; background: rgba(241, 196, 15, 0.2);
+            display: flex; justify-content: center; align-items: center;
+            color: white; font-weight: bold; font-size: 14px;
+            box-shadow: 0 0 10px rgba(241, 196, 15, 0.3);
+            transition: opacity 0.2s; cursor: pointer;
+        }
         #dashIcon.ready { background: rgba(241, 196, 15, 0.6); opacity: 1; border-color: #fff; }
         #dashIcon.cooldown { background: rgba(0,0,0,0.5); opacity: 0.4; border-color: #555; font-size: 24px;}
+        
         #pcGuide { position: absolute; bottom: 20px; width: 100%; text-align: center; color: #666; font-size: 11px; pointer-events: none; font-weight: bold; }
-        .modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; flex-direction: column; justify-content: center; align-items: center; pointer-events: auto; z-index: 100; }
-        .card { background: #0f1218; color: #c8aa6e; width: 85%; margin: 8px; padding: 15px; border: 1px solid #c8aa6e; text-align: center; box-shadow: 0 0 10px rgba(200, 170, 110, 0.2); transition: transform 0.1s; cursor: pointer; }
+
+        /* Modals */
+        .modal {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); display: none;
+            flex-direction: column; justify-content: center; align-items: center;
+            pointer-events: auto; z-index: 100;
+        }
+        .card {
+            background: #0f1218; color: #c8aa6e; width: 85%; margin: 8px; padding: 15px;
+            border: 1px solid #c8aa6e; text-align: center;
+            box-shadow: 0 0 10px rgba(200, 170, 110, 0.2);
+            transition: transform 0.1s; cursor: pointer;
+        }
         .card:active { transform: scale(0.98); background: #1e2328; }
         .card.hyper-card { border: 1px solid #0acde5; color: #0acde5; background: #0a1a20;}
+
+        /* FX */
         .hyper-active #gameContainer { animation: shake 0.2s infinite; }
         @keyframes shake { 0% { transform: translate(1px, 1px); } 50% { transform: translate(-1px, -1px); } 100% { transform: translate(1px, -1px); } }
+
     </style>
 </head>
 <body>
@@ -47,21 +120,34 @@
     <div id="uiLayer">
         <div class="header-ui">
             <div class="score-row">
-                <span>CS: <span id="scoreVal">0</span></span><span>BEST: <span id="bestVal">0</span></span>
+                <span>CS: <span id="scoreVal">0</span></span>
+                <span>BEST: <span id="bestVal">0</span></span>
             </div>
             <div id="expBarContainer"><div id="expBar"></div></div>
             <div class="stats">
-                <span id="lvText">LV. 1</span><span id="hpText" style="color:#ff7675;">HP: 100</span>
+                <span id="lvText">LV. 1</span>
+                <span id="hpText" style="color:#ff7675;">HP: 100</span>
             </div>
         </div>
         
         <div id="killMsg"><div id="killText">DOUBLE KILL</div></div>
-        <div id="centerMsg"><div id="comboCount">0</div><div id="comboLabel">GRAZE</div></div>
+
+        <div id="centerMsg">
+            <div id="comboCount">0</div>
+            <div id="comboLabel">GRAZE</div>
+        </div>
+
         <div id="rightHud">
-            <div id="hyperContainer"><div id="hyperFill"></div></div>
+            <div id="hyperContainer">
+                <div id="hyperFill"></div>
+            </div>
             <div id="currentType">RAPID</div>
         </div>
-        <div id="dashZone"><div id="dashIcon" class="ready">DASH</div></div>
+
+        <div id="dashZone">
+            <div id="dashIcon" class="ready">DASH</div>
+        </div>
+
         <div id="pcGuide">[PC] Mouse: Move / Space: Dash</div>
     </div>
 
@@ -82,83 +168,75 @@
     const ctx = canvas.getContext('2d');
     
     // ==========================================
-    // [Sound Manager: Web Audio API Optimization]
+    // [Sound System: Audio Pooling]
+    // 렉 없이 연사하기 위해 미리 채널을 만들어두는 방식
     // ==========================================
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    const audioCtx = new AudioContext();
     
-    const soundBuffers = {}; // 메모리에 로드된 사운드 데이터 저장소
-    let isBgmPlaying = false;
+    class SoundPool {
+        constructor(src, count, vol) {
+            this.pool = [];
+            this.index = 0;
+            // 지정된 개수(count)만큼 미리 Audio 객체를 생성해서 메모리에 로드
+            for (let i = 0; i < count; i++) {
+                const audio = new Audio(src);
+                audio.volume = vol;
+                // 미리 로드 유도 (모바일/네트워크 환경 대응)
+                audio.preload = 'auto'; 
+                this.pool.push(audio);
+            }
+        }
 
-    // 1. 사운드 파일 로드 및 디코딩 (게임 시작 시 한 번만 실행)
-    async function loadSound(name, url) {
-        try {
-            const response = await fetch(url);
-            const arrayBuffer = await response.arrayBuffer();
-            const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-            soundBuffers[name] = audioBuffer;
-            console.log(`Sound loaded: ${name}`);
-        } catch (e) {
-            console.error(`Failed to load sound ${name}:`, e);
+        play() {
+            // 현재 인덱스의 오디오를 가져옴
+            const audio = this.pool[this.index];
+            
+            // 재생 중이라도 강제로 처음으로 돌려서 재생 (반응성 최우선)
+            // 혹은 재생 중이면 다음 채널을 쓸 수도 있지만, 
+            // 여기서는 단순 회전 방식을 사용합니다.
+            if (!audio.paused) {
+                audio.currentTime = 0;
+            }
+            
+            audio.play().catch(() => {
+                // 브라우저 정책으로 인해 첫 클릭 전에는 실패할 수 있음
+            });
+
+            // 다음 채널로 인덱스 이동 (순환)
+            this.index = (this.index + 1) % this.pool.length;
         }
     }
 
-    // 2. 효과음 재생 (메모리에서 꺼내서 재생 - 렉 없음)
-    function playSfx(name) {
-        if (!soundBuffers[name]) return;
-        
-        // 오디오 컨텍스트가 멈춰있으면(초기 상태) 깨움
-        if (audioCtx.state === 'suspended') {
-            audioCtx.resume();
-        }
+    // 1. 효과음 풀 생성 (총알은 자주 쏘니까 5개, 타격은 5개)
+    // 주의: 파일명이 서버에 있는 것과 정확히 일치해야 함 (shoot.ogg)
+    const sfxShoot = new SoundPool('shoot.ogg', 5, 0.3);
+    const sfxHit = new SoundPool('hit.ogg', 5, 0.4);
 
-        const source = audioCtx.createBufferSource();
-        source.buffer = soundBuffers[name];
-        
-        // 볼륨 노드 연결
-        const gainNode = audioCtx.createGain();
-        gainNode.gain.value = 0.4; // 효과음 볼륨 0.4
-        
-        source.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-        
-        // 재생 속도 랜덤 조절 (타격감 상승)
-        if(name === 'shoot') source.playbackRate.value = 0.9 + Math.random() * 0.2;
-        if(name === 'hit') source.playbackRate.value = 0.8 + Math.random() * 0.4;
-
-        source.start(0);
-    }
-
-    // 3. BGM 재생 (HTML Audio 사용 - 스트리밍)
+    // 2. 배경음악 (스트리밍)
     const bgm = new Audio('hyper.mp3');
-    bgm.loop = true;
+    bgm.loop = true; 
     bgm.volume = 0.5;
 
-    function initAudio() {
-        // 브라우저 정책상 사용자 입력 후 오디오 활성화
-        if (audioCtx.state === 'suspended') {
-            audioCtx.resume();
-        }
-        if (!isBgmPlaying) {
+    let bgmStarted = false;
+
+    // 사용자 상호작용 시 BGM 시작 (크롬 정책 대응)
+    function initAudioContext() {
+        if (!bgmStarted) {
             bgm.play().then(() => {
-                isBgmPlaying = true;
-            }).catch(e => console.log("BGM wait interact"));
+                bgmStarted = true;
+                console.log("BGM Started");
+            }).catch(e => console.log("Waiting for user interaction..."));
         }
     }
 
-    // 사운드 파일 미리 로드
-    loadSound('shoot', 'shoot.ogg');
-    loadSound('hit', 'hit.ogg');
-
-    // 사용자 입력 감지 시 오디오 시작
-    window.addEventListener('click', initAudio);
-    window.addEventListener('touchstart', initAudio);
-    window.addEventListener('keydown', initAudio);
+    window.addEventListener('click', initAudioContext);
+    window.addEventListener('touchstart', initAudioContext);
+    window.addEventListener('keydown', initAudioContext);
 
     // ==========================================
     // [Game Logic]
     // ==========================================
 
+    // UI Refs
     const expBar = document.getElementById('expBar');
     const lvText = document.getElementById('lvText');
     const hpText = document.getElementById('hpText');
@@ -228,6 +306,7 @@
         const y = (cy - rect.top) * (CH / rect.height);
         if(x > CW*0.6 && y > CH*0.75) return; 
         joystick.active = true; joystick.baseX = x; joystick.baseY = y; joystick.stickX = x; joystick.stickY = y; joystick.vx = 0; joystick.vy = 0;
+        initAudioContext(); // 터치 시 오디오 시작 시도
     }
     function inputMove(cx, cy) {
         if(!joystick.active || gameState!=='PLAY') return;
@@ -256,6 +335,7 @@
         player.dashVx = dx; player.dashVy = dy;
         player.dashReady = false; player.dashCool = player.dashMaxCool;
         spawnText("DASH!", player.wx, player.wy, "#f1c40f", 12);
+        // 대쉬 소리가 있다면 여기서 재생: sfxDash.play();
         updateDashUI();
     }
 
@@ -411,8 +491,8 @@
         e.hp = 0; e.active = false; addScore(e.scoreVal); getObj(gems, Gem).spawn(e.wx, e.wy, e.xp, e.isElite);
         if(e.isElite && !isEmp) { spawnText("SHUTDOWN", e.wx, e.wy, "#fdcb6e", 20); addHyper(20); }
         
-        // [SOUND] OGG로 재생
-        playSfx('hit');
+        // [SOUND] Play Hit Sound via Pool
+        sfxHit.play();
 
         player.killCount++; player.killTimer = 180; updateKillStreak();
     }
@@ -473,8 +553,8 @@
                     const a = Math.atan2(t.wy-player.wy, t.wx-player.wx); const spread = 0.2; const startA = a - (spread*(player.bulletCount-1))/2;
                     for(let i=0; i<player.bulletCount; i++) spawnBullet(player.wx, player.wy, startA + spread*i, false);
                     
-                    // [SOUND] OGG로 재생
-                    playSfx('shoot');
+                    // [SOUND] Play Shoot Sound via Pool
+                    sfxShoot.play();
 
                     player.lastShot = frameCount;
                 }
@@ -589,7 +669,7 @@
                 {t:"치명타 UP", d:"확률 +5%", f:()=>{player.critChance+=0.05}}, {t:"멀티샷", d:"탄환 +1", f:()=>{player.bulletCount++}},
                 {t:"대쉬 쿨다운", d:"재사용 대기시간 -1초", f:()=>{player.dashMaxCool = Math.max(180, player.dashMaxCool - 60);}}, 
                 {t:"체력회복", d:"HP +30", f:()=>{player.hp=Math.min(player.maxHp, player.hp+30)}},
-                {t:"자석 강화", d:"흡수 범위 +15", f:()=>{player.magnet += 15;}} // 자석 추가 (+15)
+                {t:"자석 강화", d:"흡수 범위 +15", f:()=>{player.magnet += 15;}} 
             ];
             
             let pool = [...statOpts];
