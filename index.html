@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Survival: Final Touch</title>
+    <title>Survival: Smart System</title>
     <style>
         body {
             margin: 0; background: #000;
@@ -41,18 +41,18 @@
         #expBar { height: 100%; width: 0%; background: #0acde5; transition: width 0.1s; }
         .stats { display: flex; justify-content: space-between; font-size: 12px; color: #a0a0a0; margin-top: 4px; }
 
-        /* Kill Message */
+        /* Kill Message (Faster) */
         #killMsg {
-            position: absolute; top: 85px; left: 15px; 
+            position: absolute; top: 90px; left: 15px; 
             text-align: left; pointer-events: none; display: none;
         }
         #killText {
-            font-size: 18px; font-weight: bold; color: #ff6b81;
+            font-size: 20px; font-weight: bold; color: #ff6b81;
             text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
             font-family: 'Segoe UI', sans-serif; letter-spacing: 0.5px;
-            animation: slideIn 0.2s ease-out;
+            animation: slideIn 0.15s ease-out;
         }
-        @keyframes slideIn { 0% { opacity: 0; transform: translateX(-10px); } 100% { opacity: 1; transform: translateX(0); } }
+        @keyframes slideIn { 0% { opacity: 0; transform: translateX(-20px); } 100% { opacity: 1; transform: translateX(0); } }
 
         /* Combo */
         #centerMsg {
@@ -66,11 +66,12 @@
         }
         #comboLabel { font-size: 14px; color: #fff; letter-spacing: 2px; display:none;}
 
-        /* Right HUD (Moved Up) */
+        /* Right HUD (Moved Up Significantly) */
         #rightHud {
-            position: absolute; right: 20px; 
-            bottom: 140px; /* 위로 올림 */
-            height: 35%; 
+            position: absolute; 
+            right: 15px; 
+            top: 130px; /* 위쪽으로 배치 */
+            height: 30%; 
             display: flex; flex-direction: column; align-items: center; gap: 5px;
         }
         #hyperLabel { color: #0acde5; font-size: 10px; font-weight: 900; letter-spacing: 1px; text-shadow: 1px 1px 2px black; text-align: center; }
@@ -81,10 +82,10 @@
         }
         #hyperFill { width: 100%; height: 0%; background: linear-gradient(to top, #6c5ce7, #a29bfe); transition: height 0.1s linear; }
 
-        /* Dash Button (Moved Up) */
+        /* Dash Button */
         #dashZone {
             position: absolute; right: 30px; 
-            bottom: 80px; /* 위로 올림 */
+            bottom: 100px; /* 대쉬 버튼도 위로 조금 올림 */
             pointer-events: auto; display: flex; flex-direction: column; align-items: center;
         }
         #dashIcon {
@@ -231,9 +232,10 @@
         combo: 0, comboTimer: 0,
         lastShot: 0, showHpTimer: 0,
         killCount: 0, killTimer: 0,
-        // Dash: 5초(300)으로 시작 (너프)
         dashReady: true, dashCool: 0, dashMaxCool: 300, 
-        isDashing: false, dashTime: 0, dashDuration: 15, dashVx: 0, dashVy: 0
+        isDashing: false, dashTime: 0, dashDuration: 15, dashVx: 0, dashVy: 0,
+        // New: Pending Level Up
+        pendingLevelUps: 0 
     };
 
     let joystick = { active: false, baseX: CW*0.2, baseY: CH*0.8, stickX: CW*0.2, stickY: CH*0.8, maxRadius: 30, vx: 0, vy: 0 };
@@ -241,14 +243,11 @@
     // --- Input Handling ---
     const dashZone = document.getElementById('dashZone');
     
-    // PC Keys
     window.addEventListener('keydown', e => { if(e.code === 'Space') useDash(); });
 
-    // Mobile Dash
     dashZone.addEventListener('touchstart', e => { e.preventDefault(); e.stopPropagation(); useDash(); }, {passive:false});
     dashZone.addEventListener('mousedown', e => { e.preventDefault(); e.stopPropagation(); useDash(); });
 
-    // Global Movement Input
     function inputStart(cx, cy) {
         if(gameState!=='PLAY') return;
         const rect = canvas.getBoundingClientRect();
@@ -461,7 +460,7 @@
             if(sx<-20||sx>CW+20||sy<-20||sy>CH+20) return;
             ctx.beginPath(); 
             if(this.isRare) { ctx.fillStyle='#f1c40f'; ctx.arc(sx, sy, 10, 0, Math.PI*2); } 
-            else { ctx.fillStyle='#55efc4'; ctx.arc(sx, sy, 6, 0, Math.PI*2); }
+            else { ctx.fillStyle='#0acde5'; ctx.arc(sx, sy, 6, 0, Math.PI*2); }
             ctx.fill();
         }
     }
@@ -556,8 +555,8 @@
             killMsg.style.display = 'block';
             killText.style.animation = 'none';
             killText.offsetHeight; 
-            killText.style.animation = 'slideIn 0.2s ease-out';
-            setTimeout(() => { if(player.killTimer <= 0) killMsg.style.display = 'none'; }, 2000);
+            killText.style.animation = 'slideIn 0.15s ease-out';
+            setTimeout(() => { if(player.killTimer <= 0) killMsg.style.display = 'none'; }, 800);
         }
     }
 
@@ -566,7 +565,15 @@
         if(player.exp >= player.nextExp) {
             player.level++; player.exp=0; 
             player.nextExp = Math.floor(player.nextExp*1.4);
-            levelUp();
+            
+            // --- SMART LEVEL UP LOGIC ---
+            // 하이퍼 게이지가 90 이상이거나 이미 하이퍼 상태면 레벨업 대기
+            if(player.hyperGauge >= 90 || player.isHyper) {
+                player.pendingLevelUps++;
+                spawnText("LEVEL PENDING!", player.wx, player.wy-60, "#fff", 10);
+            } else {
+                levelUp();
+            }
         }
         updateUI();
     }
@@ -621,13 +628,14 @@
     function drawJoystick() {
         // Very faint background
         if(!joystick.active) {
-            // Hint for mobile
+            // Hint for mobile (Faint)
             if('ontouchstart' in window) {
                 ctx.beginPath(); ctx.arc(CW*0.2, CH*0.8, 30, 0, Math.PI*2);
                 ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)'; ctx.lineWidth = 2; ctx.stroke();
             }
             return;
         }
+        // Active Joystick (Low Opacity)
         ctx.beginPath(); ctx.arc(joystick.baseX, joystick.baseY, joystick.maxRadius, 0, Math.PI*2);
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)'; ctx.lineWidth = 4; ctx.stroke();
         ctx.beginPath(); ctx.arc(joystick.stickX, joystick.stickY, 20, 0, Math.PI*2);
@@ -687,6 +695,12 @@
             if(player.hyperTime<=0) {
                 player.isHyper=false; player.hyperGauge=0;
                 document.body.classList.remove('hyper-active');
+                
+                // Hyper Ended -> Check Pending Levels
+                if(player.pendingLevelUps > 0) {
+                    player.pendingLevelUps--;
+                    levelUp();
+                }
             }
             updateUI();
         }
@@ -842,7 +856,6 @@
                 {t:"연사속도 UP", d:"공격속도 +10%", f:()=>{player.baseFireRate*=0.9}},
                 {t:"치명타 UP", d:"확률 +5%", f:()=>{player.critChance+=0.05}},
                 {t:"멀티샷", d:"탄환 +1", f:()=>{player.bulletCount++}},
-                // 대쉬 쿨다운 업그레이드 추가
                 {t:"대쉬 쿨다운", d:"재사용 대기시간 -0.5초", f:()=>{player.dashMaxCool = Math.max(60, player.dashMaxCool - 30);}},
                 {t:"체력회복", d:"HP +30", f:()=>{player.hp=Math.min(player.maxHp, player.hp+30)}},
             ];
