@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Survival: Advanced Shield FX</title>
+    <title>Survival: Ghost Joystick</title>
     <style>
         /* 모든 요소 선택 방지 */
         * {
@@ -435,9 +435,9 @@
     }
 
     function drawJoystick() {
-        if(!joystick.active) { if('ontouchstart' in window) { ctx.beginPath(); ctx.arc(CW*0.2, CH*0.8, 30, 0, Math.PI*2); ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)'; ctx.lineWidth = 2; ctx.stroke(); } return; }
-        ctx.beginPath(); ctx.arc(joystick.baseX, joystick.baseY, joystick.maxRadius, 0, Math.PI*2); ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)'; ctx.lineWidth = 4; ctx.stroke();
-        ctx.beginPath(); ctx.arc(joystick.stickX, joystick.stickY, 20, 0, Math.PI*2); ctx.fillStyle = 'rgba(10, 205, 229, 0.3)'; ctx.fill();
+        if(!joystick.active) { if('ontouchstart' in window) { ctx.beginPath(); ctx.arc(CW*0.2, CH*0.8, 30, 0, Math.PI*2); ctx.strokeStyle = 'rgba(255, 255, 255, 0.02)'; ctx.lineWidth = 2; ctx.stroke(); } return; }
+        ctx.beginPath(); ctx.arc(joystick.baseX, joystick.baseY, joystick.maxRadius, 0, Math.PI*2); ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)'; ctx.lineWidth = 4; ctx.stroke();
+        ctx.beginPath(); ctx.arc(joystick.stickX, joystick.stickY, 20, 0, Math.PI*2); ctx.fillStyle = 'rgba(10, 205, 229, 0.1)'; ctx.fill();
     }
 
     function update() {
@@ -467,7 +467,6 @@
 
         if(player.isHyper) {
             player.hyperTime--; player.hyperGauge = (player.hyperTime/300)*100;
-            // 쉴드 애니메이션 값 업데이트
             if(player.hyperType === HYPER_SHIELD) { player.shieldAngle += 0.05; player.shieldPulse += 0.1; }
             if(player.hyperTime<=0) {
                 player.isHyper=false; player.hyperGauge=0; document.body.classList.remove('hyper-active');
@@ -517,26 +516,16 @@
         ctx.strokeStyle = 'rgba(255, 250, 101, 0.2)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(CW/2, CH/2, player.grazeR, 0, Math.PI*2); ctx.stroke();
         gems.forEach(e=>{ if(e.active) e.draw(); }); effects.forEach(e=>{ if(e.active) e.draw(); }); bullets.forEach(e=>{ if(e.active) e.draw(); }); enemies.forEach(e=>{ if(e.active) e.draw(); }); texts.forEach(e=>{ if(e.active) e.draw(); });
 
-        // --- New Shield FX ---
         if(player.isHyper && player.hyperType === HYPER_SHIELD) {
-            const pulseOffset = Math.sin(player.shieldPulse) * 3; // 진동
-            const baseRadius = player.r + 8;
-            
-            // 1. Outer Pulsing Ring
+            const pulseOffset = Math.sin(player.shieldPulse) * 3;
+            const baseRadius = player.r + 25;
             ctx.strokeStyle = 'rgba(162, 155, 254, 0.8)'; ctx.lineWidth = 2;
             ctx.beginPath(); ctx.arc(CW/2, CH/2, baseRadius + pulseOffset, 0, Math.PI*2); ctx.stroke();
-            
-            // 2. Inner Rotating Energy segments (Flickering)
             ctx.save(); ctx.translate(CW/2, CH/2); ctx.rotate(player.shieldAngle);
             ctx.strokeStyle = `rgba(108, 92, 231, ${0.3 + Math.random()*0.3})`; ctx.lineWidth = 4;
-            for(let i=0; i<3; i++) {
-                ctx.beginPath(); ctx.arc(0, 0, baseRadius - 2, (Math.PI*2/3)*i, (Math.PI*2/3)*i + 1.5); ctx.stroke();
-            }
+            for(let i=0; i<3; i++) { ctx.beginPath(); ctx.arc(0, 0, baseRadius - 2, (Math.PI*2/3)*i, (Math.PI*2/3)*i + 1.5); ctx.stroke(); }
             ctx.restore();
-
-            // 3. Faint Inner Glow fill
-            ctx.fillStyle = 'rgba(162, 155, 254, 0.1)';
-            ctx.beginPath(); ctx.arc(CW/2, CH/2, baseRadius + pulseOffset, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = 'rgba(162, 155, 254, 0.1)'; ctx.beginPath(); ctx.arc(CW/2, CH/2, baseRadius + pulseOffset, 0, Math.PI*2); ctx.fill();
         }
         
         ctx.fillStyle = (player.isHyper && player.hyperType===HYPER_RAPID) ? '#fffa65' : player.color;
