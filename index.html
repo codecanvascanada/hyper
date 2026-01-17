@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Survival: Rush Mode</title>
+    <title>Survival: Bug Fixes</title>
     <style>
-        /* 기본 설정 */
+        /* 선택 방지 */
         * { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; box-sizing: border-box; }
         body { margin: 0; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; font-family: 'Segoe UI', sans-serif; color: white; touch-action: none; }
         
@@ -28,7 +28,7 @@
         #expBar { height: 100%; width: 0%; background: #0acde5; transition: width 0.1s; }
         .stats { display: flex; justify-content: space-between; font-size: 12px; color: #a0a0a0; margin-top: 4px; }
 
-        /* [수정 1, 5] 통합 메시지 시스템 (Info Msg) */
+        /* 통합 메시지 시스템 (Info Msg) */
         #infoMsg { 
             position: absolute; top: 80px; left: 15px; text-align: left; 
             pointer-events: none; opacity: 0; transition: opacity 0.1s;
@@ -38,7 +38,6 @@
             text-shadow: 1px 1px 3px rgba(0,0,0,0.9);
             font-family: 'Segoe UI', sans-serif; letter-spacing: 0.5px;
         }
-        /* 메시지 등장 애니메이션 */
         .pop-in { animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         @keyframes popIn { 0% { transform: scale(0.8) translateX(-20px); opacity: 0; } 100% { transform: scale(1) translateX(0); opacity: 1; } }
 
@@ -66,7 +65,7 @@
         .card:active { transform: scale(0.98); background: #1e2328; }
         .card.hyper-card { border: 1px solid #0acde5; color: #0acde5; background: #0a1a20;}
 
-        /* [수정 2, 3, 4] Game Over Screen Styling */
+        /* Game Over Screen */
         #gameOverTitle { color: #a29bfe; font-size: 32px; font-weight: 900; margin-bottom: 10px; letter-spacing: 2px; }
         #newRecordMsg { color: #fffa65; font-size: 18px; font-weight: bold; margin-bottom: 20px; display: none; animation: blink 0.5s infinite alternate; }
         @keyframes blink { from { opacity: 1; } to { opacity: 0.5; } }
@@ -160,7 +159,7 @@
     const hpText = document.getElementById('hpText');
     const scoreVal = document.getElementById('scoreVal');
     const bestVal = document.getElementById('bestVal');
-    const infoMsg = document.getElementById('infoMsg'); // killMsg -> infoMsg
+    const infoMsg = document.getElementById('infoMsg');
     const infoText = document.getElementById('infoText');
     const comboEl = document.getElementById('comboCount');
     const comboLabel = document.getElementById('comboLabel');
@@ -260,22 +259,16 @@
         updateDashUI();
     }
 
-    // --- [수정 1] 통합 메시지 표시 함수 ---
     let msgTimer = null;
     function showMessage(text, color) {
         infoText.innerText = text;
         infoText.style.color = color;
         infoMsg.style.opacity = 1;
-        
-        // 애니메이션 리셋
         infoText.classList.remove('pop-in');
         void infoText.offsetWidth; // trigger reflow
         infoText.classList.add('pop-in');
-
         if(msgTimer) clearTimeout(msgTimer);
-        msgTimer = setTimeout(() => {
-            infoMsg.style.opacity = 0;
-        }, 600); // 0.6초 후 사라짐
+        msgTimer = setTimeout(() => { infoMsg.style.opacity = 0; }, 600);
     }
 
     let enemies = []; let bullets = []; let gems = []; let texts = []; let effects = [];
@@ -616,22 +609,17 @@
         }
     }
 
-    // --- [수정 3] Rush Mode Logic ---
     function gameOver() {
         gameState='GAMEOVER';
-        
         let isNewRecord = false;
         if(player.score > highScore) { 
             highScore = player.score; 
             localStorage.setItem('survival_highscore', highScore);
             isNewRecord = true;
         }
-        
-        // UI Update
         newRecordMsg.style.display = isNewRecord ? 'block' : 'none';
         resultText.innerText = `SCORE: ${player.score.toLocaleString()}\nBEST: ${parseInt(highScore).toLocaleString()}`;
         
-        // Rush Mode Timer
         let timeLeft = 5;
         rushCountEl.innerText = timeLeft;
         document.getElementById('rushBtn').innerText = "⚡ RUSH START";
@@ -644,7 +632,6 @@
             rushCountEl.innerText = timeLeft;
             if(timeLeft <= 0) {
                 clearInterval(rushTimerInterval);
-                // Time Over -> Hard Reset logic next start
                 document.getElementById('rushBtn').innerText = "RESTART (Lv.1)";
                 rushCountEl.innerText = "";
             }
@@ -655,16 +642,12 @@
         if(rushTimerInterval) clearInterval(rushTimerInterval);
         const canRush = document.getElementById('rushBtn').innerText.includes("RUSH");
         
-        // Reset Entities
         enemies.length = 0; bullets.length = 0; gems.length = 0; texts.length = 0; effects.length = 0;
         player.wx = 0; player.wy = 0; joystick.active = false;
         
         if(canRush) {
-            // Soft Reset (Keep Level, Gauge, Stats)
             player.hp = player.maxHp;
-            // Gauge is kept
         } else {
-            // Hard Reset
             player.hp = 100; player.maxHp = 100; player.level = 1; player.exp = 0; player.nextExp = 10;
             player.score = 0; player.damage = 15; player.fireRate = 25; player.baseFireRate = 25;
             player.bulletCount = 1; player.critChance = 0.15; player.magnet = 20;
@@ -672,11 +655,19 @@
             player.dashMaxCool = 600;
         }
         
-        // Common Reset
+        // **[Bug Fix]** 초기화 로직
+        player.lastShot = 0; 
         player.dashReady = true; player.dashCool = 0;
-        player.combo = 0; player.killCount = 0;
+        player.combo = 0; player.comboTimer = 0;
+        player.killCount = 0; player.killTimer = 0;
         frameCount = 0; 
         
+        // **[Bug Fix]** UI 잔상 제거
+        comboEl.style.display = 'none';
+        comboLabel.style.display = 'none';
+        killMsg.style.display = 'none';
+        infoMsg.style.opacity = 0;
+
         gameOverScreen.style.display = 'none';
         gameState = 'PLAY';
         updateUI(); updateTypeLabel(); updateDashUI();
