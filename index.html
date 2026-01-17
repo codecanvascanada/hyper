@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Survival: Balanced Magnet</title>
+    <title>Survival: Crit & Pierce</title>
     <style>
         /* 선택 방지 */
         * { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
@@ -210,7 +210,6 @@
         critChance: 0.15, critDamage: 2.0,
         fireRate: 25, baseFireRate: 25,
         bulletCount: 1,
-        // 자석 초기값 20 (기본 몸체 범위)
         magnet: 20, 
         level: 1, exp: 0, nextExp: 10,
         score: 0,
@@ -218,7 +217,6 @@
         combo: 0, comboTimer: 0,
         lastShot: 0, showHpTimer: 0,
         killCount: 0, killTimer: 0,
-        // Dash: 10초(600프레임) 쿨타임 시작
         dashReady: true, dashCool: 0, dashMaxCool: 600, 
         isDashing: false, dashTime: 0, dashDuration: 15, dashVx: 0, dashVy: 0,
         pendingLevelUps: 0,
@@ -270,7 +268,6 @@
         updateDashUI();
     }
 
-    // --- Entities ---
     const enemies = []; const bullets = []; const gems = []; const texts = []; const effects = [];
     function getObj(arr, Class) { let o = arr.find(x=>!x.active); if(!o) { o=new Class(); arr.push(o); } return o; }
 
@@ -281,12 +278,11 @@
             this.wx = player.wx + Math.cos(angle)*dist; this.wy = player.wy + Math.sin(angle)*dist;
             this.isElite = isElite; this.active = true; this.grazeCool = 0;
             
-            // --- 난이도 스케일링 로직 ---
             let speedBonus = 0;
-            if(player.level > 5) speedBonus += (player.level * 0.05); // 기본 증가
-            if(player.level >= 15) speedBonus += 0.8; // 1차 벽
-            if(player.level >= 30) speedBonus += 1.2; // 2차 벽
-            if(player.level >= 50) speedBonus += 2.0; // 3차 벽
+            if(player.level > 5) speedBonus += (player.level * 0.05);
+            if(player.level >= 15) speedBonus += 0.8;
+            if(player.level >= 30) speedBonus += 1.2;
+            if(player.level >= 50) speedBonus += 2.0;
 
             if(isElite) {
                 this.hp = 120 + player.level*30; this.maxHp = this.hp; 
@@ -346,8 +342,21 @@
         constructor() { this.active=false; }
         spawn(wx, wy, a, isEnemyBullet=false) {
             this.wx=wx; this.wy=wy; this.isEnemyBullet = isEnemyBullet;
-            if(isEnemyBullet) { this.vx = Math.cos(a)*4; this.vy = Math.sin(a)*4; this.life = 300; this.r = 6; this.color = '#ff9f43'; } 
-            else { this.vx = Math.cos(a)*8; this.vy = Math.sin(a)*8; this.life = 50; this.r = (player.isHyper && player.hyperType===HYPER_RAPID) ? 8 : 4; this.color = (player.isHyper && player.hyperType===HYPER_RAPID) ? '#fffa65' : '#0acde5'; }
+            if(isEnemyBullet) { 
+                this.vx = Math.cos(a)*4; this.vy = Math.sin(a)*4; this.life = 300; this.r = 6; this.color = '#ff9f43'; this.isCrit=false;
+            } else { 
+                this.vx = Math.cos(a)*8; this.vy = Math.sin(a)*8; this.life = 50;
+                // [변경] 생성 시 크리티컬 여부 결정
+                this.isCrit = Math.random() < player.critChance;
+                this.r = (player.isHyper && player.hyperType===HYPER_RAPID) ? 8 : 4;
+                if(this.isCrit) {
+                    this.color = '#ff4757'; // Red
+                    this.r += 2; 
+                } else {
+                    this.color = (player.isHyper && player.hyperType===HYPER_RAPID) ? '#fffa65' : '#0acde5';
+                }
+                this.hitList = []; // 관통 시 중복 타격 방지용
+            }
             this.active=true;
         }
         update() { this.wx+=this.vx; this.wy+=this.vy; this.life--; if(this.life<=0) this.active=false; }
@@ -364,7 +373,6 @@
         spawn(wx, wy, v, isRare) { this.wx=wx; this.wy=wy; this.val=v; this.isRare = isRare; this.active=true; }
         update() {
             const dist = Math.hypot(player.wx-this.wx, player.wy-this.wy);
-            // 자석 로직: 업그레이드 전엔 매우 작음
             let range = player.magnet; 
             let spd = 7;
             if(dist < range) {
@@ -410,7 +418,7 @@
     function activateHyper() {
         if(player.hyperType === HYPER_RAPID) { player.isHyper = true; player.hyperTime = 300; document.body.classList.add('hyper-active'); spawnText("RAPID FIRE", player.wx, player.wy-40, "#fffa65", 20); } 
         else if (player.hyperType === HYPER_EMP) { screenShake = 30; spawnEffect().spawnEMP(player.wx, player.wy); enemies.forEach(e => { if(e.active && Math.hypot(e.wx - player.wx, e.wy - player.wy) < 500) killEnemy(e, true); }); bullets.forEach(b => { if(b.active && b.isEnemyBullet) b.active = false; }); player.hyperGauge = 0; spawnText("EMP BLAST", player.wx, player.wy-40, "#00d2d3", 20); }
-        else if (player.hyperType === HYPER_SHIELD) { player.isHyper = true; player.hyperTime = 300; document.body.classList.add('hyper-active'); spawnText("SHIELD ON", player.wx, player.wy-40, "#a29bfe", 20); }
+        else if (player.hyperType === HYPER_SHIELD) { player.isHyper = true; player.hyperTime = 600; /* [상향] 10초 지속 */ document.body.classList.add('hyper-active'); spawnText("SHIELD ON", player.wx, player.wy-40, "#a29bfe", 20); }
     }
 
     function killEnemy(e, isEmp=false) {
@@ -448,9 +456,7 @@
     }
 
     function drawJoystick() {
-        // 투명도 극한 하향 (0.02)
         if(!joystick.active) { if('ontouchstart' in window) { ctx.beginPath(); ctx.arc(CW*0.2, CH*0.8, 30, 0, Math.PI*2); ctx.strokeStyle = 'rgba(255, 255, 255, 0.02)'; ctx.lineWidth = 2; ctx.stroke(); } return; }
-        // 활성 시에도 옅게 (0.1)
         ctx.beginPath(); ctx.arc(joystick.baseX, joystick.baseY, joystick.maxRadius, 0, Math.PI*2); ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)'; ctx.lineWidth = 4; ctx.stroke();
         ctx.beginPath(); ctx.arc(joystick.stickX, joystick.stickY, 20, 0, Math.PI*2); ctx.fillStyle = 'rgba(10, 205, 229, 0.1)'; ctx.fill();
     }
@@ -482,7 +488,11 @@
 
         if(player.isHyper) {
             player.hyperTime--; player.hyperGauge = (player.hyperTime/300)*100;
-            if(player.hyperType === HYPER_SHIELD) { player.shieldAngle += 0.05; player.shieldPulse += 0.1; }
+            // Shield duration is 600, so map it correctly visually
+            if(player.hyperType === HYPER_SHIELD) {
+                player.hyperGauge = (player.hyperTime/600)*100;
+                player.shieldAngle += 0.05; player.shieldPulse += 0.1;
+            }
             if(player.hyperTime<=0) {
                 player.isHyper=false; player.hyperGauge=0; document.body.classList.remove('hyper-active');
                 if(player.pendingLevelUps > 0) { player.pendingLevelUps--; levelUp(); }
@@ -512,9 +522,26 @@
                         if(e.active) {
                             const d = Math.hypot(b.wx-e.wx, b.wy-e.wy);
                             if(d < b.r + e.r) {
-                                let isCrit = Math.random() < player.critChance; let finalDmg = player.damage * ((player.isHyper && player.hyperType===HYPER_RAPID)?2:1); if(isCrit) finalDmg *= player.critDamage;
-                                e.hp -= finalDmg; let color = isCrit ? '#ff4757' : 'white'; let size = isCrit ? 20 : 12; let txt = Math.floor(finalDmg) + (isCrit ? "!" : ""); spawnText(txt, e.wx, e.wy, color, size);
-                                const kbPower = e.isElite ? 0.3 : 4.0; e.wx += b.vx * 0.5 * kbPower; e.wy += b.vy * 0.5 * kbPower; if(e.hp<=0) killEnemy(e); b.active=false;
+                                // [수정] 충돌 로직: hitList에 없어야만 데미지
+                                if (!b.hitList.includes(e)) {
+                                    let finalDmg = player.damage * ((player.isHyper && player.hyperType===HYPER_RAPID)?2:1);
+                                    if(b.isCrit) finalDmg *= player.critDamage;
+                                    
+                                    e.hp -= finalDmg; 
+                                    let color = b.isCrit ? '#ff4757' : 'white'; let size = b.isCrit ? 20 : 12; let txt = Math.floor(finalDmg) + (b.isCrit ? "!" : ""); 
+                                    spawnText(txt, e.wx, e.wy, color, size);
+                                    
+                                    const kbPower = e.isElite ? 0.3 : 4.0; e.wx += b.vx * 0.5 * kbPower; e.wy += b.vy * 0.5 * kbPower; 
+                                    if(e.hp<=0) killEnemy(e);
+                                    
+                                    // [중요] 관통 로직
+                                    if (b.isCrit) {
+                                        b.hitList.push(e); // 이 적은 다시 안 때림
+                                        // active=false 안함 (관통)
+                                    } else {
+                                        b.active = false; // 일반 총알은 소멸
+                                    }
+                                }
                             }
                         }
                     })
@@ -576,17 +603,16 @@
             const statOpts = [
                 {t:"공격력 UP", d:"데미지 +5", f:()=>{player.damage+=5}}, {t:"연사속도 UP", d:"공격속도 +10%", f:()=>{player.baseFireRate*=0.9}},
                 {t:"치명타 UP", d:"확률 +5%", f:()=>{player.critChance+=0.05}}, {t:"멀티샷", d:"탄환 +1", f:()=>{player.bulletCount++}},
-                {t:"대쉬 쿨다운", d:"재사용 대기시간 -1초", f:()=>{player.dashMaxCool = Math.max(180, player.dashMaxCool - 60);}}, // 쿨감 강화
+                {t:"대쉬 쿨다운", d:"재사용 대기시간 -1초", f:()=>{player.dashMaxCool = Math.max(180, player.dashMaxCool - 60);}}, 
                 {t:"체력회복", d:"HP +30", f:()=>{player.hp=Math.min(player.maxHp, player.hp+30)}},
-                {t:"자석 강화", d:"흡수 범위 +15", f:()=>{player.magnet += 15;}} // 자석 추가 (+15 수치 명시)
+                {t:"자석 강화", d:"흡수 범위 +15", f:()=>{player.magnet += 15;}} // 자석 추가 (+15)
             ];
             
-            // 중복 없는 3개 뽑기
             let pool = [...statOpts];
             for(let i=0; i<3; i++) {
                 if(pool.length === 0) break;
                 const r = Math.floor(Math.random()*pool.length);
-                const item = pool.splice(r, 1)[0]; // 뽑아서 제거 (중복방지)
+                const item = pool.splice(r, 1)[0]; 
                 const div = document.createElement('div'); div.className = 'card'; div.innerHTML=`<h3>${item.t}</h3><p>${item.d}</p>`;
                 div.onclick=()=>{ item.f(); levelUpScreen.style.display='none'; gameState='PLAY'; }; cardsBox.appendChild(div);
             }
