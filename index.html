@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Survival: Pure Stats</title>
+    <title>Survival: Balanced Magnet</title>
     <style>
         /* 선택 방지 */
         * { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
@@ -210,7 +210,7 @@
         critChance: 0.15, critDamage: 2.0,
         fireRate: 25, baseFireRate: 25,
         bulletCount: 1,
-        // 자석 초기값 20 (기본 몸체 범위 수준)
+        // 자석 초기값 20 (기본 몸체 범위)
         magnet: 20, 
         level: 1, exp: 0, nextExp: 10,
         score: 0,
@@ -364,9 +364,9 @@
         spawn(wx, wy, v, isRare) { this.wx=wx; this.wy=wy; this.val=v; this.isRare = isRare; this.active=true; }
         update() {
             const dist = Math.hypot(player.wx-this.wx, player.wy-this.wy);
+            // 자석 로직: 업그레이드 전엔 매우 작음
             let range = player.magnet; 
             let spd = 7;
-            // 하이퍼 자석 기능 삭제됨 (오직 스탯에 의존)
             if(dist < range) {
                 const a = Math.atan2(player.wy-this.wy, player.wx-this.wx);
                 this.wx += Math.cos(a)*spd; this.wy += Math.sin(a)*spd; if(dist < 20) { addExp(this.val); this.active=false; }
@@ -578,7 +578,7 @@
                 {t:"치명타 UP", d:"확률 +5%", f:()=>{player.critChance+=0.05}}, {t:"멀티샷", d:"탄환 +1", f:()=>{player.bulletCount++}},
                 {t:"대쉬 쿨다운", d:"재사용 대기시간 -1초", f:()=>{player.dashMaxCool = Math.max(180, player.dashMaxCool - 60);}}, // 쿨감 강화
                 {t:"체력회복", d:"HP +30", f:()=>{player.hp=Math.min(player.maxHp, player.hp+30)}},
-                {t:"자석 강화", d:"아이템 흡수 범위 증가", f:()=>{player.magnet += 30;}} // 자석 추가
+                {t:"자석 강화", d:"흡수 범위 +15", f:()=>{player.magnet += 15;}} // 자석 추가 (+15 수치 명시)
             ];
             
             // 중복 없는 3개 뽑기
