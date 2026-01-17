@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Survival: Clean UI</title>
+    <title>Survival: Action Dash</title>
     <style>
         body {
             margin: 0; background: #0a0a12;
@@ -43,28 +43,18 @@
         
         .stats { display: flex; justify-content: space-between; font-size: 12px; color: #a0a0a0; margin-top: 4px; }
 
-        /* Kill Streak Message (Changed) */
+        /* Kill Streak Message */
         #killMsg {
-            position: absolute; 
-            top: 85px; /* 헤더 UI 바로 아래 */
-            left: 15px; 
-            text-align: left; 
-            pointer-events: none;
-            display: none;
+            position: absolute; top: 85px; left: 15px; 
+            text-align: left; pointer-events: none; display: none;
         }
         #killText {
-            font-size: 18px; 
-            font-weight: bold;
-            color: #ff6b81; /* 깔끔한 붉은색 */
+            font-size: 18px; font-weight: bold; color: #ff6b81;
             text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
-            font-family: 'Segoe UI', sans-serif; /* 일반 폰트 */
-            letter-spacing: 0.5px;
+            font-family: 'Segoe UI', sans-serif; letter-spacing: 0.5px;
             animation: slideIn 0.2s ease-out;
         }
-        @keyframes slideIn { 
-            0% { opacity: 0; transform: translateX(-10px); } 
-            100% { opacity: 1; transform: translateX(0); } 
-        }
+        @keyframes slideIn { 0% { opacity: 0; transform: translateX(-10px); } 100% { opacity: 1; transform: translateX(0); } }
 
         /* Right Side HUD */
         #rightHud {
@@ -81,8 +71,7 @@
         }
         #hyperContainer {
             width: 12px; flex: 1; 
-            background: rgba(0,0,0,0.8);
-            border: 1px solid #444; 
+            background: rgba(0,0,0,0.8); border: 1px solid #444; 
             overflow: hidden; display: flex; flex-direction: column-reverse;
         }
         #hyperFill {
@@ -91,21 +80,20 @@
             transition: height 0.1s linear;
         }
 
-        /* Flash Button */
-        #flashBtn {
-            position: absolute; right: 20px; bottom: 40px;
-            width: 60px; height: 60px;
-            background: radial-gradient(#f1c40f, #d35400);
-            border: 3px solid #fff; border-radius: 50%;
-            pointer-events: auto; 
-            display: flex; justify-content: center; align-items: center;
-            font-weight: bold; color: white; font-size: 12px;
-            box-shadow: 0 0 15px rgba(243, 156, 18, 0.6);
-            user-select: none;
+        /* Dash Indicator (Right Side Overlay) */
+        #dashZone {
+            position: absolute; right: 0; bottom: 0; width: 40%; height: 30%;
+            pointer-events: none; /* 터치는 캔버스에서 처리, 시각적 표시만 */
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            opacity: 0.3;
         }
-        #flashBtn:active { transform: scale(0.9); }
-        #flashBtn.cooldown { filter: grayscale(100%); opacity: 0.5; }
-        #flashTimer { position: absolute; font-size: 20px; font-weight: bold; }
+        #dashIcon {
+            width: 50px; height: 50px; border-radius: 50%;
+            border: 2px solid #fff; background: rgba(255,255,255,0.1);
+            display: flex; justify-content: center; align-items: center;
+            color: white; font-weight: bold; font-size: 10px;
+        }
+        .cooldown-overlay { opacity: 0.2; }
 
         /* Modals */
         .modal {
@@ -156,9 +144,9 @@
             <div id="currentType">TYPE: RAPID</div>
         </div>
 
-        <div id="flashBtn">
-            <span>FLASH</span>
-            <div id="flashTimer"></div>
+        <div id="dashZone">
+            <div id="dashIcon">DASH</div>
+            <div style="font-size:10px; margin-top:5px; color:#aaa;">TAP RIGHT SIDE</div>
         </div>
     </div>
 
@@ -178,6 +166,7 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     
+    // UI Refs
     const expBar = document.getElementById('expBar');
     const lvText = document.getElementById('lvText');
     const hpText = document.getElementById('hpText');
@@ -187,8 +176,7 @@
     const killText = document.getElementById('killText');
     const hyperFill = document.getElementById('hyperFill');
     const typeLabel = document.getElementById('currentType');
-    const flashBtn = document.getElementById('flashBtn');
-    const flashTimerEl = document.getElementById('flashTimer');
+    const dashIcon = document.getElementById('dashIcon');
     const levelUpScreen = document.getElementById('levelUpScreen');
     const levelUpTitle = document.getElementById('levelUpTitle');
     const cardsBox = document.getElementById('cardsBox');
@@ -224,19 +212,30 @@
         hyperGauge: 0, isHyper: false, hyperTime: 0, hyperType: HYPER_RAPID,
         lastShot: 0, showHpTimer: 0,
         killCount: 0, killTimer: 0,
-        flashReady: true, flashCool: 0, flashMaxCool: 300
+        // Dash Stats
+        dashReady: true, dashCool: 0, dashMaxCool: 180, // 3초 쿨타임
+        isDashing: false, dashTime: 0, dashDuration: 15, // 0.25초 지속
+        dashVx: 0, dashVy: 0
     };
 
     let joystick = { active: false, baseX: 0, baseY: 0, stickX: 0, stickY: 0, maxRadius: 25, vx: 0, vy: 0 };
 
+    // --- Input (Left Stick, Right Tap) ---
     function inputStart(x, y) {
         if(gameState!=='PLAY') return;
-        const rect = flashBtn.getBoundingClientRect();
-        if(x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
-            useFlash(); return;
+        
+        // 화면 절반 기준
+        const rect = canvas.getBoundingClientRect();
+        const touchX = (x - rect.left) * (CW / rect.width);
+
+        if (touchX > CW / 2) {
+            // Right Side Tap -> DASH
+            useDash();
+        } else {
+            // Left Side -> JOYSTICK
+            joystick.active=true; joystick.baseX=x; joystick.baseY=y; joystick.stickX=x; joystick.stickY=y;
+            joystick.vx=0; joystick.vy=0;
         }
-        joystick.active=true; joystick.baseX=x; joystick.baseY=y; joystick.stickX=x; joystick.stickY=y;
-        joystick.vx=0; joystick.vy=0;
     }
     
     function inputMove(x, y) {
@@ -253,24 +252,53 @@
     
     function inputEnd() { joystick.active=false; joystick.vx=0; joystick.vy=0; }
 
-    function useFlash() {
-        if(!player.flashReady) return;
-        let flashDirX = joystick.vx; let flashDirY = joystick.vy;
-        if(flashDirX === 0 && flashDirY === 0) { flashDirY = -1; }
-        player.wx += flashDirX * 150; player.wy += flashDirY * 150;
-        spawnText("FLASH", player.wx, player.wy, "#f1c40f", 12);
-        player.flashReady = false; player.flashCool = player.flashMaxCool;
-        updateFlashUI();
+    function useDash() {
+        if(!player.dashReady || player.isDashing) return;
+        
+        // 이동 중이면 이동 방향, 정지 중이면 위쪽
+        let dx = joystick.vx; let dy = joystick.vy;
+        if(dx === 0 && dy === 0) { dy = -1; }
+
+        player.isDashing = true;
+        player.dashTime = player.dashDuration;
+        player.dashVx = dx;
+        player.dashVy = dy;
+        player.dashReady = false;
+        player.dashCool = player.dashMaxCool;
+        
+        spawnText("DASH!", player.wx, player.wy, "#f1c40f", 12);
+        updateDashUI();
     }
 
-    flashBtn.addEventListener('mousedown', (e)=>{ e.stopPropagation(); useFlash(); });
+    // Event Listeners
     canvas.addEventListener('mousedown', e=>inputStart(e.clientX, e.clientY));
     window.addEventListener('mousemove', e=>inputMove(e.clientX, e.clientY));
     window.addEventListener('mouseup', inputEnd);
-    canvas.addEventListener('touchstart', e=>{ const touch = e.touches[0]; inputStart(touch.clientX, touch.clientY); }, {passive:false});
-    window.addEventListener('touchmove', e=>{ if(joystick.active){ e.preventDefault(); inputMove(e.touches[0].clientX, e.touches[0].clientY); } }, {passive:false});
-    window.addEventListener('touchend', inputEnd);
+    canvas.addEventListener('touchstart', e=>{
+        e.preventDefault(); 
+        // 멀티터치 지원 (이동하면서 대시 가능)
+        for(let i=0; i<e.changedTouches.length; i++) {
+            inputStart(e.changedTouches[i].clientX, e.changedTouches[i].clientY);
+        }
+    }, {passive:false});
+    window.addEventListener('touchmove', e=>{
+        e.preventDefault();
+        // 왼쪽 터치만 조이스틱 처리 (단순화: 첫번째 터치나 좌표 기준)
+        for(let i=0; i<e.touches.length; i++) {
+            const t = e.touches[i];
+            const rect = canvas.getBoundingClientRect();
+            if(joystick.active && t.clientX < rect.left + rect.width/2 + 50) { // 약간의 여유
+                 inputMove(t.clientX, t.clientY);
+            }
+        }
+    }, {passive:false});
+    window.addEventListener('touchend', e=>{
+        // 왼쪽 터치가 떨어졌는지 확인해야 하지만 단순하게 모든 터치 끝날 때 리셋 방지
+        // 여기선 단순화: 조이스틱 터치가 끝나면 멈춤
+        if(e.touches.length === 0) inputEnd();
+    });
 
+    // --- Entities ---
     const enemies = []; const bullets = []; const gems = []; const texts = []; const effects = [];
 
     function getObj(arr, Class) {
@@ -293,7 +321,7 @@
             if(isElite) {
                 this.hp = 120 + player.level*20; 
                 this.maxHp = this.hp;
-                this.speed = player.baseSpeed * 0.40; 
+                this.speed = player.baseSpeed * 0.40; // 느림
                 this.r = 30; this.color = '#e17055'; 
                 this.xp = 200; this.scoreVal = 1000;
                 this.pattern = Math.random() > 0.5 ? 0 : 1; 
@@ -315,7 +343,18 @@
             const dist = Math.hypot(player.wx-this.wx, player.wy-this.wy);
             
             if(dist < player.hitR + this.r) {
-                if(player.isHyper && player.hyperType === HYPER_SHIELD) {
+                // Dash Impact Logic
+                if(player.isDashing) {
+                    // 무적 + 적에게 데미지
+                    const dmg = 50 + (player.damage * 2); // 강력한 충돌 데미지
+                    this.hp -= dmg;
+                    spawnText("CRASH!", this.wx, this.wy, "#f1c40f", 16);
+                    // 넉백
+                    this.wx -= Math.cos(angleToPlayer) * 30;
+                    this.wy -= Math.sin(angleToPlayer) * 30;
+                    if(this.hp <= 0) killEnemy(this);
+                }
+                else if(player.isHyper && player.hyperType === HYPER_SHIELD) {
                     spawnText("BLOCK", player.wx, player.wy, '#a29bfe');
                     this.wx -= Math.cos(angleToPlayer)*15;
                     this.wy -= Math.sin(angleToPlayer)*15;
@@ -523,13 +562,15 @@
         hyperFill.style.height = player.hyperGauge + "%";
     }
     
-    function updateFlashUI() {
-        if(player.flashReady) {
-            flashBtn.classList.remove('cooldown');
-            flashTimerEl.innerText = "";
+    function updateDashUI() {
+        if(player.dashReady) {
+            dashIcon.style.opacity = 1;
+            dashIcon.style.borderColor = '#fff';
+            dashIcon.innerText = "DASH";
         } else {
-            flashBtn.classList.add('cooldown');
-            flashTimerEl.innerText = Math.ceil(player.flashCool/60);
+            dashIcon.style.opacity = 0.3;
+            dashIcon.style.borderColor = '#555';
+            dashIcon.innerText = Math.ceil(player.dashCool/60);
         }
     }
 
@@ -574,16 +615,48 @@
             if(player.killTimer <= 0) { player.killCount = 0; killMsg.style.display = 'none'; }
         }
 
-        if(!player.flashReady) {
-            player.flashCool--;
-            if(player.flashCool <= 0) { player.flashReady = true; updateFlashUI(); } 
-            else if (frameCount % 60 === 0) { updateFlashUI(); }
+        // Dash Cooldown
+        if(!player.dashReady) {
+            player.dashCool--;
+            if(player.dashCool <= 0) { player.dashReady = true; updateDashUI(); } 
+            else if (frameCount % 60 === 0) { updateDashUI(); }
         }
 
-        const isMoving = joystick.active && (joystick.vx !== 0 || joystick.vy !== 0);
-        const spd = (player.isHyper && player.hyperType===HYPER_RAPID) ? player.baseSpeed*1.5 : player.baseSpeed;
-        player.wx += joystick.vx * spd;
-        player.wy += joystick.vy * spd;
+        // Dashing Logic
+        if(player.isDashing) {
+            player.wx += player.dashVx * 15; // 고속 이동
+            player.wy += player.dashVy * 15;
+            player.dashTime--;
+            // 잔상 효과 (Trail)
+            if(frameCount % 2 === 0) {
+                // 이펙트 추가 (여기선 간소화)
+            }
+            if(player.dashTime <= 0) player.isDashing = false;
+        } else {
+            // Normal Move
+            const isMoving = joystick.active && (joystick.vx !== 0 || joystick.vy !== 0);
+            const spd = (player.isHyper && player.hyperType===HYPER_RAPID) ? player.baseSpeed*1.5 : player.baseSpeed;
+            player.wx += joystick.vx * spd;
+            player.wy += joystick.vy * spd;
+            
+            // Fire
+            const fr = (player.isHyper && player.hyperType===HYPER_RAPID) ? 4 : player.baseFireRate;
+            if(isMoving && frameCount - player.lastShot > fr) {
+                let t=null, min=Infinity;
+                enemies.forEach(e=>{
+                    if(!e.active) return;
+                    const d = Math.hypot(player.wx-e.wx, player.wy-e.wy);
+                    if(d<min) { min=d; t=e; }
+                });
+                if(t && min<450) {
+                    const a = Math.atan2(t.wy-player.wy, t.wx-player.wx);
+                    const spread = 0.2;
+                    const startA = a - (spread*(player.bulletCount-1))/2;
+                    for(let i=0; i<player.bulletCount; i++) spawnBullet(player.wx, player.wy, startA + spread*i, false);
+                    player.lastShot = frameCount;
+                }
+            }
+        }
 
         if(player.isHyper) {
             player.hyperTime--;
@@ -593,23 +666,6 @@
                 document.body.classList.remove('hyper-active');
             }
             updateUI();
-        }
-
-        const fr = (player.isHyper && player.hyperType===HYPER_RAPID) ? 4 : player.baseFireRate;
-        if(isMoving && frameCount - player.lastShot > fr) {
-            let t=null, min=Infinity;
-            enemies.forEach(e=>{
-                if(!e.active) return;
-                const d = Math.hypot(player.wx-e.wx, player.wy-e.wy);
-                if(d<min) { min=d; t=e; }
-            });
-            if(t && min<450) {
-                const a = Math.atan2(t.wy-player.wy, t.wx-player.wx);
-                const spread = 0.2;
-                const startA = a - (spread*(player.bulletCount-1))/2;
-                for(let i=0; i<player.bulletCount; i++) spawnBullet(player.wx, player.wy, startA + spread*i, false);
-                player.lastShot = frameCount;
-            }
         }
 
         const rate = (player.isHyper && player.hyperType===HYPER_RAPID) ? 5 : Math.max(15, 60-player.level);
@@ -622,7 +678,7 @@
                 if(b.isEnemyBullet) {
                     const d = Math.hypot(b.wx-player.wx, b.wy-player.wy);
                     if(d < player.hitR + b.r) {
-                        if(player.isHyper && player.hyperType === HYPER_SHIELD) {
+                        if((player.isHyper && player.hyperType === HYPER_SHIELD) || player.isDashing) {
                             spawnText("BLOCK", player.wx, player.wy, "#a29bfe"); b.active = false; 
                         } else {
                             player.hp -= 10; player.showHpTimer = 60;
@@ -676,8 +732,16 @@
             ctx.strokeStyle = '#a29bfe'; ctx.lineWidth = 3;
             ctx.beginPath(); ctx.arc(CW/2, CH/2, player.r + 5, 0, Math.PI*2); ctx.stroke();
         }
+        
+        // Player Draw
         ctx.fillStyle = (player.isHyper && player.hyperType===HYPER_RAPID) ? '#fffa65' : player.color;
-        if(player.isHyper) { ctx.shadowColor=ctx.fillStyle; ctx.shadowBlur=15; }
+        if(player.isDashing) {
+            // Dash Effect
+            ctx.shadowColor = '#f1c40f'; ctx.shadowBlur = 20;
+            ctx.fillStyle = '#fff'; // White while dashing
+        } else if(player.isHyper) { 
+            ctx.shadowColor=ctx.fillStyle; ctx.shadowBlur=15; 
+        }
         ctx.beginPath(); ctx.arc(CW/2, CH/2, player.r, 0, Math.PI*2); ctx.fill();
         ctx.shadowBlur=0;
 
