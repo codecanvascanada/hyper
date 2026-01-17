@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Survival: League of Kiting</title>
+    <title>Survival: Clean UI</title>
     <style>
         body {
-            margin: 0; background: #0a0a12; /* LoL Dark Blue Tone */
+            margin: 0; background: #0a0a12;
             display: flex; justify-content: center; align-items: center;
             height: 100vh; overflow: hidden;
             font-family: 'Segoe UI', sans-serif;
@@ -27,11 +27,11 @@
             display: flex; flex-direction: column;
         }
 
-        /* Top Header (Hextech Style) */
+        /* Top Header */
         .header-ui { width: 100%; display: flex; flex-direction: column; gap: 5px; }
         .score-row { 
             display: flex; justify-content: space-between; 
-            font-size: 14px; font-weight: bold; color: #c8aa6e; /* Gold */
+            font-size: 14px; font-weight: bold; color: #c8aa6e; 
             text-shadow: 1px 1px 2px #000;
         }
         
@@ -39,27 +39,32 @@
             width: 100%; height: 6px; background: #1e2328;
             border: 1px solid #c8aa6e; margin-top: 2px;
         }
-        #expBar { height: 100%; width: 0%; background: #0acde5; transition: width 0.1s; } /* Hextech Blue */
+        #expBar { height: 100%; width: 0%; background: #0acde5; transition: width 0.1s; }
         
         .stats { display: flex; justify-content: space-between; font-size: 12px; color: #a0a0a0; margin-top: 4px; }
 
-        /* Kill Streak Message */
+        /* Kill Streak Message (Changed) */
         #killMsg {
-            position: absolute; top: 15%; left: 50%; transform: translateX(-50%);
-            text-align: center; width: 100%; pointer-events: none;
-            font-family: 'Impact', sans-serif;
-            font-style: italic;
-            text-shadow: 3px 3px 0 #000;
+            position: absolute; 
+            top: 85px; /* 헤더 UI 바로 아래 */
+            left: 15px; 
+            text-align: left; 
+            pointer-events: none;
             display: none;
         }
         #killText {
-            font-size: 48px; 
-            background: linear-gradient(to bottom, #ffeb3b, #f44336);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            font-size: 18px; 
+            font-weight: bold;
+            color: #ff6b81; /* 깔끔한 붉은색 */
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+            font-family: 'Segoe UI', sans-serif; /* 일반 폰트 */
+            letter-spacing: 0.5px;
+            animation: slideIn 0.2s ease-out;
         }
-        @keyframes popIn { 0%{transform: scale(0.5); opacity:0;} 100%{transform: scale(1.5); opacity:1;} }
+        @keyframes slideIn { 
+            0% { opacity: 0; transform: translateX(-10px); } 
+            100% { opacity: 1; transform: translateX(0); } 
+        }
 
         /* Right Side HUD */
         #rightHud {
@@ -86,13 +91,13 @@
             transition: height 0.1s linear;
         }
 
-        /* Flash Button (Bottom Right) */
+        /* Flash Button */
         #flashBtn {
             position: absolute; right: 20px; bottom: 40px;
             width: 60px; height: 60px;
             background: radial-gradient(#f1c40f, #d35400);
             border: 3px solid #fff; border-radius: 50%;
-            pointer-events: auto; /* Clickable */
+            pointer-events: auto; 
             display: flex; justify-content: center; align-items: center;
             font-weight: bold; color: white; font-size: 12px;
             box-shadow: 0 0 15px rgba(243, 156, 18, 0.6);
@@ -131,7 +136,8 @@
     <div id="uiLayer">
         <div class="header-ui">
             <div class="score-row">
-                <span>CS: <span id="scoreVal">0</span></span> <span>BEST: <span id="bestVal">0</span></span>
+                <span>CS: <span id="scoreVal">0</span></span>
+                <span>BEST: <span id="bestVal">0</span></span>
             </div>
             <div id="expBarContainer"><div id="expBar"></div></div>
             <div class="stats">
@@ -140,10 +146,11 @@
             </div>
         </div>
         
-        <div id="killMsg"><div id="killText">PENTA KILL</div></div>
+        <div id="killMsg"><div id="killText">DOUBLE KILL</div></div>
 
         <div id="rightHud">
-            <div id="hyperLabel">R<br>GAUGE</div> <div id="hyperContainer">
+            <div id="hyperLabel">R<br>GAUGE</div>
+            <div id="hyperContainer">
                 <div id="hyperFill"></div>
             </div>
             <div id="currentType">TYPE: RAPID</div>
@@ -204,12 +211,11 @@
     const player = {
         wx: 0, wy: 0,
         r: 10, hitR: 5, grazeR: 40,
-        color: '#0acde5', // Hextech Blue
+        color: '#0acde5',
         hp: 100, maxHp: 100,
         speed: 3.2, baseSpeed: 3.2, 
-        damage: 15, // 기본 공격력 상향
-        critChance: 0.15, // 기본 치명타 15%
-        critDamage: 2.0,  // 치명타 데미지 200%
+        damage: 15,
+        critChance: 0.15, critDamage: 2.0,
         fireRate: 25, baseFireRate: 25,
         bulletCount: 1,
         magnet: 80,
@@ -217,22 +223,17 @@
         score: 0,
         hyperGauge: 0, isHyper: false, hyperTime: 0, hyperType: HYPER_RAPID,
         lastShot: 0, showHpTimer: 0,
-        // Kill Streak
         killCount: 0, killTimer: 0,
-        // Flash
-        flashReady: true, flashCool: 0, flashMaxCool: 300 // 5초 (60fps)
+        flashReady: true, flashCool: 0, flashMaxCool: 300
     };
 
     let joystick = { active: false, baseX: 0, baseY: 0, stickX: 0, stickY: 0, maxRadius: 25, vx: 0, vy: 0 };
 
-    // --- Input & Flash ---
     function inputStart(x, y) {
         if(gameState!=='PLAY') return;
-        // Flash 버튼 영역 터치 시 조이스틱 발동 안함
         const rect = flashBtn.getBoundingClientRect();
         if(x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
-            useFlash();
-            return;
+            useFlash(); return;
         }
         joystick.active=true; joystick.baseX=x; joystick.baseY=y; joystick.stickX=x; joystick.stickY=y;
         joystick.vx=0; joystick.vy=0;
@@ -254,50 +255,23 @@
 
     function useFlash() {
         if(!player.flashReady) return;
-        
-        // 이동 중이면 이동 방향으로, 정지 중이면 바라보는 방향(최근 이동) or 랜덤? 
-        // 편의상 정지중이면 화면 위쪽으로
-        let flashDirX = joystick.vx;
-        let flashDirY = joystick.vy;
-        
-        if(flashDirX === 0 && flashDirY === 0) { flashDirY = -1; } // Default Up
-
-        // Teleport 150px
-        player.wx += flashDirX * 150;
-        player.wy += flashDirY * 150;
-        
-        // Effect
-        spawnText("FLASH!", player.wx, player.wy, "#f1c40f");
-        
-        // Cooldown
-        player.flashReady = false;
-        player.flashCool = player.flashMaxCool;
+        let flashDirX = joystick.vx; let flashDirY = joystick.vy;
+        if(flashDirX === 0 && flashDirY === 0) { flashDirY = -1; }
+        player.wx += flashDirX * 150; player.wy += flashDirY * 150;
+        spawnText("FLASH", player.wx, player.wy, "#f1c40f", 12);
+        player.flashReady = false; player.flashCool = player.flashMaxCool;
         updateFlashUI();
     }
 
-    // Flash Button Click (Mouse)
     flashBtn.addEventListener('mousedown', (e)=>{ e.stopPropagation(); useFlash(); });
-    // Flash Button Touch is handled in inputStart to prevent ghost clicks
-
     canvas.addEventListener('mousedown', e=>inputStart(e.clientX, e.clientY));
     window.addEventListener('mousemove', e=>inputMove(e.clientX, e.clientY));
     window.addEventListener('mouseup', inputEnd);
-    canvas.addEventListener('touchstart', e=>{
-        // e.preventDefault(); // 버튼 클릭을 위해 주석 처리 혹은 조건부 처리
-        const touch = e.touches[0];
-        inputStart(touch.clientX, touch.clientY);
-    }, {passive:false});
-    window.addEventListener('touchmove', e=>{
-        if(joystick.active){ e.preventDefault(); inputMove(e.touches[0].clientX, e.touches[0].clientY); }
-    }, {passive:false});
+    canvas.addEventListener('touchstart', e=>{ const touch = e.touches[0]; inputStart(touch.clientX, touch.clientY); }, {passive:false});
+    window.addEventListener('touchmove', e=>{ if(joystick.active){ e.preventDefault(); inputMove(e.touches[0].clientX, e.touches[0].clientY); } }, {passive:false});
     window.addEventListener('touchend', inputEnd);
 
-    // --- Entities ---
-    const enemies = [];
-    const bullets = [];
-    const gems = [];
-    const texts = [];
-    const effects = [];
+    const enemies = []; const bullets = []; const gems = []; const texts = []; const effects = [];
 
     function getObj(arr, Class) {
         let o = arr.find(x=>!x.active);
@@ -470,7 +444,6 @@
     function spawnBullet(wx, wy, a, isEnemy=false) { getObj(bullets, Bullet).spawn(wx, wy, a, isEnemy); }
     function spawnEffect() { return getObj(effects, Effect); }
 
-    // --- Logic ---
     function addHyper(n) {
         if(player.isHyper) return;
         player.hyperGauge = Math.min(100, player.hyperGauge+n);
@@ -482,7 +455,7 @@
         if(player.hyperType === HYPER_RAPID) {
             player.isHyper = true; player.hyperTime = 300;
             document.body.classList.add('hyper-active');
-            spawnText("LETHAL TEMPO!", player.wx, player.wy-40, "#fffa65", 20);
+            spawnText("RAPID FIRE", player.wx, player.wy-40, "#fffa65", 20);
         } 
         else if (player.hyperType === HYPER_EMP) {
             spawnEffect().spawnEMP(player.wx, player.wy);
@@ -492,25 +465,23 @@
                 }
             });
             bullets.forEach(b => { if(b.active && b.isEnemyBullet) b.active = false; });
-            player.hyperGauge = 0; spawnText("ACE!", player.wx, player.wy-40, "#00d2d3", 20);
+            player.hyperGauge = 0; spawnText("EMP BLAST", player.wx, player.wy-40, "#00d2d3", 20);
         }
         else if (player.hyperType === HYPER_SHIELD) {
             player.isHyper = true; player.hyperTime = 300;
             document.body.classList.add('hyper-active');
-            spawnText("INVULNERABLE!", player.wx, player.wy-40, "#a29bfe", 20);
+            spawnText("SHIELD", player.wx, player.wy-40, "#a29bfe", 20);
         }
     }
 
-    // Kill Processing & Streak
     function killEnemy(e, isEmp=false) {
         e.hp = 0; e.active = false;
         addScore(e.scoreVal);
         getObj(gems, Gem).spawn(e.wx, e.wy, e.xp, e.isElite);
-        if(e.isElite && !isEmp) { spawnText("SHUTDOWN!", e.wx, e.wy, "#fdcb6e", 20); addHyper(20); }
+        if(e.isElite && !isEmp) { spawnText("SHUTDOWN", e.wx, e.wy, "#fdcb6e", 20); addHyper(20); }
         
-        // Kill Streak Logic
         player.killCount++;
-        player.killTimer = 180; // 3 seconds to maintain streak
+        player.killTimer = 180;
         updateKillStreak();
     }
 
@@ -524,12 +495,9 @@
         if(msg) {
             killText.innerText = msg;
             killMsg.style.display = 'block';
-            
-            // Re-trigger animation
             killText.style.animation = 'none';
-            killText.offsetHeight; /* trigger reflow */
-            killText.style.animation = 'popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-            
+            killText.offsetHeight; 
+            killText.style.animation = 'slideIn 0.2s ease-out';
             setTimeout(() => { if(player.killTimer <= 0) killMsg.style.display = 'none'; }, 2000);
         }
     }
@@ -601,24 +569,15 @@
         if(gameState!=='PLAY') return;
         frameCount++;
 
-        // Kill Streak Timer
         if(player.killTimer > 0) {
             player.killTimer--;
-            if(player.killTimer <= 0) {
-                player.killCount = 0;
-                killMsg.style.display = 'none';
-            }
+            if(player.killTimer <= 0) { player.killCount = 0; killMsg.style.display = 'none'; }
         }
 
-        // Flash Cooldown
         if(!player.flashReady) {
             player.flashCool--;
-            if(player.flashCool <= 0) {
-                player.flashReady = true;
-                updateFlashUI();
-            } else if (frameCount % 60 === 0) { // Update text every sec
-                updateFlashUI();
-            }
+            if(player.flashCool <= 0) { player.flashReady = true; updateFlashUI(); } 
+            else if (frameCount % 60 === 0) { updateFlashUI(); }
         }
 
         const isMoving = joystick.active && (joystick.vx !== 0 || joystick.vy !== 0);
@@ -626,7 +585,6 @@
         player.wx += joystick.vx * spd;
         player.wy += joystick.vy * spd;
 
-        // Hyper Duration Logic
         if(player.isHyper) {
             player.hyperTime--;
             player.hyperGauge = (player.hyperTime/300)*100;
@@ -637,7 +595,6 @@
             updateUI();
         }
 
-        // Fire (Only when moving)
         const fr = (player.isHyper && player.hyperType===HYPER_RAPID) ? 4 : player.baseFireRate;
         if(isMoving && frameCount - player.lastShot > fr) {
             let t=null, min=Infinity;
@@ -679,14 +636,10 @@
                         if(e.active) {
                             const d = Math.hypot(b.wx-e.wx, b.wy-e.wy);
                             if(d < b.r + e.r) {
-                                // Critical Logic
                                 let isCrit = Math.random() < player.critChance;
                                 let finalDmg = player.damage * ((player.isHyper && player.hyperType===HYPER_RAPID)?2:1);
                                 if(isCrit) finalDmg *= player.critDamage;
-                                
                                 e.hp -= finalDmg;
-                                
-                                // Text Effect
                                 let color = isCrit ? '#ff4757' : 'white';
                                 let size = isCrit ? 20 : 12;
                                 let txt = Math.floor(finalDmg) + (isCrit ? "!" : "");
@@ -710,9 +663,7 @@
 
     function draw() {
         drawGrid();
-        // Range Indicator (LoL Style)
-        ctx.strokeStyle = 'rgba(10, 205, 229, 0.1)';
-        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(10, 205, 229, 0.1)'; ctx.lineWidth = 1;
         ctx.beginPath(); ctx.arc(CW/2, CH/2, 450, 0, Math.PI*2); ctx.stroke();
 
         gems.forEach(e=>{ if(e.active) e.draw(); });
