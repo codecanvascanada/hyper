@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Survival: New Game+</title>
+    <title>Survival: Energy Drain FX</title>
     <style>
         /* 선택 방지 */
         * { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; box-sizing: border-box; }
@@ -144,7 +144,6 @@
     const HYPER_EMP = 1;
     const HYPER_SHIELD = 2;
 
-    // Player Object
     const player = {
         wx: 0, wy: 0,
         r: 10, hitR: 5, grazeR: 45,
@@ -359,6 +358,35 @@
     function spawnBullet(wx, wy, a, isEnemy=false) { getObj(bullets, Bullet).spawn(wx, wy, a, isEnemy); }
     function spawnEffect() { return getObj(effects, Effect); }
 
+    // [New Function] Lightning Effect for Graze
+    function drawLightning(x1, y1, x2, y2) {
+        ctx.save();
+        ctx.strokeStyle = '#00f3ff'; // Electric Cyan
+        ctx.lineWidth = 2;
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = '#00f3ff';
+        
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        
+        const dist = Math.hypot(x2 - x1, y2 - y1);
+        const steps = Math.floor(dist / 10); // Segments
+        let cx = x1; let cy = y1;
+        
+        for (let i = 1; i < steps; i++) {
+            const t = i / steps;
+            // Linear interpolation
+            const tx = x1 + (x2 - x1) * t;
+            const ty = y1 + (y2 - y1) * t;
+            // Random jitter
+            const jitter = (Math.random() - 0.5) * 20; 
+            ctx.lineTo(tx + jitter, ty + jitter);
+        }
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+        ctx.restore();
+    }
+
     function addCombo(n) {
         player.combo += n; player.comboTimer = 120; comboEl.style.display = 'block'; comboLabel.style.display = 'block';
         comboEl.innerText = player.combo; comboEl.style.transform = 'scale(1.3)'; setTimeout(()=>comboEl.style.transform='scale(1)', 100);
@@ -518,6 +546,20 @@
         if(player.isDashing) { ctx.shadowColor = '#f1c40f'; ctx.shadowBlur = 20; ctx.fillStyle = '#fff'; } else if(player.isHyper) { ctx.shadowColor=ctx.fillStyle; ctx.shadowBlur=15; }
         ctx.beginPath(); ctx.arc(CW/2, CH/2, player.r, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur=0;
 
+        // [NEW] Draw Lightning for Enemies inside Graze Radius
+        enemies.forEach(e => {
+            if (e.active) {
+                const dist = Math.hypot(e.wx - player.wx, e.wy - player.wy);
+                // Graze 범위 안이고, 충돌 범위 밖일 때만 스파크
+                if (dist < player.grazeR + e.r && dist > player.hitR + e.r) {
+                    // 캔버스 좌표로 변환
+                    const sx = e.wx - player.wx + CW/2;
+                    const sy = e.wy - player.wy + CH/2;
+                    drawLightning(CW/2, CH/2, sx, sy);
+                }
+            }
+        });
+
         if(player.showHpTimer > 0) {
             player.showHpTimer--; const hpPct = Math.max(0, player.hp / player.maxHp); const bx = CW/2, by = CH/2 - 25; const bw = 30, bh = 4;
             ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(bx - bw/2, by, bw, bh); ctx.fillStyle = '#ff7675'; ctx.fillRect(bx - bw/2, by, bw * hpPct, bh);
@@ -564,7 +606,6 @@
         }
     }
 
-    // --- [NEW] Game Over & Rush Mode ---
     function gameOver() {
         gameState='GAMEOVER';
         let isNewRecord = false;
@@ -598,21 +639,15 @@
         const btnText = document.getElementById('rushBtn').innerText;
         const canRush = btnText.includes("RUSH");
         
-        // 1. 엔티티 초기화
         enemies.length = 0; bullets.length = 0; gems.length = 0; texts.length = 0; effects.length = 0;
         player.wx = 0; player.wy = 0; joystick.active = false;
         
-        // 2. 상태 분기
         if(canRush) {
-            // New Game+: Stats retained, but Level resets
-            player.level = 1;
-            player.exp = 0;
-            player.nextExp = 10;
-            player.score = 0;
+            // New Game+: Stats retained, Level/Score reset
+            player.level = 1; player.exp = 0; player.nextExp = 10; player.score = 0;
             player.hp = player.maxHp; 
-            // Stats (damage, magnet, etc.) are KEPT
         } else {
-            // Hard Reset: Everything back to base
+            // Hard Reset
             player.hp = 100; player.maxHp = 100; player.level = 1; player.exp = 0; player.nextExp = 10;
             player.score = 0; player.damage = 15; player.fireRate = 25; player.baseFireRate = 25;
             player.bulletCount = 1; player.critChance = 0.15; player.magnet = 20;
@@ -620,14 +655,12 @@
             player.dashMaxCool = 600;
         }
         
-        // 3. 공통 리셋 (가장 중요: lastShot 초기화)
-        player.lastShot = -100; // 바로 발사되게 음수값
+        player.lastShot = -100; 
         player.dashReady = true; player.dashCool = 0;
         player.combo = 0; player.comboTimer = 0;
         player.killCount = 0; player.killTimer = 0;
         frameCount = 0; 
         
-        // 4. UI 클린업
         comboEl.style.display = 'none';
         comboLabel.style.display = 'none';
         infoMsg.style.opacity = 0;
