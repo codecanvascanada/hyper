@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Survival: Strategic Hyper</title>
+    <title>Survival: Growth Balance</title>
     <style>
         body {
             margin: 0; background: #000;
@@ -185,7 +185,8 @@
         r: 8, hitR: 4, grazeR: 40,
         color: '#00d2d3',
         hp: 100, maxHp: 100,
-        speed: 4.5, baseSpeed: 4.5,
+        // --- 밸런스 조정: 초기 속도 너프 (3.2) ---
+        speed: 3.2, baseSpeed: 3.2, 
         damage: 10,
         fireRate: 25, baseFireRate: 25,
         bulletCount: 1,
@@ -250,17 +251,23 @@
             this.grazeCool = 0;
             
             if(isElite) {
+                // --- 밸런스: 보스 ---
                 this.hp = 120 + player.level*20; 
                 this.maxHp = this.hp;
-                this.speed = player.baseSpeed * 0.55; 
+                // 플레이어 현재 속도의 85% ~ 90% (업그레이드 안하면 보스도 느리고, 하면 보스도 빨라짐)
+                // 최소 속도는 보장 (2.0)
+                this.speed = Math.max(2.0, player.baseSpeed * 0.9);
                 this.r = 30; this.color = '#e17055'; 
                 this.xp = 200; this.scoreVal = 1000;
                 this.pattern = Math.random() > 0.5 ? 0 : 1; 
                 this.shootTimer = 0; this.patternAngle = 0;
             } else {
+                // --- 밸런스: 잡몹 ---
                 this.hp = 15 + player.level*4;
                 this.maxHp = this.hp;
-                this.speed = 1.5 + Math.random();
+                // 레벨에 따라 빨라짐 (초반 1.2 ~ 후반엔 4.0 이상까지 가능)
+                const levelSpeedBonus = player.level * 0.05;
+                this.speed = (1.2 + Math.random() * 0.5) + levelSpeedBonus;
                 this.r = 10; this.color = '#ff6b81'; 
                 this.xp = 5; this.scoreVal = 10;
             }
@@ -275,8 +282,8 @@
             if(dist < player.hitR + this.r) {
                 if(player.isHyper && player.hyperType === HYPER_SHIELD) {
                     spawnText("BLOCK", player.wx, player.wy, '#a29bfe');
-                    this.wx -= Math.cos(angleToPlayer)*10;
-                    this.wy -= Math.sin(angleToPlayer)*10;
+                    this.wx -= Math.cos(angleToPlayer)*15; // 넉백 강화
+                    this.wy -= Math.sin(angleToPlayer)*15;
                 } else {
                     const dmg = this.isElite?20:10;
                     player.hp -= dmg; player.showHpTimer = 60;
@@ -402,7 +409,8 @@
     function addCombo(n) {
         player.combo += n; player.comboTimer = 120;
         comboEl.style.display = 'block'; comboEl.innerText = player.combo + " COMBO";
-        comboEl.style.transform = 'scale(1.2)'; setTimeout(()=>comboEl.style.transform='scale(1)', 100);
+        comboEl.style.transform = 'scale(1.2)';
+        setTimeout(()=>comboEl.style.transform='scale(1)', 100);
     }
     
     function addHyper(n) {
@@ -496,10 +504,12 @@
         frameCount++;
 
         const isMoving = joystick.active && (joystick.vx !== 0 || joystick.vy !== 0);
+        // RAPID 모드일 때만 이속 증가
         const spd = (player.isHyper && player.hyperType===HYPER_RAPID) ? player.baseSpeed*1.5 : player.baseSpeed;
         player.wx += joystick.vx * spd;
         player.wy += joystick.vy * spd;
 
+        // Hyper Duration Logic
         if(player.isHyper) {
             player.hyperTime--;
             player.hyperGauge = (player.hyperTime/300)*100;
@@ -514,6 +524,7 @@
             if(player.comboTimer<=0) { player.combo=0; comboEl.style.display='none'; }
         }
 
+        // Fire (Only when moving)
         const fr = (player.isHyper && player.hyperType===HYPER_RAPID) ? 4 : player.baseFireRate;
         if(isMoving && frameCount - player.lastShot > fr) {
             let t=null, min=Infinity;
@@ -541,6 +552,7 @@
                 if(b.isEnemyBullet) {
                     const d = Math.hypot(b.wx-player.wx, b.wy-player.wy);
                     if(d < player.hitR + b.r) {
+                        // Shield Check
                         if(player.isHyper && player.hyperType === HYPER_SHIELD) {
                             spawnText("BLOCK", player.wx, player.wy, "#a29bfe"); b.active = false; 
                         } else {
