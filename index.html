@@ -26,27 +26,25 @@
         #comboCount { font-size: 48px; font-weight: 900; color: #fffa65; text-shadow: 0 0 15px rgba(255, 165, 2, 0.8); display: none; transition: transform 0.05s; }
         #comboLabel { font-size: 12px; color: #81ecec; letter-spacing: 3px; font-weight: bold; display:none; text-shadow: 0 0 5px #00cec9; }
 
-        /* [수정] HUD 레이아웃: 아이콘과 게이지 간격 좁힘 */
+        /* HUD 레이아웃 */
         #rightHud { 
             position: absolute; right: 15px; top: 130px; height: 30%; 
             display: flex; flex-direction: column; align-items: center; 
-            gap: 2px; /* 간격 최소화 */
+            gap: 2px; 
         }
         
-        /* [수정] 아이콘 크기 축소 */
         #typeIcon { 
-            width: 20px; height: 20px; /* 크기 줄임 */
+            width: 20px; height: 20px; 
             margin-top: 2px; 
             object-fit: contain; 
             filter: drop-shadow(0 0 2px rgba(255,255,255,0.3));
         }
         
-        /* [수정] 게이지: 사각 디자인 (border-radius 제거) */
         #hyperContainer { 
             width: 12px; flex: 1; 
             background: rgba(0,0,0,0.6); 
             border: 1px solid #555; 
-            border-radius: 0; /* 사각형 */
+            border-radius: 0; 
             overflow: hidden; 
             display: flex; flex-direction: column-reverse; 
             box-shadow: 0 0 5px rgba(0,0,0,0.5); 
@@ -58,9 +56,7 @@
             box-shadow: 0 0 8px rgba(255, 255, 255, 0.3), 0 0 1px rgba(255, 255, 255, 0.2) inset; 
             border-color: rgba(255, 255, 255, 0.6); 
         }
-        .gauge-charging #hyperFill { 
-            filter: brightness(1.2); 
-        }
+        .gauge-charging #hyperFill { filter: brightness(1.2); }
 
         #dashZone { position: absolute; right: 30px; bottom: 100px; pointer-events: auto; display: flex; flex-direction: column; align-items: center; }
         #dashIcon { width: 70px; height: 70px; border-radius: 50%; border: 3px solid #fff; background: rgba(241, 196, 15, 0.2); display: flex; justify-content: center; align-items: center; color: white; font-weight: bold; font-size: 14px; box-shadow: 0 0 10px rgba(241, 196, 15, 0.3); transition: opacity 0.2s; cursor: pointer; }
@@ -76,11 +72,11 @@
             pointer-events: auto; z-index: 100; 
         }
 
-        /* [수정] 카드: 고정 폭, 가운데 정렬, 동일 규격 */
+        /* 카드 스타일 */
         .card { 
             background: #0f1218; color: #c8aa6e; 
-            width: 240px; /* 고정 너비 */
-            margin: 8px auto; /* 가운데 정렬 */
+            width: 240px; 
+            margin: 8px auto; 
             padding: 12px 15px; 
             border: 1px solid #c8aa6e; 
             box-shadow: 0 0 10px rgba(200, 170, 110, 0.2); 
@@ -88,54 +84,43 @@
             opacity: 0; 
             transform: translateY(20px) scale(0.9);
             animation: cardEntry 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-            
-            display: flex; 
-            flex-direction: row; 
-            align-items: center; 
-            text-align: left; 
+            display: flex; flex-direction: row; align-items: center; text-align: left; 
         }
-        @keyframes cardEntry {
-            to { opacity: 1; transform: translateY(0) scale(1); }
-        }
+        @keyframes cardEntry { to { opacity: 1; transform: translateY(0) scale(1); } }
 
         .card:active { transform: scale(0.98); background: #1e2328; }
         .card.hyper-card { border: 1px solid #0acde5; color: #0acde5; background: #0a1a20;}
-        
-        .card-icon {
-            width: 40px; height: 40px; /* 카드 내부 아이콘 크기도 약간 조정 */
-            margin-right: 15px; 
-            object-fit: contain;
-            flex-shrink: 0; 
-            filter: drop-shadow(0 0 5px rgba(255,255,255,0.2)); 
-        }
+        .card-icon { width: 40px; height: 40px; margin-right: 15px; object-fit: contain; flex-shrink: 0; filter: drop-shadow(0 0 5px rgba(255,255,255,0.2)); }
+        .card-text-group { display: flex; flex-direction: column; justify-content: center; }
+        .card-text-group h3 { margin: 0 0 4px 0; font-size: 16px; line-height: 1.2; }
+        .card-text-group p { margin: 0; font-size: 12px; color: #ccc; line-height: 1.2; }
 
-        .card-text-group {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-        }
-
-        .card-text-group h3 {
-            margin: 0 0 4px 0;
-            font-size: 16px; /* 폰트 사이즈 조정 */
-            line-height: 1.2;
-        }
-
-        .card-text-group p {
-            margin: 0;
-            font-size: 12px;
-            color: #ccc;
-            line-height: 1.2;
-        }
-
+        /* [수정] 게임오버 화면 스타일 */
         #gameOverTitle { 
-            color: #00f3ff; font-size: 36px; font-weight: 900; margin-bottom: 5px; letter-spacing: 3px; 
+            color: #00f3ff; font-size: 36px; font-weight: 900; 
+            margin-top: -50px; /* 위쪽으로 올림 */
+            margin-bottom: 20px; 
+            letter-spacing: 3px; 
             text-shadow: 0 0 10px rgba(0, 243, 255, 0.6);
             font-style: italic;
         }
+        
+        #missionEndedMsg {
+            font-size: 24px; /* 사이즈 키움 */
+            font-weight: 800; /* 굵게 */
+            color: #fff; /* 잘 보이게 흰색 */
+            margin-bottom: 30px; 
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            letter-spacing: 1px;
+        }
+
         #newRecordMsg { color: #fffa65; font-size: 18px; font-weight: bold; margin-bottom: 20px; display: none; animation: blink 0.5s infinite alternate; }
         @keyframes blink { from { opacity: 1; } to { opacity: 0.5; } }
-        #rushTimerBox { margin-top: 20px; text-align: center; }
+        
+        /* 점수 텍스트 컨테이너 */
+        #resultContainer { margin-bottom: 30px; text-align: center; }
+
+        #rushTimerBox { margin-top: 10px; text-align: center; }
         #rushCount { font-size: 40px; font-weight: bold; color: #ff7675; min-height: 48px; }
         #rushBtn {
             margin-top: 10px; padding: 15px 30px; font-size: 18px; font-weight: bold;
@@ -144,7 +129,7 @@
             transition: transform 0.1s;
         }
         #rushBtn:active { transform: scale(0.95); }
-        #rushSubText { font-size: 12px; color: #ccc; margin-top: 5px; }
+        #rushSubText { font-size: 12px; color: #ccc; margin-top: 5px; min-height: 15px; }
 
         .hyper-active #gameContainer { animation: shake 0.2s infinite; }
         @keyframes shake { 0% { transform: translate(1px, 1px); } 50% { transform: translate(-1px, -1px); } 100% { transform: translate(1px, -1px); } }
@@ -181,16 +166,15 @@
 
     <div id="gameOverScreen" class="modal">
         <div id="gameOverTitle">SPARCRUSH</div>
-        <div style="font-size:14px; color:#aaa; margin-bottom:15px; letter-spacing:1px;">MISSION ENDED</div>
+        <div id="missionEndedMsg">MISSION ENDED</div> <div id="newRecordMsg" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">🏆 NEW RECORD! 🏆</div>
         
-        <div id="newRecordMsg" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">🏆 NEW RECORD! 🏆</div>
-        <h3 id="resultText" style="color:#fff; margin-bottom: 10px; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);"></h3>
+        <div id="resultContainer"></div>
+
         <div id="rushTimerBox">
             <div id="rushLabel" style="font-size:12px; color:#ddd; text-shadow: 1px 1px 1px rgba(0,0,0,0.5);">RUSH MODE AVAILABLE</div>
             <div id="rushCount" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">5</div>
             <button id="rushBtn" onclick="rushStart()">⚡ RUSH START</button>
-            <div id="rushSubText" style="text-shadow: 1px 1px 1px rgba(0,0,0,0.5);">(Keep Stats / Lv.1 Start)</div>
-        </div>
+            <div id="rushSubText"></div> </div>
     </div>
 </div>
 
@@ -230,7 +214,7 @@
     const cardsBox = document.getElementById('cardsBox');
     const gameOverScreen = document.getElementById('gameOverScreen');
     const gameOverTitle = document.getElementById('gameOverTitle');
-    const resultText = document.getElementById('resultText');
+    const resultContainer = document.getElementById('resultContainer'); // [수정]
     const newRecordMsg = document.getElementById('newRecordMsg');
     const rushCountEl = document.getElementById('rushCount');
     const rushBtn = document.getElementById('rushBtn');
@@ -471,7 +455,6 @@
         update() { this.r += 40; if(this.r > this.maxR) this.active = false; }
         draw() {
             const sx = this.wx - player.wx + CW/2; const sy = this.wy - player.wy + CH/2;
-            // [수정] EMP 이펙트 색상 변경 (초록색)
             ctx.strokeStyle = '#2ecc71'; 
             ctx.lineWidth = 10; ctx.beginPath(); ctx.arc(sx, sy, this.r, 0, Math.PI*2); ctx.stroke();
         }
@@ -559,17 +542,16 @@
     
     function updateDashUI() { if(player.dashReady) { dashIcon.classList.remove('cooldown'); dashIcon.classList.add('ready'); dashIcon.innerText = "DASH"; } else { dashIcon.classList.remove('ready'); dashIcon.classList.add('cooldown'); dashIcon.innerText = Math.ceil(player.dashCool/60); } }
     
-    // [수정] 게이지 색상 변경 로직
     function updateTypeIcon() { 
         if(player.hyperType === HYPER_RAPID) { 
             typeIcon.src = "rapid.png"; 
-            hyperFill.style.background = 'linear-gradient(to top, #ff9f43, #ff6b81)'; /* 주황-레드 */
+            hyperFill.style.background = 'linear-gradient(to top, #ff9f43, #ff6b81)'; 
         } else if(player.hyperType === HYPER_EMP) { 
             typeIcon.src = "emp.png"; 
-            hyperFill.style.background = 'linear-gradient(to top, #f1c40f, #2ecc71)'; /* 노랑-초록 */
+            hyperFill.style.background = 'linear-gradient(to top, #f1c40f, #2ecc71)'; 
         } else { 
             typeIcon.src = "shield.png"; 
-            hyperFill.style.background = 'linear-gradient(to top, #54a0ff, #5f27cd)'; /* 블루-보라 */
+            hyperFill.style.background = 'linear-gradient(to top, #54a0ff, #5f27cd)'; 
         } 
     }
 
@@ -673,7 +655,16 @@
         ctx.save();
         if(screenShake > 0) { const rx = (Math.random() - 0.5) * screenShake; const ry = (Math.random() - 0.5) * screenShake; ctx.translate(rx, ry); }
         drawGrid();
-        ctx.strokeStyle = 'rgba(255, 250, 101, 0.2)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(CW/2, CH/2, player.grazeR, 0, Math.PI*2); ctx.stroke();
+        
+        // [수정] Graze 서클 색상 동적 변경
+        let grazeColor;
+        if(player.hyperType === HYPER_RAPID) grazeColor = 'rgba(255, 159, 67, 0.4)'; // Orange/Red
+        else if(player.hyperType === HYPER_EMP) grazeColor = 'rgba(46, 204, 113, 0.4)'; // Green
+        else grazeColor = 'rgba(155, 89, 182, 0.4)'; // Purple
+        
+        ctx.strokeStyle = grazeColor; 
+        ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(CW/2, CH/2, player.grazeR, 0, Math.PI*2); ctx.stroke();
+        
         gems.forEach(e=>{ if(e.active) e.draw(); }); effects.forEach(e=>{ if(e.active) e.draw(); }); bullets.forEach(e=>{ if(e.active) e.draw(); }); enemies.forEach(e=>{ if(e.active) e.draw(); }); texts.forEach(e=>{ if(e.active) e.draw(); });
 
         if(player.isHyper && player.hyperType === HYPER_SHIELD) {
@@ -784,7 +775,12 @@
             isNewRecord = true;
         }
         newRecordMsg.style.display = isNewRecord ? 'block' : 'none';
-        resultText.innerText = `SCORE: ${player.score.toLocaleString()}\nBEST: ${parseInt(highScore).toLocaleString()}`;
+        
+        // [수정] 점수 표시 HTML
+        resultContainer.innerHTML = `
+            <div style="font-size:20px; font-weight:normal; color:#ddd; margin-bottom:5px;">SCORE: ${player.score.toLocaleString()}</div>
+            <div style="font-size:20px; font-weight:bold; color:#fffa65;">BEST: ${parseInt(highScore).toLocaleString()}</div>
+        `;
         
         // 1회 한정 Rush 체크
         if (!hasRushed) {
@@ -804,7 +800,7 @@
                     clearInterval(rushTimerInterval);
                     // 타임아웃 -> 일반 리셋으로 변경
                     rushBtn.innerText = "↻ RESTART";
-                    rushSubText.innerText = "(New Game)";
+                    rushSubText.innerText = ""; // [수정] 빈 문자열
                     rushCountEl.innerText = "";
                     rushCountEl.style.display = "none";
                 }
@@ -814,7 +810,7 @@
             rushCountEl.style.display = "none";
             rushLabel.style.display = "none";
             rushBtn.innerText = "↻ RESTART";
-            rushSubText.innerText = "(New Game)";
+            rushSubText.innerText = ""; // [수정] 빈 문자열
             if(rushTimerInterval) clearInterval(rushTimerInterval);
         }
         
