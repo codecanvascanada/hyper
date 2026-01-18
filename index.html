@@ -231,6 +231,18 @@
     window.addEventListener('touchstart', startBgm);
     window.addEventListener('keydown', startBgm);
 
+    // [수정] 포커스 잃으면 BGM 일시정지, 돌아오면 재생
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            bgm.pause();
+        } else {
+            // 게임 중이고 BGM이 시작된 상태라면 다시 재생
+            if (gameState === 'PLAY' && bgmStarted) {
+                bgm.play().catch(e => {});
+            }
+        }
+    });
+
     // --- Refs ---
     const expBar = document.getElementById('expBar');
     const lvText = document.getElementById('lvText');
