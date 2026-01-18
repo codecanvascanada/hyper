@@ -93,21 +93,20 @@
         .card-text-group h3 { margin: 0 0 4px 0; font-size: 16px; line-height: 1.2; }
         .card-text-group p { margin: 0; font-size: 12px; color: #ccc; line-height: 1.2; }
 
-        /* [수정] 게임오버 화면 레이아웃 변경 */
         #gameOverTitle { 
             color: #00f3ff; font-size: 36px; font-weight: 900; 
             margin-top: 0; 
-            margin-bottom: 80px; /* 아래 메시지와 간격을 크게 벌림 */
+            margin-bottom: 80px; 
             letter-spacing: 3px; 
             text-shadow: 0 0 10px rgba(0, 243, 255, 0.6);
             font-style: italic;
-            position: absolute; /* 절대 위치로 상단 고정 */
+            position: absolute; 
             top: 15%;
         }
         
         #missionEndedMsg {
             font-size: 24px; font-weight: 800; color: #fff; 
-            margin-top: 50px; /* 타이틀과 겹치지 않게 */
+            margin-top: 50px; 
             margin-bottom: 30px; 
             text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
             letter-spacing: 1px;
@@ -446,10 +445,9 @@
         draw() {
             const sx = this.wx - player.wx + CW/2; const sy = this.wy - player.wy + CH/2;
             if(sx<-20||sx>CW+20||sy<-20||sy>CH+20) return;
-            // [수정] 보스 보석 색상 변경 (청록색)
             ctx.beginPath(); 
             ctx.fillStyle='#0acde5'; 
-            if(this.isRare) ctx.arc(sx, sy, 10, 0, Math.PI*2); // 크기는 유지
+            if(this.isRare) ctx.arc(sx, sy, 10, 0, Math.PI*2); 
             else ctx.arc(sx, sy, 6, 0, Math.PI*2); 
             ctx.fill();
         }
@@ -477,7 +475,6 @@
     function spawnBullet(wx, wy, a, isEnemy=false) { getObj(bullets, Bullet).spawn(wx, wy, a, isEnemy); }
     function spawnEffect() { return getObj(effects, Effect); }
 
-    // [수정] 전기 색상 파라미터 추가
     function drawLightning(x1, y1, x2, y2, color) {
         ctx.save();
         ctx.strokeStyle = color; 
@@ -507,7 +504,7 @@
     function addHyper(n) { if(player.isHyper) return; player.hyperGauge = Math.min(100, player.hyperGauge+n); if(player.hyperGauge>=100) activateHyper(); updateUI(); }
 
     function activateHyper() {
-        if(player.hyperType === HYPER_RAPID) { player.isHyper = true; player.hyperTime = 300; document.body.classList.add('hyper-active'); showMessage("RAPID FIRE!", "#e74c3c"); } 
+        if(player.hyperType === HYPER_RAPID) { player.isHyper = true; player.hyperTime = 300; document.body.classList.add('hyper-active'); showMessage("RAPID FIRE!", "#f1c40f"); } 
         else if (player.hyperType === HYPER_EMP) { screenShake = 30; spawnEffect().spawnEMP(player.wx, player.wy); enemies.forEach(e => { if(e.active && Math.hypot(e.wx - player.wx, e.wy - player.wy) < 500) killEnemy(e, true); }); bullets.forEach(b => { if(b.active && b.isEnemyBullet) b.active = false; }); player.hyperGauge = 0; showMessage("EMP BLAST!", "#2ecc71"); }
         else if (player.hyperType === HYPER_SHIELD) { player.isHyper = true; player.hyperTime = 600; document.body.classList.add('hyper-active'); showMessage("SHIELD ON", "#9b59b6"); }
     }
@@ -552,7 +549,7 @@
     function updateTypeIcon() { 
         if(player.hyperType === HYPER_RAPID) { 
             typeIcon.src = "rapid.png"; 
-            hyperFill.style.background = 'linear-gradient(to top, #ff9f43, #ff6b81)'; 
+            hyperFill.style.background = 'linear-gradient(to top, #f1c40f, #fffa65)'; 
         } else if(player.hyperType === HYPER_EMP) { 
             typeIcon.src = "emp.png"; 
             hyperFill.style.background = 'linear-gradient(to top, #f1c40f, #2ecc71)'; 
@@ -663,9 +660,9 @@
         if(screenShake > 0) { const rx = (Math.random() - 0.5) * screenShake; const ry = (Math.random() - 0.5) * screenShake; ctx.translate(rx, ry); }
         drawGrid();
         
-        // [수정] Graze 서클 및 전기 색상 동적 결정
+        // [수정] Graze 서클 및 전기 색상 동적 결정 (Rapid: Yellow)
         let hyperColor;
-        if(player.hyperType === HYPER_RAPID) hyperColor = '#e74c3c'; // Orange/Red
+        if(player.hyperType === HYPER_RAPID) hyperColor = '#f1c40f'; // Yellow
         else if(player.hyperType === HYPER_EMP) hyperColor = '#2ecc71'; // Green
         else hyperColor = '#9b59b6'; // Purple
         
@@ -716,62 +713,61 @@
 
     function loop() { requestAnimationFrame(loop); if(gameState==='PLAY') { update(); draw(); } }
 
+    // [수정] 통합된 레벨업 시스템 (하이퍼 스킬 랜덤 출현)
     function levelUp() {
-        gameState='PAUSE'; joystick.active=false; joystick.vx=0; joystick.vy=0; levelUpScreen.style.display='flex'; cardsBox.innerHTML='';
-        const canSwitchHyper = (player.level % 3 === 0) && !player.isHyper;
-        if(canSwitchHyper) {
-            levelUpTitle.innerText = "특수기술 선택";
-            const hyperOpts = [
-                {t:"고속연사", d:"5초 동안 고속연사", c:'hyper-card', img:'rapid.png', f:()=>{player.hyperType=HYPER_RAPID; updateTypeIcon();}},
-                {t:"광역폭발", d:"EMP 광역 데미지", c:'hyper-card', img:'emp.png', f:()=>{player.hyperType=HYPER_EMP; updateTypeIcon();}},
-                {t:"완전방어", d:"10초 동안 무적", c:'hyper-card', img:'shield.png', f:()=>{player.hyperType=HYPER_SHIELD; updateTypeIcon();}},
-            ];
-            hyperOpts.forEach(item => {
-                const div = document.createElement('div'); div.className = `card ${item.c}`; 
-                
-                let imgHTML = item.img ? `<img src="${item.img}" class="card-icon">` : '';
+        gameState='PAUSE'; 
+        joystick.active=false; joystick.vx=0; joystick.vy=0; 
+        levelUpScreen.style.display='flex'; 
+        cardsBox.innerHTML='';
+        levelUpTitle.innerText = "LEVEL UP!"; // 타이틀 통일
 
-                div.innerHTML = `
-                    ${imgHTML}
-                    <div class="card-text-group">
-                        <h3>${item.t}</h3>
-                        <p>${item.d}</p>
-                    </div>
-                `;
-                
-                div.style.animationDelay = `${0.1}s`; 
-                div.onclick = () => { item.f(); showMessage(item.t+" 장착됨", "#a29bfe"); levelUpScreen.style.display='none'; gameState='PLAY'; }; cardsBox.appendChild(div);
-            });
-        } else {
-            levelUpTitle.innerText = "LEVEL UP!";
-            const statOpts = [
-                {t:"공격력 UP", d:"데미지 +5", img: "atk.png", f:()=>{player.damage+=5; showMessage("DAMAGE UP!", "#e17055");}}, 
-                {t:"연사속도 UP", d:"공격속도 +10%", img: "speed.png", f:()=>{player.baseFireRate*=0.9; showMessage("FIRE RATE UP!", "#fdcb6e");}},
-                {t:"치명타 UP", d:"확률 +5%", img: "cri.png", f:()=>{player.critChance+=0.05; showMessage("CRIT CHANCE UP!", "#d63031");}}, 
-                {t:"멀티샷", d:"탄환 +1", img: "multi.png", f:()=>{player.bulletCount++; showMessage("MULTISHOT +1", "#0984e3");}},
-                {t:"대쉬 쿨다운", d:"재사용 대기시간 -1초", img: "dash.png", f:()=>{player.dashMaxCool = Math.max(180, player.dashMaxCool - 60); showMessage("DASH COOL DOWN", "#00b894");}}, 
-                {t:"체력회복", d:"HP +30", img: "hp.png", f:()=>{player.hp=Math.min(player.maxHp, player.hp+30); showMessage("HEALED!", "#55efc4");}},
-                {t:"자석 강화", d:"흡수 범위 +15", img: "mag.png", f:()=>{player.magnet += 15; showMessage("MAGNET UP!", "#a29bfe");}} 
-            ];
-            let pool = [...statOpts];
-            for(let i=0; i<3; i++) {
-                if(pool.length === 0) break;
-                const r = Math.floor(Math.random()*pool.length);
-                const item = pool.splice(r, 1)[0]; 
-                const div = document.createElement('div'); div.className = 'card'; 
-                
-                let imgHTML = item.img ? `<img src="${item.img}" class="card-icon">` : '';
-                div.innerHTML = `
-                    ${imgHTML}
-                    <div class="card-text-group">
-                        <h3>${item.t}</h3>
-                        <p>${item.d}</p>
-                    </div>
-                `;
-                
-                div.style.animationDelay = `${i * 0.1}s`; 
-                div.onclick=()=>{ item.f(); levelUpScreen.style.display='none'; gameState='PLAY'; }; cardsBox.appendChild(div);
-            }
+        // 1. 일반 스탯 옵션
+        const statOpts = [
+            {t:"공격력 UP", d:"데미지 +5", img: "atk.png", f:()=>{player.damage+=5; showMessage("DAMAGE UP!", "#e17055");}}, 
+            {t:"연사속도 UP", d:"공격속도 +10%", img: "speed.png", f:()=>{player.baseFireRate*=0.9; showMessage("FIRE RATE UP!", "#fdcb6e");}},
+            {t:"치명타 UP", d:"확률 +5%", img: "cri.png", f:()=>{player.critChance+=0.05; showMessage("CRIT CHANCE UP!", "#d63031");}}, 
+            {t:"멀티샷", d:"탄환 +1", img: "multi.png", f:()=>{player.bulletCount++; showMessage("MULTISHOT +1", "#0984e3");}},
+            {t:"대쉬 쿨다운", d:"재사용 대기시간 -1초", img: "dash.png", f:()=>{player.dashMaxCool = Math.max(180, player.dashMaxCool - 60); showMessage("DASH COOL DOWN", "#00b894");}}, 
+            {t:"체력회복", d:"HP +30", img: "hp.png", f:()=>{player.hp=Math.min(player.maxHp, player.hp+30); showMessage("HEALED!", "#55efc4");}},
+            {t:"자석 강화", d:"흡수 범위 +15", img: "mag.png", f:()=>{player.magnet += 15; showMessage("MAGNET UP!", "#a29bfe");}} 
+        ];
+
+        // 2. 하이퍼 스킬 옵션
+        const hyperOpts = [
+            {t:"고속연사", d:"5초 동안 고속연사", c:'hyper-card', img:'rapid.png', f:()=>{player.hyperType=HYPER_RAPID; updateTypeIcon();}},
+            {t:"광역폭발", d:"EMP 광역 데미지", c:'hyper-card', img:'emp.png', f:()=>{player.hyperType=HYPER_EMP; updateTypeIcon();}},
+            {t:"완전방어", d:"10초 동안 무적", c:'hyper-card', img:'shield.png', f:()=>{player.hyperType=HYPER_SHIELD; updateTypeIcon();}},
+        ];
+
+        // 3. 풀 합치기 (확률 조정 가능, 여기선 단순 병합)
+        let pool = [...statOpts, ...hyperOpts];
+
+        // 4. 랜덤 3개 선택 (중복 방지 로직 포함)
+        for(let i=0; i<3; i++) {
+            if(pool.length === 0) break;
+            const r = Math.floor(Math.random()*pool.length);
+            const item = pool.splice(r, 1)[0]; 
+
+            const div = document.createElement('div'); 
+            div.className = item.c ? `card ${item.c}` : 'card'; // 하이퍼 카드는 별도 클래스 유지
+            
+            let imgHTML = item.img ? `<img src="${item.img}" class="card-icon">` : '';
+            div.innerHTML = `
+                ${imgHTML}
+                <div class="card-text-group">
+                    <h3>${item.t}</h3>
+                    <p>${item.d}</p>
+                </div>
+            `;
+            
+            div.style.animationDelay = `${i * 0.1}s`; 
+            div.onclick=()=>{ 
+                item.f(); 
+                if(item.c) showMessage(item.t+" 장착됨", "#a29bfe"); // 하이퍼 장착 메시지
+                levelUpScreen.style.display='none'; 
+                gameState='PLAY'; 
+            }; 
+            cardsBox.appendChild(div);
         }
     }
 
