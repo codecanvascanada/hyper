@@ -734,9 +734,9 @@
 
         // 2. 하이퍼 스킬 옵션
         const hyperOpts = [
-            {t:"고속연사", d:"5초 동안 고속연사", c:'hyper-card', img:'rapid.png', f:()=>{player.hyperType=HYPER_RAPID; updateTypeIcon();}},
-            {t:"광역폭발", d:"EMP 광역 데미지", c:'hyper-card', img:'emp.png', f:()=>{player.hyperType=HYPER_EMP; updateTypeIcon();}},
-            {t:"완전방어", d:"10초 동안 무적", c:'hyper-card', img:'shield.png', f:()=>{player.hyperType=HYPER_SHIELD; updateTypeIcon();}},
+            {t:"고속연사 스킬장착", d:"5초 동안 고속연사", c:'hyper-card', img:'rapid.png', f:()=>{player.hyperType=HYPER_RAPID; updateTypeIcon();}},
+            {t:"EMP 스킬장착", d:"EMP 광역 데미지", c:'hyper-card', img:'emp.png', f:()=>{player.hyperType=HYPER_EMP; updateTypeIcon();}},
+            {t:"완전방어 스킬장착", d:"10초 동안 무적", c:'hyper-card', img:'shield.png', f:()=>{player.hyperType=HYPER_SHIELD; updateTypeIcon();}},
         ];
 
         // 3. 풀 합치기 (확률 조정 가능, 여기선 단순 병합)
