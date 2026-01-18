@@ -26,26 +26,40 @@
         #comboCount { font-size: 48px; font-weight: 900; color: #fffa65; text-shadow: 0 0 15px rgba(255, 165, 2, 0.8); display: none; transition: transform 0.05s; }
         #comboLabel { font-size: 12px; color: #81ecec; letter-spacing: 3px; font-weight: bold; display:none; text-shadow: 0 0 5px #00cec9; }
 
-        #rightHud { position: absolute; right: 15px; top: 130px; height: 30%; display: flex; flex-direction: column; align-items: center; gap: 5px; }
-        
-        /* [수정] 텍스트 대신 아이콘 표시를 위한 스타일 */
-        #typeIcon { 
-            width: 28px; height: 28px; 
-            margin-top: 5px; 
-            object-fit: contain; 
-            filter: drop-shadow(0 0 3px rgba(255,255,255,0.4));
+        /* [수정] HUD 레이아웃: 아이콘과 게이지 간격 좁힘 */
+        #rightHud { 
+            position: absolute; right: 15px; top: 130px; height: 30%; 
+            display: flex; flex-direction: column; align-items: center; 
+            gap: 2px; /* 간격 최소화 */
         }
         
-        #hyperContainer { width: 14px; flex: 1; background: rgba(0,0,0,0.6); border: 1px solid #555; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column-reverse; box-shadow: 0 0 8px rgba(0,0,0,0.5); transition: box-shadow 0.1s; }
+        /* [수정] 아이콘 크기 축소 */
+        #typeIcon { 
+            width: 20px; height: 20px; /* 크기 줄임 */
+            margin-top: 2px; 
+            object-fit: contain; 
+            filter: drop-shadow(0 0 2px rgba(255,255,255,0.3));
+        }
+        
+        /* [수정] 게이지: 사각 디자인 (border-radius 제거) */
+        #hyperContainer { 
+            width: 12px; flex: 1; 
+            background: rgba(0,0,0,0.6); 
+            border: 1px solid #555; 
+            border-radius: 0; /* 사각형 */
+            overflow: hidden; 
+            display: flex; flex-direction: column-reverse; 
+            box-shadow: 0 0 5px rgba(0,0,0,0.5); 
+            transition: box-shadow 0.1s; 
+        }
         #hyperFill { width: 100%; height: 0%; background: linear-gradient(to top, #6c5ce7, #a29bfe); transition: height 0.1s linear, filter 0.1s; }
         
         .gauge-charging #hyperContainer { 
-            box-shadow: 0 0 10px rgba(0, 243, 255, 0.4), 0 0 2px rgba(255, 255, 255, 0.3) inset; 
-            border-color: rgba(255, 255, 255, 0.8); 
+            box-shadow: 0 0 8px rgba(255, 255, 255, 0.3), 0 0 1px rgba(255, 255, 255, 0.2) inset; 
+            border-color: rgba(255, 255, 255, 0.6); 
         }
         .gauge-charging #hyperFill { 
             filter: brightness(1.2); 
-            background: linear-gradient(to top, #00f3ff, #74b9ff); 
         }
 
         #dashZone { position: absolute; right: 30px; bottom: 100px; pointer-events: auto; display: flex; flex-direction: column; align-items: center; }
@@ -62,9 +76,12 @@
             pointer-events: auto; z-index: 100; 
         }
 
-        /* 카드 레이아웃: 가로 배치, 폭 조정 */
+        /* [수정] 카드: 고정 폭, 가운데 정렬, 동일 규격 */
         .card { 
-            background: #0f1218; color: #c8aa6e; width: 90%; margin: 6px; padding: 12px 15px; 
+            background: #0f1218; color: #c8aa6e; 
+            width: 240px; /* 고정 너비 */
+            margin: 8px auto; /* 가운데 정렬 */
+            padding: 12px 15px; 
             border: 1px solid #c8aa6e; 
             box-shadow: 0 0 10px rgba(200, 170, 110, 0.2); 
             transition: transform 0.1s; cursor: pointer;
@@ -72,7 +89,6 @@
             transform: translateY(20px) scale(0.9);
             animation: cardEntry 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
             
-            /* Flexbox: 가로 정렬 */
             display: flex; 
             flex-direction: row; 
             align-items: center; 
@@ -86,7 +102,7 @@
         .card.hyper-card { border: 1px solid #0acde5; color: #0acde5; background: #0a1a20;}
         
         .card-icon {
-            width: 48px; height: 48px; 
+            width: 40px; height: 40px; /* 카드 내부 아이콘 크기도 약간 조정 */
             margin-right: 15px; 
             object-fit: contain;
             flex-shrink: 0; 
@@ -101,13 +117,13 @@
 
         .card-text-group h3 {
             margin: 0 0 4px 0;
-            font-size: 18px;
+            font-size: 16px; /* 폰트 사이즈 조정 */
             line-height: 1.2;
         }
 
         .card-text-group p {
             margin: 0;
-            font-size: 13px;
+            font-size: 12px;
             color: #ccc;
             line-height: 1.2;
         }
@@ -207,7 +223,7 @@
     const comboLabel = document.getElementById('comboLabel');
     const hyperFill = document.getElementById('hyperFill');
     const rightHud = document.getElementById('rightHud');
-    const typeIcon = document.getElementById('typeIcon'); // [수정] 아이콘 Ref
+    const typeIcon = document.getElementById('typeIcon');
     const dashIcon = document.getElementById('dashIcon');
     const levelUpScreen = document.getElementById('levelUpScreen');
     const levelUpTitle = document.getElementById('levelUpTitle');
@@ -455,7 +471,9 @@
         update() { this.r += 40; if(this.r > this.maxR) this.active = false; }
         draw() {
             const sx = this.wx - player.wx + CW/2; const sy = this.wy - player.wy + CH/2;
-            ctx.strokeStyle = '#0acde5'; ctx.lineWidth = 10; ctx.beginPath(); ctx.arc(sx, sy, this.r, 0, Math.PI*2); ctx.stroke();
+            // [수정] EMP 이펙트 색상 변경 (초록색)
+            ctx.strokeStyle = '#2ecc71'; 
+            ctx.lineWidth = 10; ctx.beginPath(); ctx.arc(sx, sy, this.r, 0, Math.PI*2); ctx.stroke();
         }
     }
 
@@ -499,9 +517,9 @@
     function addHyper(n) { if(player.isHyper) return; player.hyperGauge = Math.min(100, player.hyperGauge+n); if(player.hyperGauge>=100) activateHyper(); updateUI(); }
 
     function activateHyper() {
-        if(player.hyperType === HYPER_RAPID) { player.isHyper = true; player.hyperTime = 300; document.body.classList.add('hyper-active'); showMessage("RAPID FIRE!", "#fffa65"); } 
-        else if (player.hyperType === HYPER_EMP) { screenShake = 30; spawnEffect().spawnEMP(player.wx, player.wy); enemies.forEach(e => { if(e.active && Math.hypot(e.wx - player.wx, e.wy - player.wy) < 500) killEnemy(e, true); }); bullets.forEach(b => { if(b.active && b.isEnemyBullet) b.active = false; }); player.hyperGauge = 0; showMessage("EMP BLAST!", "#00d2d3"); }
-        else if (player.hyperType === HYPER_SHIELD) { player.isHyper = true; player.hyperTime = 600; document.body.classList.add('hyper-active'); showMessage("SHIELD ON", "#a29bfe"); }
+        if(player.hyperType === HYPER_RAPID) { player.isHyper = true; player.hyperTime = 300; document.body.classList.add('hyper-active'); showMessage("RAPID FIRE!", "#e74c3c"); } 
+        else if (player.hyperType === HYPER_EMP) { screenShake = 30; spawnEffect().spawnEMP(player.wx, player.wy); enemies.forEach(e => { if(e.active && Math.hypot(e.wx - player.wx, e.wy - player.wy) < 500) killEnemy(e, true); }); bullets.forEach(b => { if(b.active && b.isEnemyBullet) b.active = false; }); player.hyperGauge = 0; showMessage("EMP BLAST!", "#2ecc71"); }
+        else if (player.hyperType === HYPER_SHIELD) { player.isHyper = true; player.hyperTime = 600; document.body.classList.add('hyper-active'); showMessage("SHIELD ON", "#9b59b6"); }
     }
 
     function killEnemy(e, isEmp=false) {
@@ -541,17 +559,17 @@
     
     function updateDashUI() { if(player.dashReady) { dashIcon.classList.remove('cooldown'); dashIcon.classList.add('ready'); dashIcon.innerText = "DASH"; } else { dashIcon.classList.remove('ready'); dashIcon.classList.add('cooldown'); dashIcon.innerText = Math.ceil(player.dashCool/60); } }
     
-    // [수정] 텍스트가 아닌 아이콘 이미지 src 변경
+    // [수정] 게이지 색상 변경 로직
     function updateTypeIcon() { 
         if(player.hyperType === HYPER_RAPID) { 
             typeIcon.src = "rapid.png"; 
-            hyperFill.style.background = 'linear-gradient(to top, #ff9f43, #ff6b81)'; 
+            hyperFill.style.background = 'linear-gradient(to top, #ff9f43, #ff6b81)'; /* 주황-레드 */
         } else if(player.hyperType === HYPER_EMP) { 
             typeIcon.src = "emp.png"; 
-            hyperFill.style.background = 'linear-gradient(to top, #00d2d3, #54a0ff)'; 
+            hyperFill.style.background = 'linear-gradient(to top, #f1c40f, #2ecc71)'; /* 노랑-초록 */
         } else { 
             typeIcon.src = "shield.png"; 
-            hyperFill.style.background = 'linear-gradient(to top, #6c5ce7, #a29bfe)'; 
+            hyperFill.style.background = 'linear-gradient(to top, #54a0ff, #5f27cd)'; /* 블루-보라 */
         } 
     }
 
@@ -701,7 +719,7 @@
         gameState='PAUSE'; joystick.active=false; joystick.vx=0; joystick.vy=0; levelUpScreen.style.display='flex'; cardsBox.innerHTML='';
         const canSwitchHyper = (player.level % 3 === 0) && !player.isHyper;
         if(canSwitchHyper) {
-            levelUpTitle.innerText = "특수기술 선택"; // [수정] 한글 제목
+            levelUpTitle.innerText = "특수기술 선택";
             const hyperOpts = [
                 {t:"고속연사", d:"5초 동안 고속연사", c:'hyper-card', img:'rapid.png', f:()=>{player.hyperType=HYPER_RAPID; updateTypeIcon();}},
                 {t:"광역폭발", d:"EMP 광역 데미지", c:'hyper-card', img:'emp.png', f:()=>{player.hyperType=HYPER_EMP; updateTypeIcon();}},
