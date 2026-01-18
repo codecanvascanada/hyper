@@ -463,26 +463,53 @@
             const angle = Math.random() * Math.PI * 2; const dist = 480;
             this.wx = player.wx + Math.cos(angle)*dist; this.wy = player.wy + Math.sin(angle)*dist;
             this.isElite = isElite; this.active = true; this.grazeCool = 0;
+            this.isSuicide = false; this.suicideTimer = 0; // 자폭 관련 초기화
+
             let speedBonus = 0; let hpBonus = 0;
             if(player.level > 5) speedBonus += (player.level * 0.05);
-            if(player.level >= 10) { speedBonus += 0.5; hpBonus += 20; }
-            if(player.level >= 20) { speedBonus += 1.0; hpBonus += 50; }
-            if(player.level >= 30) { speedBonus += 1.5; hpBonus += 100; }
-            if(player.level >= 50) { speedBonus += 2.0; hpBonus += 300; }
+            // ... (중략) ...
             if(isElite) {
-                this.hp = 150 + (player.level * 50) + hpBonus; 
+                // 엘리트 HP: 다항식 스케일링 적용 (기하급수적 증가)
+                this.hp = 150 + (player.level * 40) + Math.pow(player.level, 2.5);
                 this.maxHp = this.hp; 
                 this.speed = Math.min(5.0, (player.baseSpeed * 0.40) + (speedBonus * 0.5)); 
                 this.r = 30; this.color = '#e17055'; this.xp = 200; this.scoreVal = 1000;
-                this.pattern = 0; 
-                if(player.level >= 20) this.pattern = Math.floor(Math.random() * 3);
-                else if(player.level >= 10) this.pattern = Math.floor(Math.random() * 2);
-                this.shootTimer = 0; this.patternAngle = 0;
+                
+                // 패턴 레벨 스케일링 개선: 특정 패턴 고정이 아닌 'AI 성향' 부여
+                let roll = Math.random();
+                if (player.level < 5) {
+                    this.aiType = 0; 
+                } else if (player.level < 15) {
+                    this.aiType = roll < 0.7 ? 1 : 0; 
+                } else if (player.level < 25) {
+                    this.aiType = roll < 0.6 ? 2 : (roll < 0.9 ? 1 : 0); 
+                } else {
+                    this.aiType = 3; 
+                }
+
+                this.shootTimer = 60; 
+                this.patternAngle = 0;
+                this.rapidCount = 0; 
             } else {
-                this.hp = 20 + (player.level * 8) + (hpBonus * 0.2); 
+                // 일반 적 HP: 다항식 스케일링 적용
+                let baseHp = 20 + (player.level * 8) + Math.pow(player.level, 2.2);
+                let baseSpeed = Math.min(6.5, (1.2 + Math.random() * 0.5) + speedBonus);
+                
+                // 10% 확률로 자폭병 생성
+                if (Math.random() < 0.1) {
+                    this.isSuicide = true;
+                    this.hp = baseHp * 1.5; // 맷집 1.5배
+                    this.speed = baseSpeed * 1.5; // 속도 1.5배 (기본보다 0.5배 빠름)
+                    this.color = '#555'; // 검은 회색
+                } else {
+                    this.hp = baseHp;
+                    this.speed = baseSpeed;
+                    this.r = 10; this.color = '#ff6b81'; 
+                }
+                
                 this.maxHp = this.hp;
-                this.speed = Math.min(6.5, (1.2 + Math.random() * 0.5) + speedBonus);
-                this.r = 10; this.color = '#ff6b81'; this.xp = 5; this.scoreVal = 10;
+                this.r = 10; 
+                this.xp = 5; this.scoreVal = 10;
             }
         }
         update() {
@@ -504,48 +531,121 @@
             if(this.isElite) {
                 this.shootTimer--;
                 if(this.shootTimer <= 0) {
-                    if(this.pattern === 0) {
-                        const count = 5 + Math.floor(player.level / 10); 
-                        const spread = 0.5; const startA = angleToPlayer - (spread * (count-1))/2;
-                        for(let i=0; i<count; i++) spawnBullet(this.wx, this.wy, startA + spread*i, true); 
-                        this.shootTimer = Math.max(40, 90 - player.level); 
+                    let execPattern = 0;
+                    
+                    // 연사 중이면 무조건 연사 유지
+                    if(this.rapidCount > 0) {
+                        execPattern = 2;
+                    } else {
+                        // AI 성향에 따른 확률적 패턴 선택
+                        let r = Math.random();
+                        if (this.aiType === 0) { // Fan 위주
+                            execPattern = r < 0.8 ? 0 : 2; 
+                        } else if (this.aiType === 1) { // Spiral 위주
+                            execPattern = r < 0.6 ? 1 : (r < 0.9 ? 0 : 2);
+                        } else if (this.aiType === 2) { // Stream 위주
+                            execPattern = r < 0.6 ? 2 : (r < 0.9 ? 1 : 0);
+                        } else { // Chaos
+                            execPattern = Math.floor(Math.random() * 3);
+                        }
+                    }
+
+                    // 탄속 증가: 레벨당 2% 빨라짐 (최대 2배)
+                    const speedMult = 1 + Math.min(1.0, player.level * 0.02);
+
+                    if(execPattern === 0) { // Fan (부채꼴)
+                        const count = 5 + Math.floor(player.level / 8); 
+                        const spread = 0.4; 
+                        const startA = angleToPlayer - (spread * (count-1))/2;
+                        for(let i=0; i<count; i++) spawnBullet(this.wx, this.wy, startA + spread*i, true, speedMult); 
+                        this.shootTimer = Math.max(50, 90 - player.level); 
                     } 
-                    else if(this.pattern === 1) {
-                        const count = 12;
+                    else if(execPattern === 1) { // Spiral (나선/원형)
+                        const count = 8 + Math.floor(player.level / 10);
                         for(let i=0; i<count; i++) {
                             const a = (Math.PI*2 / count) * i + this.patternAngle;
-                            spawnBullet(this.wx, this.wy, a, true);
+                            spawnBullet(this.wx, this.wy, a, true, speedMult);
                         }
-                        this.patternAngle += 0.5; this.shootTimer = 60;
+                        this.patternAngle += 0.3; 
+                        this.shootTimer = 20; 
                     }
-                    else if(this.pattern === 2) {
-                        spawnBullet(this.wx, this.wy, angleToPlayer, true);
-                        spawnBullet(this.wx, this.wy, angleToPlayer + 0.2, true);
-                        spawnBullet(this.wx, this.wy, angleToPlayer - 0.2, true);
-                        this.shootTimer = 10;
+                    else if(execPattern === 2) { // Stream (조준 연사)
+                        if(this.rapidCount <= 0) this.rapidCount = 5 + Math.floor(player.level / 15); 
+                        
+                        spawnBullet(this.wx, this.wy, angleToPlayer, true, speedMult * 2); // 연사는 2배 빠름
+                        this.rapidCount--;
+                        
+                        if(this.rapidCount > 0) this.shootTimer = 8; 
+                        else this.shootTimer = 100; 
                     }
                 }
             }
             if(dist > 1000) this.active=false;
+
+            // 자폭 로직
+            if(this.isSuicide && this.hp < this.maxHp) {
+                if(this.suicideTimer === 0) this.suicideTimer = 1; // 카운트다운 시작
+            }
+            if(this.suicideTimer > 0) {
+                this.suicideTimer++;
+                if(this.suicideTimer >= 240) { // 4초 (60fps * 4)
+                    // 폭발
+                    this.active = false;
+                    this.hp = 0; // 사망 처리
+                    
+                    // 폭발 이펙트 (EMP 처럼 퍼지는 효과)
+                    spawnEffect().spawnExplosion(this.wx, this.wy);
+
+                    // 플레이어 피격 체크 (반경 2배)
+                    const distToPlayer = Math.hypot(player.wx - this.wx, player.wy - this.wy);
+                    if(distToPlayer < this.r * 2 + player.hitR) {
+                        if(!player.isDashing && !(player.isHyper && player.hyperType === HYPER_SHIELD)) {
+                            player.hp -= 20; // 기본(10)의 2배 데미지
+                            player.showHpTimer = 60; 
+                            spawnText("-20", player.wx, player.wy, 'red'); 
+                            updateUI(); 
+                            if(player.hp<=0) gameOver();
+                        } else {
+                            spawnText("BLOCK", player.wx, player.wy, "#a29bfe");
+                        }
+                    }
+                    // 자폭은 점수/경험치 안줌 (또는 줌? 일단 킬 처리와 동일하게)
+                    killEnemy(this); 
+                }
+            }
         }
         draw() {
             const sx = this.wx - player.wx + CW/2; const sy = this.wy - player.wy + CH/2;
             if(sx<-60||sx>CW+60||sy<-60||sy>CH+60) return;
+            
+            // 자폭병 그리기
             ctx.beginPath(); ctx.arc(sx, sy, this.r, 0, Math.PI*2); ctx.fillStyle = this.color; ctx.fill();
+            
+            // 카운트다운 텍스트
+            if(this.suicideTimer > 0) {
+                const remainingSec = 4 - Math.floor(this.suicideTimer / 60);
+                ctx.fillStyle = "white";
+                ctx.font = "bold 8px Arial"; // 자폭 숫자를 절반 크기로 줄임
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillText(remainingSec, sx, sy);
+            }
+
             const hpPct = Math.max(0, this.hp / this.maxHp);
             let barW = this.isElite ? 40 : 18; let barH = this.isElite ? 6 : 3; let barY = this.isElite ? 40 : 20;
             if(this.isElite) { ctx.lineWidth=3; ctx.strokeStyle='#fff'; ctx.stroke(); }
             ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(sx - barW/2, sy - barY, barW, barH);
-            ctx.fillStyle = '#ff7675'; ctx.fillRect(sx - barW/2, sy - barY, barW * hpPct, barH);
+            ctx.fillStyle = this.isElite || this.isSuicide ? '#ff7675' : '#ff7675'; // 자폭병도 빨간 게이지
+            ctx.fillRect(sx - barW/2, sy - barY, barW * hpPct, barH);
         }
     }
 
     class Bullet {
         constructor() { this.active=false; }
-        spawn(wx, wy, a, isEnemyBullet=false) {
+        spawn(wx, wy, a, isEnemyBullet=false, speedMult=1.0) {
             this.wx=wx; this.wy=wy; this.isEnemyBullet = isEnemyBullet;
             if(isEnemyBullet) { 
-                this.vx = Math.cos(a)*4; this.vy = Math.sin(a)*4; this.life = 300; this.r = 6; this.color = '#ff9f43'; this.isCrit=false;
+                this.vx = Math.cos(a)*4*speedMult; this.vy = Math.sin(a)*4*speedMult; this.life = 300; this.r = 6; this.color = '#ff9f43'; this.isCrit=false;
             } else { 
                 this.vx = Math.cos(a)*8; this.vy = Math.sin(a)*8; this.life = 50;
                 this.isCrit = Math.random() < player.critChance;
@@ -590,12 +690,18 @@
 
     class Effect {
         constructor() { this.active = false; }
-        spawnEMP(wx, wy) { this.wx = wx; this.wy = wy; this.r = 0; this.maxR = 200; this.active = true; }
-        update() { this.r += 40; if(this.r > this.maxR) this.active = false; }
+        spawnEMP(wx, wy) { this.wx = wx; this.wy = wy; this.r = 0; this.maxR = 200; this.active = true; this.type = 'EMP'; }
+        spawnExplosion(wx, wy) { this.wx = wx; this.wy = wy; this.r = 0; this.maxR = 60; this.active = true; this.type = 'EXPLOSION'; } // 자폭 이펙트
+        update() { this.r += this.type === 'EXPLOSION' ? 5 : 40; if(this.r > this.maxR) this.active = false; }
         draw() {
             const sx = this.wx - player.wx + CW/2; const sy = this.wy - player.wy + CH/2;
-            ctx.strokeStyle = '#2ecc71'; 
-            ctx.lineWidth = 10; ctx.beginPath(); ctx.arc(sx, sy, this.r, 0, Math.PI*2); ctx.stroke();
+            if (this.type === 'EMP') {
+                ctx.strokeStyle = '#2ecc71'; 
+                ctx.lineWidth = 10; ctx.beginPath(); ctx.arc(sx, sy, this.r, 0, Math.PI*2); ctx.stroke();
+            } else if (this.type === 'EXPLOSION') {
+                ctx.fillStyle = `rgba(255, 69, 0, ${1 - this.r/this.maxR})`; // 오렌지색, 퍼질수록 투명
+                ctx.beginPath(); ctx.arc(sx, sy, this.r, 0, Math.PI*2); ctx.fill();
+            }
         }
     }
 
@@ -774,7 +880,8 @@
         }
         if(player.combo>0) { player.comboTimer--; if(player.comboTimer<=0) { player.combo=0; comboEl.style.display='none'; comboLabel.style.display='none'; } }
 
-        const rate = (player.isHyper && player.hyperType===HYPER_RAPID) ? 5 : Math.max(15, 60-player.level);
+        // 스폰 주기: 레벨이 오를수록 기하급수적으로 빨라짐 (최소 10프레임 = 초당 6마리)
+        const rate = (player.isHyper && player.hyperType===HYPER_RAPID) ? 5 : Math.max(10, 60 - player.level - Math.floor(Math.pow(player.level, 1.5) * 0.1));
         if(frameCount % rate === 0) getObj(enemies, Enemy).spawn(false);
         if(frameCount % 900 === 0 && player.level >= 3) {
             const activeBosses = enemies.filter(e => e.active && e.isElite).length; let maxBosses = 1; if(player.level >= 9) maxBosses = 2; if(player.level >= 18) maxBosses = 3;
