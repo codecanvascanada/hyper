@@ -206,7 +206,7 @@
             <div id="rushLabel" style="display:none;"></div> 
             <div style="position: relative; display: inline-block; margin-top: 10px;">
                 <div id="rushProgressBar" style="position: absolute; top: -5px; left: 0; width: 100%; height: 5px; background-color: rgba(255,255,255,0.2); border-radius: 2px 2px 0 0; overflow: hidden; display: none; z-index: 10;">
-                                    <div id="rushProgressBarFill" style="width: 100%; height: 100%; background-color: #ff0000;"></div>
+                                    <div id="rushProgressBarFill" style="width: 100%; height: 100%; background-color: #f1c40f;"></div>
                                 </div>                <button id="rushBtn" onclick="rushStart()" style="margin-top: 0;">⚡ 강화된 재도전</button>
             </div>
             <div id="rushSubText"></div>
@@ -529,9 +529,14 @@
                 } else if(player.isHyper && player.hyperType === HYPER_SHIELD) {
                     spawnText("BLOCK", player.wx, player.wy, '#a29bfe'); this.wx -= Math.cos(angleToPlayer)*15; this.wy -= Math.sin(angleToPlayer)*15;
                 } else {
-                    const dmg = this.isElite?20:10; player.hp -= dmg; player.showHpTimer = 60; spawnText(`-${dmg}`, player.wx, player.wy, 'red');
-                    player.combo = 0; comboEl.style.display='none'; comboLabel.style.display='none'; // 피격 시 콤보 초기화
-                    if(!this.isElite) this.active=false; updateUI(); if(player.hp<=0) gameOver();
+                    // [수정] 자폭병이 플레이어와 충돌하면 즉시 폭발
+                    if (this.isSuicide) {
+                        triggerSuicideExplosion(this);
+                    } else {
+                        const dmg = this.isElite?20:10; player.hp -= dmg; player.showHpTimer = 60; spawnText(`-${dmg}`, player.wx, player.wy, 'red');
+                        player.combo = 0; comboEl.style.display='none'; comboLabel.style.display='none'; // 피격 시 콤보 초기화
+                        if(!this.isElite) this.active=false; updateUI(); if(player.hp<=0) gameOver();
+                    }
                 }
             } else if(dist < player.grazeR + this.r && this.grazeCool<=0) { 
                 addHyper(this.isElite?5:1); 
