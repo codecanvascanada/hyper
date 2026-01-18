@@ -26,7 +26,6 @@
         #comboCount { font-size: 48px; font-weight: 900; color: #fffa65; text-shadow: 0 0 15px rgba(255, 165, 2, 0.8); display: none; transition: transform 0.05s; }
         #comboLabel { font-size: 12px; color: #81ecec; letter-spacing: 3px; font-weight: bold; display:none; text-shadow: 0 0 5px #00cec9; }
 
-        /* HUD 레이아웃 */
         #rightHud { 
             position: absolute; right: 15px; top: 130px; height: 30%; 
             display: flex; flex-direction: column; align-items: center; 
@@ -72,7 +71,6 @@
             pointer-events: auto; z-index: 100; 
         }
 
-        /* 카드 스타일 */
         .card { 
             background: #0f1218; color: #c8aa6e; 
             width: 240px; 
@@ -95,20 +93,21 @@
         .card-text-group h3 { margin: 0 0 4px 0; font-size: 16px; line-height: 1.2; }
         .card-text-group p { margin: 0; font-size: 12px; color: #ccc; line-height: 1.2; }
 
-        /* [수정] 게임오버 화면 스타일 */
+        /* [수정] 게임오버 화면 레이아웃 변경 */
         #gameOverTitle { 
             color: #00f3ff; font-size: 36px; font-weight: 900; 
-            margin-top: -50px; /* 위쪽으로 올림 */
-            margin-bottom: 20px; 
+            margin-top: 0; 
+            margin-bottom: 80px; /* 아래 메시지와 간격을 크게 벌림 */
             letter-spacing: 3px; 
             text-shadow: 0 0 10px rgba(0, 243, 255, 0.6);
             font-style: italic;
+            position: absolute; /* 절대 위치로 상단 고정 */
+            top: 15%;
         }
         
         #missionEndedMsg {
-            font-size: 24px; /* 사이즈 키움 */
-            font-weight: 800; /* 굵게 */
-            color: #fff; /* 잘 보이게 흰색 */
+            font-size: 24px; font-weight: 800; color: #fff; 
+            margin-top: 50px; /* 타이틀과 겹치지 않게 */
             margin-bottom: 30px; 
             text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
             letter-spacing: 1px;
@@ -117,7 +116,6 @@
         #newRecordMsg { color: #fffa65; font-size: 18px; font-weight: bold; margin-bottom: 20px; display: none; animation: blink 0.5s infinite alternate; }
         @keyframes blink { from { opacity: 1; } to { opacity: 0.5; } }
         
-        /* 점수 텍스트 컨테이너 */
         #resultContainer { margin-bottom: 30px; text-align: center; }
 
         #rushTimerBox { margin-top: 10px; text-align: center; }
@@ -166,7 +164,9 @@
 
     <div id="gameOverScreen" class="modal">
         <div id="gameOverTitle">SPARCRUSH</div>
-        <div id="missionEndedMsg">MISSION ENDED</div> <div id="newRecordMsg" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">🏆 NEW RECORD! 🏆</div>
+        <div id="missionEndedMsg">MISSION ENDED</div>
+        
+        <div id="newRecordMsg" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">🏆 NEW RECORD! 🏆</div>
         
         <div id="resultContainer"></div>
 
@@ -174,7 +174,8 @@
             <div id="rushLabel" style="font-size:12px; color:#ddd; text-shadow: 1px 1px 1px rgba(0,0,0,0.5);">RUSH MODE AVAILABLE</div>
             <div id="rushCount" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">5</div>
             <button id="rushBtn" onclick="rushStart()">⚡ RUSH START</button>
-            <div id="rushSubText"></div> </div>
+            <div id="rushSubText"></div>
+        </div>
     </div>
 </div>
 
@@ -214,7 +215,7 @@
     const cardsBox = document.getElementById('cardsBox');
     const gameOverScreen = document.getElementById('gameOverScreen');
     const gameOverTitle = document.getElementById('gameOverTitle');
-    const resultContainer = document.getElementById('resultContainer'); // [수정]
+    const resultContainer = document.getElementById('resultContainer'); 
     const newRecordMsg = document.getElementById('newRecordMsg');
     const rushCountEl = document.getElementById('rushCount');
     const rushBtn = document.getElementById('rushBtn');
@@ -445,7 +446,12 @@
         draw() {
             const sx = this.wx - player.wx + CW/2; const sy = this.wy - player.wy + CH/2;
             if(sx<-20||sx>CW+20||sy<-20||sy>CH+20) return;
-            ctx.beginPath(); if(this.isRare) { ctx.fillStyle='#f1c40f'; ctx.arc(sx, sy, 10, 0, Math.PI*2); } else { ctx.fillStyle='#0acde5'; ctx.arc(sx, sy, 6, 0, Math.PI*2); } ctx.fill();
+            // [수정] 보스 보석 색상 변경 (청록색)
+            ctx.beginPath(); 
+            ctx.fillStyle='#0acde5'; 
+            if(this.isRare) ctx.arc(sx, sy, 10, 0, Math.PI*2); // 크기는 유지
+            else ctx.arc(sx, sy, 6, 0, Math.PI*2); 
+            ctx.fill();
         }
     }
 
@@ -471,12 +477,13 @@
     function spawnBullet(wx, wy, a, isEnemy=false) { getObj(bullets, Bullet).spawn(wx, wy, a, isEnemy); }
     function spawnEffect() { return getObj(effects, Effect); }
 
-    function drawLightning(x1, y1, x2, y2) {
+    // [수정] 전기 색상 파라미터 추가
+    function drawLightning(x1, y1, x2, y2, color) {
         ctx.save();
-        ctx.strokeStyle = '#00f3ff'; 
+        ctx.strokeStyle = color; 
         ctx.lineWidth = 2;
         ctx.shadowBlur = 10;
-        ctx.shadowColor = '#00f3ff';
+        ctx.shadowColor = color;
         ctx.beginPath();
         ctx.moveTo(x1, y1);
         const dist = Math.hypot(x2 - x1, y2 - y1);
@@ -656,15 +663,17 @@
         if(screenShake > 0) { const rx = (Math.random() - 0.5) * screenShake; const ry = (Math.random() - 0.5) * screenShake; ctx.translate(rx, ry); }
         drawGrid();
         
-        // [수정] Graze 서클 색상 동적 변경
-        let grazeColor;
-        if(player.hyperType === HYPER_RAPID) grazeColor = 'rgba(255, 159, 67, 0.4)'; // Orange/Red
-        else if(player.hyperType === HYPER_EMP) grazeColor = 'rgba(46, 204, 113, 0.4)'; // Green
-        else grazeColor = 'rgba(155, 89, 182, 0.4)'; // Purple
+        // [수정] Graze 서클 및 전기 색상 동적 결정
+        let hyperColor;
+        if(player.hyperType === HYPER_RAPID) hyperColor = '#e74c3c'; // Orange/Red
+        else if(player.hyperType === HYPER_EMP) hyperColor = '#2ecc71'; // Green
+        else hyperColor = '#9b59b6'; // Purple
         
-        ctx.strokeStyle = grazeColor; 
+        ctx.strokeStyle = hyperColor; 
+        ctx.globalAlpha = 0.4; // 원 투명도
         ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(CW/2, CH/2, player.grazeR, 0, Math.PI*2); ctx.stroke();
-        
+        ctx.globalAlpha = 1.0; // 투명도 복구
+
         gems.forEach(e=>{ if(e.active) e.draw(); }); effects.forEach(e=>{ if(e.active) e.draw(); }); bullets.forEach(e=>{ if(e.active) e.draw(); }); enemies.forEach(e=>{ if(e.active) e.draw(); }); texts.forEach(e=>{ if(e.active) e.draw(); });
 
         if(player.isHyper && player.hyperType === HYPER_SHIELD) {
@@ -689,7 +698,8 @@
                 if (dist < player.grazeR + e.r && dist > player.hitR + e.r) {
                     const sx = e.wx - player.wx + CW/2;
                     const sy = e.wy - player.wy + CH/2;
-                    drawLightning(CW/2, CH/2, sx, sy);
+                    // [수정] 전기 색상 파라미터 전달
+                    drawLightning(CW/2, CH/2, sx, sy, hyperColor); 
                     player.isGrazingNow = true; 
                 }
             }
@@ -776,7 +786,6 @@
         }
         newRecordMsg.style.display = isNewRecord ? 'block' : 'none';
         
-        // [수정] 점수 표시 HTML
         resultContainer.innerHTML = `
             <div style="font-size:20px; font-weight:normal; color:#ddd; margin-bottom:5px;">SCORE: ${player.score.toLocaleString()}</div>
             <div style="font-size:20px; font-weight:bold; color:#fffa65;">BEST: ${parseInt(highScore).toLocaleString()}</div>
@@ -800,7 +809,7 @@
                     clearInterval(rushTimerInterval);
                     // 타임아웃 -> 일반 리셋으로 변경
                     rushBtn.innerText = "↻ RESTART";
-                    rushSubText.innerText = ""; // [수정] 빈 문자열
+                    rushSubText.innerText = "";
                     rushCountEl.innerText = "";
                     rushCountEl.style.display = "none";
                 }
@@ -810,7 +819,7 @@
             rushCountEl.style.display = "none";
             rushLabel.style.display = "none";
             rushBtn.innerText = "↻ RESTART";
-            rushSubText.innerText = ""; // [수정] 빈 문자열
+            rushSubText.innerText = "";
             if(rushTimerInterval) clearInterval(rushTimerInterval);
         }
         
