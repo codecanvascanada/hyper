@@ -178,7 +178,7 @@
             <img id="infoIcon" src="" alt="Info Icon">
             <div id="infoText"></div>
         </div>
-        <div id="centerMsg"><div id="comboCount">0</div><div id="comboLabel">GRAZE</div></div>
+        <div id="centerMsg"><div id="comboCount">0</div><div id="comboLabel">COMBO</div></div>
         
         <div id="rightHud">
             <div id="hyperContainer"><div id="hyperFill"></div></div>
@@ -204,8 +204,11 @@
 
         <div id="rushTimerBox">
             <div id="rushLabel" style="display:none;"></div> 
-            <div id="rushCount" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">5</div>
-            <button id="rushBtn" onclick="rushStart()">⚡ 강화된 재도전</button>
+            <div style="position: relative; display: inline-block; margin-top: 10px;">
+                <div id="rushProgressBar" style="position: absolute; top: -5px; left: 0; width: 100%; height: 5px; background-color: rgba(255,255,255,0.2); border-radius: 2px 2px 0 0; overflow: hidden; display: none; z-index: 10;">
+                                    <div id="rushProgressBarFill" style="width: 100%; height: 100%; background-color: #ff0000;"></div>
+                                </div>                <button id="rushBtn" onclick="rushStart()" style="margin-top: 0;">⚡ 강화된 재도전</button>
+            </div>
             <div id="rushSubText"></div>
         </div>
     </div>
@@ -250,7 +253,9 @@
     const gameOverTitle = document.getElementById('gameOverTitle');
     const resultContainer = document.getElementById('resultContainer'); 
     const newRecordMsg = document.getElementById('newRecordMsg');
-    const rushCountEl = document.getElementById('rushCount');
+    const rushCountEl = document.getElementById('rushCount'); // (참조는 남겨둠, 사용 안 함)
+    const rushProgressBar = document.getElementById('rushProgressBar');
+    const rushProgressBarFill = document.getElementById('rushProgressBarFill');
     const rushBtn = document.getElementById('rushBtn');
     const rushSubText = document.getElementById('rushSubText');
     const rushLabel = document.getElementById('rushLabel');
@@ -525,9 +530,13 @@
                     spawnText("BLOCK", player.wx, player.wy, '#a29bfe'); this.wx -= Math.cos(angleToPlayer)*15; this.wy -= Math.sin(angleToPlayer)*15;
                 } else {
                     const dmg = this.isElite?20:10; player.hp -= dmg; player.showHpTimer = 60; spawnText(`-${dmg}`, player.wx, player.wy, 'red');
+                    player.combo = 0; comboEl.style.display='none'; comboLabel.style.display='none'; // 피격 시 콤보 초기화
                     if(!this.isElite) this.active=false; updateUI(); if(player.hp<=0) gameOver();
                 }
-            } else if(dist < player.grazeR + this.r && this.grazeCool<=0) { addCombo(1); addHyper(this.isElite?5:1); this.grazeCool=20; }
+            } else if(dist < player.grazeR + this.r && this.grazeCool<=0) { 
+                addHyper(this.isElite?5:1); 
+                this.grazeCool=20; 
+            }
             if(this.isElite) {
                 this.shootTimer--;
                 if(this.shootTimer <= 0) {
@@ -570,12 +579,12 @@
                         this.shootTimer = 20; 
                     }
                     else if(execPattern === 2) { // Stream (조준 연사)
-                        if(this.rapidCount <= 0) this.rapidCount = 5 + Math.floor(player.level / 15); 
+                        if(this.rapidCount <= 0) this.rapidCount = (5 + Math.floor(player.level / 15)) * 2; // 발사 수 2배
                         
-                        spawnBullet(this.wx, this.wy, angleToPlayer, true, speedMult * 2); // 연사는 2배 빠름
+                        spawnBullet(this.wx, this.wy, angleToPlayer, true, speedMult * 4); // 탄속 기존 대비 2배 (총 4배속)
                         this.rapidCount--;
                         
-                        if(this.rapidCount > 0) this.shootTimer = 8; 
+                        if(this.rapidCount > 0) this.shootTimer = 16; // 간격 2배 (8 -> 16)
                         else this.shootTimer = 100; 
                     }
                 }
@@ -589,28 +598,9 @@
             if(this.suicideTimer > 0) {
                 this.suicideTimer++;
                 if(this.suicideTimer >= 240) { // 4초 (60fps * 4)
-                    // 폭발
-                    this.active = false;
-                    this.hp = 0; // 사망 처리
-                    
-                    // 폭발 이펙트 (EMP 처럼 퍼지는 효과)
-                    spawnEffect().spawnExplosion(this.wx, this.wy);
-
-                    // 플레이어 피격 체크 (반경 2배)
-                    const distToPlayer = Math.hypot(player.wx - this.wx, player.wy - this.wy);
-                    if(distToPlayer < this.r * 2 + player.hitR) {
-                        if(!player.isDashing && !(player.isHyper && player.hyperType === HYPER_SHIELD)) {
-                            player.hp -= 20; // 기본(10)의 2배 데미지
-                            player.showHpTimer = 60; 
-                            spawnText("-20", player.wx, player.wy, 'red'); 
-                            updateUI(); 
-                            if(player.hp<=0) gameOver();
-                        } else {
-                            spawnText("BLOCK", player.wx, player.wy, "#a29bfe");
-                        }
-                    }
-                    // 자폭은 점수/경험치 안줌 (또는 줌? 일단 킬 처리와 동일하게)
-                    killEnemy(this); 
+                    // 타이머 종료 시 폭발
+                    triggerSuicideExplosion(this);
+                    // 타이머 폭발은 킬 카운트/점수 처리 안함 (자폭했으므로)
                 }
             }
         }
@@ -625,7 +615,7 @@
             if(this.suicideTimer > 0) {
                 const remainingSec = 4 - Math.floor(this.suicideTimer / 60);
                 ctx.fillStyle = "white";
-                ctx.font = "bold 8px Arial"; // 자폭 숫자를 절반 크기로 줄임
+                ctx.font = "bold 12px Arial"; // 자폭 숫자를 키움 (8px -> 12px)
                 ctx.textAlign = "center";
                 ctx.textBaseline = "middle";
                 ctx.fillText(remainingSec, sx, sy);
@@ -746,12 +736,58 @@
 
     function activateHyper() {
         if(player.hyperType === HYPER_RAPID) { player.isHyper = true; player.hyperTime = 300; document.body.classList.add('hyper-active'); showMessage("RAPID FIRE!", "#f1c40f"); } 
-        else if (player.hyperType === HYPER_EMP) { screenShake = 30; spawnEffect().spawnEMP(player.wx, player.wy); enemies.forEach(e => { if(e.active && Math.hypot(e.wx - player.wx, e.wy - player.wy) < 300) killEnemy(e, true); }); bullets.forEach(b => { if(b.active && b.isEnemyBullet) b.active = false; }); player.hyperGauge = 0; showMessage("EMP BLAST!", "#2ecc71"); }
+        else if (player.hyperType === HYPER_EMP) { screenShake = 30; spawnEffect().spawnEMP(player.wx, player.wy); enemies.forEach(e => { if(e.active && Math.hypot(e.wx - player.wx, e.wy - player.wy) < 300) killEnemy(e, true); }); player.hyperGauge = 0; showMessage("EMP BLAST!", "#2ecc71"); }
         else if (player.hyperType === HYPER_SHIELD) { player.isHyper = true; player.hyperTime = 600; document.body.classList.add('hyper-active'); showMessage("SHIELD ON", "#9b59b6"); }
     }
 
+    function triggerSuicideExplosion(e) {
+        e.active = false;
+        e.hp = 0;
+        
+        // 폭발 이펙트
+        spawnEffect().spawnExplosion(e.wx, e.wy);
+
+        // 폭발 시 원형 탄막 발사 (12발) - 총알 크기 절반(3)으로 축소
+        for(let i=0; i<12; i++) {
+            const angle = (Math.PI * 2 / 12) * i;
+            // spawnBullet에 radius 인자 추가하거나 spawn 후 수정
+            let b = getObj(bullets, Bullet);
+            b.spawn(e.wx, e.wy, angle, true);
+            b.r = 3; // 자폭 탄막 크기 절반
+        }
+
+        // 플레이어 피격 체크 (반경 4배)
+        const distToPlayer = Math.hypot(player.wx - e.wx, player.wy - e.wy);
+        if(distToPlayer < e.r * 4 + player.hitR) {
+            if(!player.isDashing && !(player.isHyper && player.hyperType === HYPER_SHIELD)) {
+                player.hp -= 20; 
+                player.showHpTimer = 60; 
+                spawnText("-20", player.wx, player.wy, 'red'); 
+                player.combo = 0; comboEl.style.display='none'; comboLabel.style.display='none';
+                updateUI(); 
+                if(player.hp<=0) gameOver();
+            } else {
+                spawnText("BLOCK", player.wx, player.wy, "#a29bfe");
+            }
+        }
+    }
+
     function killEnemy(e, isEmp=false) {
+        if (e.isSuicide) {
+            // 자폭병은 죽을 때도 폭발 (단, EMP로 죽을 땐 폭발 안함? 일단 요청대로 죽으면 자폭)
+            // EMP로 죽을 때도 폭발해야 하나? "데미지를 입어 죽는 경우"라고 했으므로 포함
+            triggerSuicideExplosion(e);
+            
+            // 점수/보상은 줌
+            addScore(e.scoreVal); 
+            getObj(gems, Gem).spawn(e.wx, e.wy, e.xp, e.isElite);
+            player.killCount++; player.killTimer = 180; updateKillStreak();
+            addCombo(1);
+            return;
+        }
+
         e.hp = 0; e.active = false; addScore(e.scoreVal); getObj(gems, Gem).spawn(e.wx, e.wy, e.xp, e.isElite);
+        addCombo(1); // 킬 콤보 추가
         // [수정] 하이퍼 상태가 아닐 때만 엘리트 처치 시 게이지 충전
         // 즉시 충전하지 않고 HyperOrb 생성
         if(e.isElite && !player.isHyper) { 
@@ -872,9 +908,9 @@
                 player.hyperGauge = (player.hyperTime/600)*100;
                 player.shieldAngle += 0.05; player.shieldPulse += 0.1;
 
-                // 쉴드 하이퍼 동안 HP 재생 (0.5초마다 2HP)
-                if (frameCount % 30 === 0) {
-                    player.hp = Math.min(player.maxHp, player.hp + 2);
+                // 쉴드 하이퍼 동안 HP 재생 (1초마다 1HP)
+                if (frameCount % 60 === 0) {
+                    player.hp = Math.min(player.maxHp, player.hp + 1);
                     updateUI(); // HP 업데이트 반영
                 }
             }
@@ -901,7 +937,11 @@
                     const d = Math.hypot(b.wx-player.wx, b.wy-player.wy);
                     if(d < player.hitR + b.r) {
                         if((player.isHyper && player.hyperType === HYPER_SHIELD) || player.isDashing) { spawnText("BLOCK", player.wx, player.wy, "#a29bfe"); b.active = false; } 
-                        else { player.hp -= 10; player.showHpTimer = 60; spawnText("-10", player.wx, player.wy, 'red'); updateUI(); b.active=false; if(player.hp<=0) gameOver(); }
+                        else { 
+                            player.hp -= 10; player.showHpTimer = 60; spawnText("-10", player.wx, player.wy, 'red'); 
+                            player.combo = 0; comboEl.style.display='none'; comboLabel.style.display='none'; // 피격 시 콤보 초기화
+                            updateUI(); b.active=false; if(player.hp<=0) gameOver(); 
+                        }
                     }
                 } else {
                     enemies.forEach(e=>{
@@ -1079,6 +1119,8 @@
     // --- [Logic Update] 1-Time Rush Mode ---
     function gameOver() {
         gameState='GAMEOVER';
+        gameOverScreen.style.display='flex'; // [수정] 모달을 먼저 표시하여 리플로우가 동작하게 함
+
         let isNewRecord = false;
         if(player.score > highScore) { 
             highScore = player.score; 
@@ -1094,40 +1136,56 @@
         
         // 1회 한정 Rush 체크
         if (!hasRushed) {
-            rushCountEl.style.display = "none"; // 타이머는 버튼 안에 표시되므로 숨김
+            // rushCountEl.style.display = "none"; // 삭제됨
+            rushProgressBar.style.display = "block"; // 프로그레스 바 표시
             
+            // 프로그레스 바 애니메이션 리셋 및 시작 (5초간 주~욱 줄어듦)
+            rushProgressBarFill.style.transition = 'none';
+            rushProgressBarFill.style.width = "100%"; 
+            
+            // 모달이 뜬 직후 브라우저가 렌더링할 시간을 아주 잠깐 주고 애니메이션 시작
+            setTimeout(() => {
+                rushProgressBarFill.style.transition = 'width 5s linear';
+                rushProgressBarFill.style.width = "0%";
+            }, 50);
+
             let timeLeft = 5; // 초기 타이머 값
-            rushBtn.innerHTML = `<span style="font-size: 1.5em; vertical-align: middle;">${timeLeft}</span> &nbsp; 강화된 재도전`; // 타이머를 버튼 텍스트에 포함, 크기/간격 조절
-            rushBtn.className = "btn-enhanced"; // 스타일 적용
+            // const maxTime = timeLeft; // (CSS 애니메이션 사용으로 불필요)
+            
+            rushBtn.innerHTML = `<span style="font-size: 1.5em; vertical-align: middle;">${timeLeft}</span> &nbsp; 강화된 재도전`; 
+            rushBtn.className = "btn-enhanced"; 
             rushSubText.innerText = "단 한번! 현재 스킬을 유지한 채 재시작.";
             rushLabel.style.display = "none"; 
             
             if(rushTimerInterval) clearInterval(rushTimerInterval);
             rushTimerInterval = setInterval(() => {
                 timeLeft--;
-                if(timeLeft > 0) { // 타이머가 0보다 클 때만 업데이트
+                // rushProgressBarFill.style.width 업데이트 제거 (CSS transition이 처리)
+                
+                if(timeLeft > 0) { 
                     rushBtn.innerHTML = `<span style="font-size: 1.5em; vertical-align: middle;">${timeLeft}</span> &nbsp; 강화된 재도전`;
                 } else {
                     clearInterval(rushTimerInterval);
                     // 타임아웃 -> 일반 리셋으로 변경
                     rushBtn.innerText = "↻ 처음부터";
-                    rushBtn.className = "btn-reset"; // 스타일 변경
+                    rushBtn.className = "btn-reset"; 
                     rushSubText.innerText = "";
-                    rushCountEl.innerText = "";
-                    rushCountEl.style.display = "none";
+                    // rushCountEl 삭제됨
+                    rushProgressBar.style.display = "none"; 
                 }
             }, 1000);
         } else {
             // 이미 Rush를 씀 -> 바로 리셋 버튼
-            rushCountEl.style.display = "none";
+            // rushCountEl 삭제됨
             rushLabel.style.display = "none";
             rushBtn.innerText = "↻ 처음부터";
-            rushBtn.className = "btn-reset"; // 스타일 변경
+            rushBtn.className = "btn-reset"; 
             rushSubText.innerText = "";
             if(rushTimerInterval) clearInterval(rushTimerInterval);
+            rushProgressBar.style.display = "none"; 
         }
         
-        gameOverScreen.style.display='flex';
+        // gameOverScreen.style.display='flex'; // [수정] 위로 이동함
     }
 
     function rushStart() {
