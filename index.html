@@ -711,9 +711,6 @@
         ctx.restore(); drawJoystick();
     }
 
-    function loop() { requestAnimationFrame(loop); if(gameState==='PLAY') { update(); draw(); } }
-
-    // [수정] 통합된 레벨업 시스템 (하이퍼 스킬 랜덤 출현)
     function levelUp() {
         gameState='PAUSE'; 
         joystick.active=false; joystick.vx=0; joystick.vy=0; 
@@ -739,8 +736,13 @@
             {t:"완전방어 스킬장착", d:"10초 동안 무적", c:'hyper-card', img:'shield.png', f:()=>{player.hyperType=HYPER_SHIELD; updateTypeIcon();}},
         ];
 
-        // 3. 풀 합치기 (확률 조정 가능, 여기선 단순 병합)
-        let pool = [...statOpts, ...hyperOpts];
+        // 3. 풀 합치기
+        let pool = [...statOpts];
+        
+        // [중요] 하이퍼 스킬 사용 중(게이지 소모 중)에는 스킬 교체 불가 -> 목록에 안 뜨게 함
+        if (!player.isHyper) {
+            pool = [...pool, ...hyperOpts];
+        }
 
         // 4. 랜덤 3개 선택 (중복 방지 로직 포함)
         for(let i=0; i<3; i++) {
@@ -749,7 +751,7 @@
             const item = pool.splice(r, 1)[0]; 
 
             const div = document.createElement('div'); 
-            div.className = item.c ? `card ${item.c}` : 'card'; // 하이퍼 카드는 별도 클래스 유지
+            div.className = item.c ? `card ${item.c}` : 'card'; 
             
             let imgHTML = item.img ? `<img src="${item.img}" class="card-icon">` : '';
             div.innerHTML = `
@@ -792,7 +794,7 @@
             rushCountEl.style.display = "block";
             rushBtn.innerText = "⚡ 강화된 재도전";
             rushSubText.innerText = "(Keep Stats / Lv.1 Start)";
-            rushLabel.style.display = "none"; // [수정] 텍스트 제거
+            rushLabel.style.display = "none"; 
             
             let timeLeft = 5;
             rushCountEl.innerText = timeLeft;
