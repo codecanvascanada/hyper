@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Survival: Polished UI</title>
+    <title>SPARCRUSH</title>
     <style>
         /* 선택 방지 */
         * { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; box-sizing: border-box; }
@@ -29,18 +29,16 @@
         #rightHud { position: absolute; right: 15px; top: 130px; height: 30%; display: flex; flex-direction: column; align-items: center; gap: 5px; }
         #currentType { color: #fff; font-size: 9px; margin-top: 5px; font-weight: 900; letter-spacing: 1px; text-shadow: 0 0 3px rgba(0,0,0,0.8); }
         
-        /* [수정 1] 게이지 스타일 & 충전 이펙트 완화 */
         #hyperContainer { width: 14px; flex: 1; background: rgba(0,0,0,0.6); border: 1px solid #555; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column-reverse; box-shadow: 0 0 8px rgba(0,0,0,0.5); transition: box-shadow 0.1s; }
         #hyperFill { width: 100%; height: 0%; background: linear-gradient(to top, #6c5ce7, #a29bfe); transition: height 0.1s linear, filter 0.1s; }
         
-        /* 은은하게 빛나는 효과 (기존보다 약하게) */
         .gauge-charging #hyperContainer { 
             box-shadow: 0 0 10px rgba(0, 243, 255, 0.4), 0 0 2px rgba(255, 255, 255, 0.3) inset; 
             border-color: rgba(255, 255, 255, 0.8); 
         }
         .gauge-charging #hyperFill { 
-            filter: brightness(1.2); /* 1.5 -> 1.2 로 감소 */
-            background: linear-gradient(to top, #00f3ff, #74b9ff); /* 색감 조정 */
+            filter: brightness(1.2); 
+            background: linear-gradient(to top, #00f3ff, #74b9ff); 
         }
 
         #dashZone { position: absolute; right: 30px; bottom: 100px; pointer-events: auto; display: flex; flex-direction: column; align-items: center; }
@@ -49,24 +47,23 @@
         #dashIcon.cooldown { background: rgba(0,0,0,0.5); opacity: 0.4; border-color: #555; font-size: 24px;}
         #pcGuide { position: absolute; bottom: 20px; width: 100%; text-align: center; color: #666; font-size: 11px; pointer-events: none; font-weight: bold; }
 
-        /* [수정 3] 모달 배경 투명도 조절 & 블러 효과 */
         .modal { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.4); /* 0.9 -> 0.4 로 투명하게 */
-            backdrop-filter: blur(4px);   /* 배경 블러 추가 */
+            background: rgba(0,0,0,0.4); 
+            backdrop-filter: blur(4px);   
             display: none; flex-direction: column; justify-content: center; align-items: center; 
             pointer-events: auto; z-index: 100; 
         }
 
-        /* [수정 2] 카드 애니메이션 (촤라락) */
         .card { 
             background: #0f1218; color: #c8aa6e; width: 85%; margin: 8px; padding: 15px; 
             border: 1px solid #c8aa6e; text-align: center; 
             box-shadow: 0 0 10px rgba(200, 170, 110, 0.2); 
             transition: transform 0.1s; cursor: pointer;
-            opacity: 0; /* 애니메이션 시작 전 숨김 */
+            opacity: 0; 
             transform: translateY(20px) scale(0.9);
             animation: cardEntry 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            display: flex; flex-direction: column; align-items: center; /* 카드 내용 중앙 정렬 */
         }
         @keyframes cardEntry {
             to { opacity: 1; transform: translateY(0) scale(1); }
@@ -74,8 +71,20 @@
 
         .card:active { transform: scale(0.98); background: #1e2328; }
         .card.hyper-card { border: 1px solid #0acde5; color: #0acde5; background: #0a1a20;}
+        
+        /* [NEW] 아이콘 스타일 */
+        .card-icon {
+            width: 50px; height: 50px; 
+            margin-bottom: 8px; 
+            object-fit: contain;
+            filter: drop-shadow(0 0 5px rgba(255,255,255,0.3)); /* 살짝 빛나는 효과 */
+        }
 
-        #gameOverTitle { color: #a29bfe; font-size: 32px; font-weight: 900; margin-bottom: 10px; letter-spacing: 2px; }
+        #gameOverTitle { 
+            color: #00f3ff; font-size: 36px; font-weight: 900; margin-bottom: 5px; letter-spacing: 3px; 
+            text-shadow: 0 0 10px rgba(0, 243, 255, 0.6);
+            font-style: italic;
+        }
         #newRecordMsg { color: #fffa65; font-size: 18px; font-weight: bold; margin-bottom: 20px; display: none; animation: blink 0.5s infinite alternate; }
         @keyframes blink { from { opacity: 1; } to { opacity: 0.5; } }
         #rushTimerBox { margin-top: 20px; text-align: center; }
@@ -87,7 +96,7 @@
             transition: transform 0.1s;
         }
         #rushBtn:active { transform: scale(0.95); }
-        #rushSubText { font-size: 12px; color: #ccc; margin-top: 5px; } /* 밝은 배경 대비 색상 조정 */
+        #rushSubText { font-size: 12px; color: #ccc; margin-top: 5px; }
 
         .hyper-active #gameContainer { animation: shake 0.2s infinite; }
         @keyframes shake { 0% { transform: translate(1px, 1px); } 50% { transform: translate(-1px, -1px); } 100% { transform: translate(1px, -1px); } }
@@ -118,7 +127,9 @@
     </div>
 
     <div id="gameOverScreen" class="modal">
-        <div id="gameOverTitle" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.8);">MISSION ENDED</div>
+        <div id="gameOverTitle">SPARCRUSH</div>
+        <div style="font-size:14px; color:#aaa; margin-bottom:15px; letter-spacing:1px;">MISSION ENDED</div>
+        
         <div id="newRecordMsg" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">🏆 NEW RECORD! 🏆</div>
         <h3 id="resultText" style="color:#fff; margin-bottom: 10px; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);"></h3>
         <div id="rushTimerBox">
@@ -654,26 +665,32 @@
         } else {
             levelUpTitle.innerText = "LEVEL UP!";
             const statOpts = [
-                {t:"공격력 UP", d:"데미지 +5", f:()=>{player.damage+=5; showMessage("DAMAGE UP!", "#e17055");}}, 
-                {t:"연사속도 UP", d:"공격속도 +10%", f:()=>{player.baseFireRate*=0.9; showMessage("FIRE RATE UP!", "#fdcb6e");}},
-                {t:"치명타 UP", d:"확률 +5%", f:()=>{player.critChance+=0.05; showMessage("CRIT CHANCE UP!", "#d63031");}}, 
-                {t:"멀티샷", d:"탄환 +1", f:()=>{player.bulletCount++; showMessage("MULTISHOT +1", "#0984e3");}},
-                {t:"대쉬 쿨다운", d:"재사용 대기시간 -1초", f:()=>{player.dashMaxCool = Math.max(180, player.dashMaxCool - 60); showMessage("DASH COOL DOWN", "#00b894");}}, 
-                {t:"체력회복", d:"HP +30", f:()=>{player.hp=Math.min(player.maxHp, player.hp+30); showMessage("HEALED!", "#55efc4");}},
-                {t:"자석 강화", d:"흡수 범위 +15", f:()=>{player.magnet += 15; showMessage("MAGNET UP!", "#a29bfe");}} 
+                {t:"공격력 UP", d:"데미지 +5", img: "atk.png", f:()=>{player.damage+=5; showMessage("DAMAGE UP!", "#e17055");}}, 
+                {t:"연사속도 UP", d:"공격속도 +10%", img: "speed.png", f:()=>{player.baseFireRate*=0.9; showMessage("FIRE RATE UP!", "#fdcb6e");}},
+                {t:"치명타 UP", d:"확률 +5%", img: "cri.png", f:()=>{player.critChance+=0.05; showMessage("CRIT CHANCE UP!", "#d63031");}}, 
+                {t:"멀티샷", d:"탄환 +1", img: "multi.png", f:()=>{player.bulletCount++; showMessage("MULTISHOT +1", "#0984e3");}},
+                {t:"대쉬 쿨다운", d:"재사용 대기시간 -1초", img: "dash.png", f:()=>{player.dashMaxCool = Math.max(180, player.dashMaxCool - 60); showMessage("DASH COOL DOWN", "#00b894");}}, 
+                {t:"체력회복", d:"HP +30", img: "hp.png", f:()=>{player.hp=Math.min(player.maxHp, player.hp+30); showMessage("HEALED!", "#55efc4");}},
+                {t:"자석 강화", d:"흡수 범위 +15", img: "mag.png", f:()=>{player.magnet += 15; showMessage("MAGNET UP!", "#a29bfe");}} 
             ];
             let pool = [...statOpts];
             for(let i=0; i<3; i++) {
                 if(pool.length === 0) break;
                 const r = Math.floor(Math.random()*pool.length);
                 const item = pool.splice(r, 1)[0]; 
-                const div = document.createElement('div'); div.className = 'card'; div.innerHTML=`<h3>${item.t}</h3><p>${item.d}</p>`;
+                const div = document.createElement('div'); div.className = 'card'; 
+                
+                // [MODIFIED] Image insertion logic
+                let imgHTML = item.img ? `<img src="${item.img}" class="card-icon">` : '';
+                div.innerHTML=`${imgHTML}<h3>${item.t}</h3><p>${item.d}</p>`;
+                
                 div.style.animationDelay = `${i * 0.1}s`; 
                 div.onclick=()=>{ item.f(); levelUpScreen.style.display='none'; gameState='PLAY'; }; cardsBox.appendChild(div);
             }
         }
     }
 
+    // --- [Logic Update] 1-Time Rush Mode ---
     function gameOver() {
         gameState='GAMEOVER';
         let isNewRecord = false;
