@@ -223,7 +223,8 @@
     bgm.loop = true; bgm.volume = 0.5;
     let bgmStarted = false;
     function startBgm() {
-        if (!bgmStarted) {
+        // 최초 시작이거나, 게임 중인데 멈춰있으면(예: 탭 전환 후) 재생 시도
+        if (!bgmStarted || (gameState === 'PLAY' && bgm.paused)) {
             bgm.play().then(() => { bgmStarted = true; }).catch(e => {});
         }
     }
