@@ -27,7 +27,14 @@
         #comboLabel { font-size: 12px; color: #81ecec; letter-spacing: 3px; font-weight: bold; display:none; text-shadow: 0 0 5px #00cec9; }
 
         #rightHud { position: absolute; right: 15px; top: 130px; height: 30%; display: flex; flex-direction: column; align-items: center; gap: 5px; }
-        #currentType { color: #fff; font-size: 9px; margin-top: 5px; font-weight: 900; letter-spacing: 1px; text-shadow: 0 0 3px rgba(0,0,0,0.8); }
+        
+        /* [수정] 텍스트 대신 아이콘 표시를 위한 스타일 */
+        #typeIcon { 
+            width: 28px; height: 28px; 
+            margin-top: 5px; 
+            object-fit: contain; 
+            filter: drop-shadow(0 0 3px rgba(255,255,255,0.4));
+        }
         
         #hyperContainer { width: 14px; flex: 1; background: rgba(0,0,0,0.6); border: 1px solid #555; border-radius: 8px; overflow: hidden; display: flex; flex-direction: column-reverse; box-shadow: 0 0 8px rgba(0,0,0,0.5); transition: box-shadow 0.1s; }
         #hyperFill { width: 100%; height: 0%; background: linear-gradient(to top, #6c5ce7, #a29bfe); transition: height 0.1s linear, filter 0.1s; }
@@ -55,7 +62,7 @@
             pointer-events: auto; z-index: 100; 
         }
 
-        /* [수정] 카드 레이아웃: 가로 배치 */
+        /* 카드 레이아웃: 가로 배치, 폭 조정 */
         .card { 
             background: #0f1218; color: #c8aa6e; width: 90%; margin: 6px; padding: 12px 15px; 
             border: 1px solid #c8aa6e; 
@@ -69,7 +76,7 @@
             display: flex; 
             flex-direction: row; 
             align-items: center; 
-            text-align: left; /* 텍스트 왼쪽 정렬 */
+            text-align: left; 
         }
         @keyframes cardEntry {
             to { opacity: 1; transform: translateY(0) scale(1); }
@@ -78,16 +85,14 @@
         .card:active { transform: scale(0.98); background: #1e2328; }
         .card.hyper-card { border: 1px solid #0acde5; color: #0acde5; background: #0a1a20;}
         
-        /* [수정] 아이콘 스타일 */
         .card-icon {
             width: 48px; height: 48px; 
-            margin-right: 15px; /* 텍스트와 간격 */
+            margin-right: 15px; 
             object-fit: contain;
-            flex-shrink: 0; /* 이미지 찌그러짐 방지 */
+            flex-shrink: 0; 
             filter: drop-shadow(0 0 5px rgba(255,255,255,0.2)); 
         }
 
-        /* [NEW] 텍스트 그룹 (제목+내용) */
         .card-text-group {
             display: flex;
             flex-direction: column;
@@ -143,7 +148,12 @@
         
         <div id="infoMsg"><div id="infoText"></div></div>
         <div id="centerMsg"><div id="comboCount">0</div><div id="comboLabel">GRAZE</div></div>
-        <div id="rightHud"><div id="hyperContainer"><div id="hyperFill"></div></div><div id="currentType">RAPID</div></div>
+        
+        <div id="rightHud">
+            <div id="hyperContainer"><div id="hyperFill"></div></div>
+            <img id="typeIcon" src="rapid.png" alt="Skill">
+        </div>
+        
         <div id="dashZone"><div id="dashIcon" class="ready">DASH</div></div>
         <div id="pcGuide">[PC] Mouse: Move / Space: Dash</div>
     </div>
@@ -197,7 +207,7 @@
     const comboLabel = document.getElementById('comboLabel');
     const hyperFill = document.getElementById('hyperFill');
     const rightHud = document.getElementById('rightHud');
-    const typeLabel = document.getElementById('currentType');
+    const typeIcon = document.getElementById('typeIcon'); // [수정] 아이콘 Ref
     const dashIcon = document.getElementById('dashIcon');
     const levelUpScreen = document.getElementById('levelUpScreen');
     const levelUpTitle = document.getElementById('levelUpTitle');
@@ -530,7 +540,20 @@
     }
     
     function updateDashUI() { if(player.dashReady) { dashIcon.classList.remove('cooldown'); dashIcon.classList.add('ready'); dashIcon.innerText = "DASH"; } else { dashIcon.classList.remove('ready'); dashIcon.classList.add('cooldown'); dashIcon.innerText = Math.ceil(player.dashCool/60); } }
-    function updateTypeLabel() { if(player.hyperType === HYPER_RAPID) { typeLabel.innerText = "RAPID"; hyperFill.style.background = 'linear-gradient(to top, #ff9f43, #ff6b81)'; } else if(player.hyperType === HYPER_EMP) { typeLabel.innerText = "EMP"; hyperFill.style.background = 'linear-gradient(to top, #00d2d3, #54a0ff)'; } else { typeLabel.innerText = "SHIELD"; hyperFill.style.background = 'linear-gradient(to top, #6c5ce7, #a29bfe)'; } }
+    
+    // [수정] 텍스트가 아닌 아이콘 이미지 src 변경
+    function updateTypeIcon() { 
+        if(player.hyperType === HYPER_RAPID) { 
+            typeIcon.src = "rapid.png"; 
+            hyperFill.style.background = 'linear-gradient(to top, #ff9f43, #ff6b81)'; 
+        } else if(player.hyperType === HYPER_EMP) { 
+            typeIcon.src = "emp.png"; 
+            hyperFill.style.background = 'linear-gradient(to top, #00d2d3, #54a0ff)'; 
+        } else { 
+            typeIcon.src = "shield.png"; 
+            hyperFill.style.background = 'linear-gradient(to top, #6c5ce7, #a29bfe)'; 
+        } 
+    }
 
     function drawGrid() {
         ctx.fillStyle = '#0f1218'; ctx.fillRect(0, 0, CW, CH);
@@ -678,16 +701,15 @@
         gameState='PAUSE'; joystick.active=false; joystick.vx=0; joystick.vy=0; levelUpScreen.style.display='flex'; cardsBox.innerHTML='';
         const canSwitchHyper = (player.level % 3 === 0) && !player.isHyper;
         if(canSwitchHyper) {
-            levelUpTitle.innerText = "TACTICAL UPGRADE";
+            levelUpTitle.innerText = "특수기술 선택"; // [수정] 한글 제목
             const hyperOpts = [
-                {t:"HYPER: RAPID", d:"[고속 연사] 모드로 전환", c:'hyper-card', img:'rapid.png', f:()=>{player.hyperType=HYPER_RAPID; updateTypeLabel();}},
-                {t:"HYPER: EMP", d:"[광역 폭발] 모드로 전환", c:'hyper-card', img:'emp.png', f:()=>{player.hyperType=HYPER_EMP; updateTypeLabel();}},
-                {t:"HYPER: SHIELD", d:"[완전 방어] 모드로 전환", c:'hyper-card', img:'shield.png', f:()=>{player.hyperType=HYPER_SHIELD; updateTypeLabel();}},
+                {t:"고속연사", d:"5초 동안 고속연사", c:'hyper-card', img:'rapid.png', f:()=>{player.hyperType=HYPER_RAPID; updateTypeIcon();}},
+                {t:"광역폭발", d:"EMP 광역 데미지", c:'hyper-card', img:'emp.png', f:()=>{player.hyperType=HYPER_EMP; updateTypeIcon();}},
+                {t:"완전방어", d:"10초 동안 무적", c:'hyper-card', img:'shield.png', f:()=>{player.hyperType=HYPER_SHIELD; updateTypeIcon();}},
             ];
             hyperOpts.forEach(item => {
                 const div = document.createElement('div'); div.className = `card ${item.c}`; 
                 
-                // [NEW] HTML structure for horizontal layout with images
                 let imgHTML = item.img ? `<img src="${item.img}" class="card-icon">` : '';
 
                 div.innerHTML = `
@@ -699,7 +721,7 @@
                 `;
                 
                 div.style.animationDelay = `${0.1}s`; 
-                div.onclick = () => { item.f(); showMessage(item.t+" EQUIPPED", "#a29bfe"); levelUpScreen.style.display='none'; gameState='PLAY'; }; cardsBox.appendChild(div);
+                div.onclick = () => { item.f(); showMessage(item.t+" 장착됨", "#a29bfe"); levelUpScreen.style.display='none'; gameState='PLAY'; }; cardsBox.appendChild(div);
             });
         } else {
             levelUpTitle.innerText = "LEVEL UP!";
@@ -719,7 +741,6 @@
                 const item = pool.splice(r, 1)[0]; 
                 const div = document.createElement('div'); div.className = 'card'; 
                 
-                // [NEW] HTML structure for horizontal layout with images
                 let imgHTML = item.img ? `<img src="${item.img}" class="card-icon">` : '';
                 div.innerHTML = `
                     ${imgHTML}
@@ -818,10 +839,10 @@
         gameOverScreen.style.display = 'none';
         gameState = 'PLAY';
         
-        updateUI(); updateTypeLabel(); updateDashUI();
+        updateUI(); updateTypeIcon(); updateDashUI();
     }
 
-    updateTypeLabel(); loop();
+    updateTypeIcon(); loop();
 </script>
 </body>
 </html>
