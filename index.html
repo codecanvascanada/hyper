@@ -163,16 +163,16 @@
 
     <div id="gameOverScreen" class="modal">
         <div id="gameOverTitle">SPARCRUSH</div>
-        <div id="missionEndedMsg">MISSION ENDED</div>
+        <div id="missionEndedMsg">게임오버</div>
         
         <div id="newRecordMsg" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">🏆 NEW RECORD! 🏆</div>
         
         <div id="resultContainer"></div>
 
         <div id="rushTimerBox">
-            <div id="rushLabel" style="font-size:12px; color:#ddd; text-shadow: 1px 1px 1px rgba(0,0,0,0.5);">RUSH MODE AVAILABLE</div>
+            <div id="rushLabel" style="display:none;"></div> 
             <div id="rushCount" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">5</div>
-            <button id="rushBtn" onclick="rushStart()">⚡ RUSH START</button>
+            <button id="rushBtn" onclick="rushStart()">⚡ 강화된 재도전</button>
             <div id="rushSubText"></div>
         </div>
     </div>
@@ -790,9 +790,9 @@
         // 1회 한정 Rush 체크
         if (!hasRushed) {
             rushCountEl.style.display = "block";
-            rushBtn.innerText = "⚡ RUSH START";
+            rushBtn.innerText = "⚡ 강화된 재도전";
             rushSubText.innerText = "(Keep Stats / Lv.1 Start)";
-            rushLabel.style.display = "block";
+            rushLabel.style.display = "none"; // [수정] 텍스트 제거
             
             let timeLeft = 5;
             rushCountEl.innerText = timeLeft;
@@ -804,7 +804,7 @@
                 if(timeLeft <= 0) {
                     clearInterval(rushTimerInterval);
                     // 타임아웃 -> 일반 리셋으로 변경
-                    rushBtn.innerText = "↻ RESTART";
+                    rushBtn.innerText = "↻ 처음부터";
                     rushSubText.innerText = "";
                     rushCountEl.innerText = "";
                     rushCountEl.style.display = "none";
@@ -814,7 +814,7 @@
             // 이미 Rush를 씀 -> 바로 리셋 버튼
             rushCountEl.style.display = "none";
             rushLabel.style.display = "none";
-            rushBtn.innerText = "↻ RESTART";
+            rushBtn.innerText = "↻ 처음부터";
             rushSubText.innerText = "";
             if(rushTimerInterval) clearInterval(rushTimerInterval);
         }
@@ -825,7 +825,8 @@
     function rushStart() {
         if(rushTimerInterval) clearInterval(rushTimerInterval);
         const btnText = rushBtn.innerText;
-        const canRush = btnText.includes("RUSH");
+        // [수정] 한글 텍스트에 맞춰 조건 변경
+        const canRush = btnText.includes("강화된");
         
         enemies.length = 0; bullets.length = 0; gems.length = 0; texts.length = 0; effects.length = 0;
         player.wx = 0; player.wy = 0; joystick.active = false;
