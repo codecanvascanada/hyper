@@ -13,12 +13,13 @@
         #uiLayer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; padding: 15px; display: flex; flex-direction: column; }
         .header-ui { width: 100%; display: flex; flex-direction: column; gap: 5px; }
         .score-row { display: flex; justify-content: space-between; font-size: 14px; font-weight: bold; color: #c8aa6e; text-shadow: 1px 1px 2px #000; }
-        #expBarContainer { width: 100%; height: 6px; background: #1e2328; border: 1px solid #c8aa6e; margin-top: 2px; }
+        #expBarContainer { width: 100%; height: 12px; background: #1e2328; border: 1px solid #c8aa6e; margin-top: 2px; }
         #expBar { height: 100%; width: 0%; background: #0acde5; transition: width 0.1s; }
         .stats { display: flex; justify-content: space-between; font-size: 12px; color: #a0a0a0; margin-top: 4px; }
         
-        #infoMsg { position: absolute; top: 80px; left: 15px; text-align: left; pointer-events: none; opacity: 0; transition: opacity 0.1s; }
+        #infoMsg { position: absolute; top: 80px; left: 15px; pointer-events: none; opacity: 0; transition: opacity 0.1s; display: flex; align-items: center; }
         #infoText { font-size: 18px; font-weight: 800; color: #fff; text-shadow: 1px 1px 3px rgba(0,0,0,0.9); font-family: 'Segoe UI', sans-serif; letter-spacing: 0.5px; }
+        #infoIcon { width:20px; height:20px; object-fit:contain; margin-right:5px; display:none; }
         .pop-in { animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         @keyframes popIn { 0% { transform: scale(0.8) translateX(-20px); opacity: 0; } 100% { transform: scale(1) translateX(0); opacity: 1; } }
 
@@ -39,9 +40,9 @@
             filter: drop-shadow(0 0 2px rgba(255,255,255,0.3));
         }
         
-        #hyperContainer { 
-            width: 12px; flex: 1; 
-            background: rgba(0,0,0,0.6); 
+                        #hyperContainer {
+        
+                            width: 10px; flex: 1;            background: rgba(0,0,0,0.6); 
             border: 1px solid #555; 
             border-radius: 0; 
             overflow: hidden; 
@@ -51,9 +52,13 @@
         }
         #hyperFill { width: 100%; height: 0%; background: linear-gradient(to top, #6c5ce7, #a29bfe); transition: height 0.1s linear, filter 0.1s; }
         
+        @keyframes gaugeBlink {
+            0% { border-color: rgba(255, 255, 255, 0.9); box-shadow: 0 0 4px rgba(255, 255, 255, 0.6); }
+            50% { border-color: rgba(255, 0, 0, 0.9); box-shadow: 0 0 4px rgba(255, 0, 0, 0.6); }
+            100% { border-color: rgba(255, 255, 255, 0.9); box-shadow: 0 0 4px rgba(255, 255, 255, 0.6); }
+        }
         .gauge-charging #hyperContainer { 
-            box-shadow: 0 0 8px rgba(255, 255, 255, 0.3), 0 0 1px rgba(255, 255, 255, 0.2) inset; 
-            border-color: rgba(255, 255, 255, 0.6); 
+            animation: gaugeBlink 0.2s infinite;
         }
         .gauge-charging #hyperFill { filter: brightness(1.2); }
 
@@ -94,7 +99,7 @@
         .card-text-group p { margin: 0; font-size: 12px; color: #ccc; line-height: 1.2; }
 
         #gameOverTitle { 
-            color: #00f3ff; font-size: 36px; font-weight: 900; 
+            color: #00f3ff; font-size: 42px; font-weight: 900; 
             margin-top: 0; 
             margin-bottom: 80px; 
             letter-spacing: 3px; 
@@ -102,15 +107,32 @@
             font-style: italic;
             position: absolute; 
             top: 15%;
+            animation: titleEntry 0.8s cubic-bezier(0.215, 0.610, 0.355, 1.000) both, neonPulse 1.5s infinite alternate;
         }
         
-        #missionEndedMsg {
-            font-size: 24px; font-weight: 800; color: #fff; 
-            margin-top: 50px; 
-            margin-bottom: 30px; 
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-            letter-spacing: 1px;
+        @keyframes titleEntry {
+            0% { letter-spacing: 1em; transform: translateY(-50px) scale(1.5); opacity: 0; }
+            50% { opacity: 0.5; }
+            100% { letter-spacing: 3px; transform: translateY(0) scale(1); opacity: 1; }
         }
+        
+        @keyframes neonPulse {
+            0% { text-shadow: 0 0 8px rgba(0, 243, 255, 0.5), 0 0 12px rgba(0, 243, 255, 0.3); transform: scale(1); }
+            100% { text-shadow: 0 0 15px rgba(0, 243, 255, 0.8), 0 0 25px rgba(0, 243, 255, 0.6), 0 0 35px rgba(0, 243, 255, 0.4); transform: scale(1.02); }
+        }
+
+        @keyframes iconBounceAndAttach {
+            0% { transform: scale(0.5) rotate(-30deg); opacity: 0; }
+            50% { transform: scale(1.2) rotate(10deg); opacity: 1; }
+            70% { transform: scale(0.9) rotate(-5deg); opacity: 1; }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+
+        .icon-attach-anim {
+            animation: iconBounceAndAttach 0.4s ease-out forwards;
+        }
+        
+        #centerMsg { position: absolute; top: 20%; left: 50%; transform: translateX(-50%); text-align: center; width: 100%; pointer-events: none; z-index: 5; }
 
         #newRecordMsg { color: #fffa65; font-size: 18px; font-weight: bold; margin-bottom: 20px; display: none; animation: blink 0.5s infinite alternate; }
         @keyframes blink { from { opacity: 1; } to { opacity: 0.5; } }
@@ -119,14 +141,22 @@
 
         #rushTimerBox { margin-top: 10px; text-align: center; }
         #rushCount { font-size: 40px; font-weight: bold; color: #ff7675; min-height: 48px; }
-        #rushBtn {
-            margin-top: 10px; padding: 15px 30px; font-size: 18px; font-weight: bold;
-            background: #6c5ce7; color: white; border: 2px solid #fff;
-            cursor: pointer; box-shadow: 0 0 15px #6c5ce7;
-            transition: transform 0.1s;
-        }
+        #rushBtn { margin-top: 10px; cursor: pointer; transition: transform 0.1s; }
         #rushBtn:active { transform: scale(0.95); }
-        #rushSubText { font-size: 12px; color: #ccc; margin-top: 5px; min-height: 15px; }
+        
+        .btn-enhanced {
+            padding: 15px 30px; font-size: 18px; font-weight: bold;
+            background: #6c5ce7; color: white; border: 2px solid #fff;
+            box-shadow: 0 0 15px #6c5ce7;
+        }
+        
+        .btn-reset {
+            padding: 12px 24px; font-size: 14px; font-weight: bold;
+            background: #555; color: white; border: none;
+            box-shadow: none;
+        }
+        .btn-reset:active { background: #666; }
+        #rushSubText { font-size: 14px; color: white; margin-top: 20px; min-height: 15px; }
 
         .hyper-active #gameContainer { animation: shake 0.2s infinite; }
         @keyframes shake { 0% { transform: translate(1px, 1px); } 50% { transform: translate(-1px, -1px); } 100% { transform: translate(1px, -1px); } }
@@ -139,12 +169,15 @@
     
     <div id="uiLayer">
         <div class="header-ui">
-            <div class="score-row"><span>CS: <span id="scoreVal">0</span></span><span>BEST: <span id="bestVal">0</span></span></div>
+            <div class="score-row"><span>현재 스코어: <span id="scoreVal">0</span></span><span>최고 점수: <span id="bestVal">0</span></span></div>
             <div id="expBarContainer"><div id="expBar"></div></div>
             <div class="stats"><span id="lvText">LV. 1</span><span id="hpText" style="color:#ff7675;">HP: 100</span></div>
         </div>
         
-        <div id="infoMsg"><div id="infoText"></div></div>
+        <div id="infoMsg">
+            <img id="infoIcon" src="" alt="Info Icon">
+            <div id="infoText"></div>
+        </div>
         <div id="centerMsg"><div id="comboCount">0</div><div id="comboLabel">GRAZE</div></div>
         
         <div id="rightHud">
@@ -203,6 +236,7 @@
     const bestVal = document.getElementById('bestVal');
     const infoMsg = document.getElementById('infoMsg');
     const infoText = document.getElementById('infoText');
+    const infoIcon = document.getElementById('infoIcon');
     const comboEl = document.getElementById('comboCount');
     const comboLabel = document.getElementById('comboLabel');
     const hyperFill = document.getElementById('hyperFill');
@@ -307,20 +341,121 @@
         updateDashUI();
     }
 
-    let msgTimer = null;
-    function showMessage(text, color) {
-        infoText.innerText = text;
-        infoText.style.color = color;
-        infoMsg.style.opacity = 1;
-        infoText.classList.remove('pop-in');
-        void infoText.offsetWidth; 
-        infoText.classList.add('pop-in');
-        if(msgTimer) clearTimeout(msgTimer);
-        msgTimer = setTimeout(() => { infoMsg.style.opacity = 0; }, 600);
-    }
-
-    let enemies = []; let bullets = []; let gems = []; let texts = []; let effects = [];
+        let msgTimer = null;
+        function showMessage(text, color, iconSrc = null) { // iconSrc 인자 추가
+            infoText.innerText = text;
+            infoText.style.color = color;
+            infoMsg.style.opacity = 1;
+            infoText.classList.remove('pop-in');
+            void infoText.offsetWidth;
+            infoText.classList.add('pop-in');
+    
+            if (iconSrc) { // 아이콘 이미지 경로가 있으면
+                infoIcon.src = iconSrc;
+                infoIcon.style.display = 'block';
+            } else { // 없으면 숨김
+                infoIcon.style.display = 'none';
+            }
+    
+            if(msgTimer) clearTimeout(msgTimer);
+            msgTimer = setTimeout(() => {
+                infoMsg.style.opacity = 0;
+                infoIcon.style.display = 'none'; // 아이콘도 숨김 처리
+            }, 600);
+        }
+    let enemies = []; let bullets = []; let gems = []; let texts = []; let effects = []; let hyperOrbs = [];
     function getObj(arr, Class) { let o = arr.find(x=>!x.active); if(!o) { o=new Class(); arr.push(o); } return o; }
+
+    class HyperOrb {
+        constructor() { this.active = false; }
+        spawn(wx, wy, color) {
+            this.wx = wx; this.wy = wy;
+            this.color = color;
+            this.active = true;
+            this.progress = 0;
+            this.startX = wx; this.startY = wy;
+            
+            // 목표: 화면 우측 게이지 부근
+            this.targetRelX = CW/2 - 20; 
+            this.targetRelY = -CH/2 + 250;
+
+            // 제어점
+            this.cpOffsetX = 100;
+            this.cpOffsetY = -200;
+            
+            this.currentSpeed = 0.005; // 시작 속도
+
+            this.colorCycle = 0; // 0: 흰색, 1: 빨간색
+            this.colorChangeInterval = 4; // 0.07초 (60fps 기준)
+            this.colorChangeCounter = 0;
+            
+            this.angle = 0; // 회전 각도
+        }
+        update() {
+            // 가속 -> 감속 -> 급가속 로직
+            if (this.progress < 0.3) {
+                this.currentSpeed += 0.0005; 
+            } else if (this.progress < 0.6) {
+                this.currentSpeed *= 0.95; 
+                if(this.currentSpeed < 0.003) this.currentSpeed = 0.003; 
+            } else {
+                this.currentSpeed *= 1.1; 
+            }
+
+            this.progress += this.currentSpeed;
+
+            this.colorChangeCounter++;
+            if (this.colorChangeCounter >= this.colorChangeInterval) {
+                this.colorCycle = 1 - this.colorCycle; // 색상 토글
+                this.colorChangeCounter = 0;
+            }
+            
+            this.angle += 0.15; // 회전
+
+            if (this.progress >= 1) {
+                this.active = false;
+                addHyper(20); 
+                showMessage("SHUTDOWN", "#fdcb6e");
+                return;
+            }
+
+            const t = this.progress;
+            const u = 1 - t;
+            
+            const targetX = player.wx + this.targetRelX;
+            const targetY = player.wy + this.targetRelY;
+            const cpX = this.startX + this.cpOffsetX;
+            const cpY = this.startY + this.cpOffsetY;
+
+            this.wx = (u * u * this.startX) + (2 * u * t * cpX) + (t * t * targetX);
+            this.wy = (u * u * this.startY) + (2 * u * t * cpY) + (t * t * targetY);
+        }
+        draw() {
+            const sx = this.wx - player.wx + CW/2; 
+            const sy = this.wy - player.wy + CH/2;
+            
+            // 색상 결정 (흰색 <-> 빨간색)
+            const curColor = this.colorCycle === 0 ? "#ffffff" : "#ff0000";
+
+            ctx.save();
+            ctx.translate(sx, sy);
+            ctx.rotate(this.angle);
+            
+            ctx.shadowColor = curColor;
+            ctx.shadowBlur = 15;
+            ctx.fillStyle = curColor;
+            
+            // 삼각형 그리기 (크기 20% 증가)
+            ctx.beginPath();
+            ctx.moveTo(0, -3.6); 
+            ctx.lineTo(3, 2.4); 
+            ctx.lineTo(-3, 2.4); 
+            ctx.closePath();
+            ctx.fill();
+            
+            ctx.restore();
+        }
+    }
 
     class Enemy {
         constructor() { this.active=false; }
@@ -401,7 +536,7 @@
             let barW = this.isElite ? 40 : 18; let barH = this.isElite ? 6 : 3; let barY = this.isElite ? 40 : 20;
             if(this.isElite) { ctx.lineWidth=3; ctx.strokeStyle='#fff'; ctx.stroke(); }
             ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(sx - barW/2, sy - barY, barW, barH);
-            ctx.fillStyle = this.isElite ? '#0acde5' : '#ff7675'; ctx.fillRect(sx - barW/2, sy - barY, barW * hpPct, barH);
+            ctx.fillStyle = '#ff7675'; ctx.fillRect(sx - barW/2, sy - barY, barW * hpPct, barH);
         }
     }
 
@@ -415,7 +550,7 @@
                 this.vx = Math.cos(a)*8; this.vy = Math.sin(a)*8; this.life = 50;
                 this.isCrit = Math.random() < player.critChance;
                 this.r = (player.isHyper && player.hyperType===HYPER_RAPID) ? 8 : 4;
-                if(this.isCrit) { this.color = '#ff4757'; this.r += 2; } 
+                if(this.isCrit) { this.color = '#ff4757'; } 
                 else { this.color = (player.isHyper && player.hyperType===HYPER_RAPID) ? '#fffa65' : '#0acde5'; }
                 this.hitList = [];
             }
@@ -455,7 +590,7 @@
 
     class Effect {
         constructor() { this.active = false; }
-        spawnEMP(wx, wy) { this.wx = wx; this.wy = wy; this.r = 0; this.maxR = 800; this.active = true; }
+        spawnEMP(wx, wy) { this.wx = wx; this.wy = wy; this.r = 0; this.maxR = 200; this.active = true; }
         update() { this.r += 40; if(this.r > this.maxR) this.active = false; }
         draw() {
             const sx = this.wx - player.wx + CW/2; const sy = this.wy - player.wy + CH/2;
@@ -505,13 +640,17 @@
 
     function activateHyper() {
         if(player.hyperType === HYPER_RAPID) { player.isHyper = true; player.hyperTime = 300; document.body.classList.add('hyper-active'); showMessage("RAPID FIRE!", "#f1c40f"); } 
-        else if (player.hyperType === HYPER_EMP) { screenShake = 30; spawnEffect().spawnEMP(player.wx, player.wy); enemies.forEach(e => { if(e.active && Math.hypot(e.wx - player.wx, e.wy - player.wy) < 500) killEnemy(e, true); }); bullets.forEach(b => { if(b.active && b.isEnemyBullet) b.active = false; }); player.hyperGauge = 0; showMessage("EMP BLAST!", "#2ecc71"); }
+        else if (player.hyperType === HYPER_EMP) { screenShake = 30; spawnEffect().spawnEMP(player.wx, player.wy); enemies.forEach(e => { if(e.active && Math.hypot(e.wx - player.wx, e.wy - player.wy) < 300) killEnemy(e, true); }); bullets.forEach(b => { if(b.active && b.isEnemyBullet) b.active = false; }); player.hyperGauge = 0; showMessage("EMP BLAST!", "#2ecc71"); }
         else if (player.hyperType === HYPER_SHIELD) { player.isHyper = true; player.hyperTime = 600; document.body.classList.add('hyper-active'); showMessage("SHIELD ON", "#9b59b6"); }
     }
 
     function killEnemy(e, isEmp=false) {
         e.hp = 0; e.active = false; addScore(e.scoreVal); getObj(gems, Gem).spawn(e.wx, e.wy, e.xp, e.isElite);
-        if(e.isElite && !isEmp) { showMessage("SHUTDOWN", "#fdcb6e"); addHyper(20); }
+        // [수정] 하이퍼 상태가 아닐 때만 엘리트 처치 시 게이지 충전
+        // 즉시 충전하지 않고 HyperOrb 생성
+        if(e.isElite && !player.isHyper) { 
+             getObj(hyperOrbs, HyperOrb).spawn(e.wx, e.wy, e.color);
+        }
         player.killCount++; player.killTimer = 180; updateKillStreak();
     }
 
@@ -546,17 +685,37 @@
     
     function updateDashUI() { if(player.dashReady) { dashIcon.classList.remove('cooldown'); dashIcon.classList.add('ready'); dashIcon.innerText = "DASH"; } else { dashIcon.classList.remove('ready'); dashIcon.classList.add('cooldown'); dashIcon.innerText = Math.ceil(player.dashCool/60); } }
     
-    function updateTypeIcon() { 
-        if(player.hyperType === HYPER_RAPID) { 
-            typeIcon.src = "rapid.png"; 
-            hyperFill.style.background = 'linear-gradient(to top, #f1c40f, #fffa65)'; 
-        } else if(player.hyperType === HYPER_EMP) { 
-            typeIcon.src = "emp.png"; 
-            hyperFill.style.background = 'linear-gradient(to top, #f1c40f, #2ecc71)'; 
-        } else { 
-            typeIcon.src = "shield.png"; 
-            hyperFill.style.background = 'linear-gradient(to top, #54a0ff, #5f27cd)'; 
-        } 
+    function updateTypeIcon() {
+        let newSrc;
+        let newBackground;
+
+        if(player.hyperType === HYPER_RAPID) {
+            newSrc = "rapid.png";
+            newBackground = 'linear-gradient(to top, #f1c40f, #fffa65)';
+        } else if(player.hyperType === HYPER_EMP) {
+            newSrc = "emp.png";
+            newBackground = 'linear-gradient(to top, #f1c40f, #2ecc71)';
+        } else {
+            newSrc = "shield.png";
+            newBackground = 'linear-gradient(to top, #54a0ff, #5f27cd)';
+        }
+
+        // 아이콘이 실제로 변경될 때만 애니메이션을 트리거
+        if (typeIcon.src.indexOf(newSrc) === -1 || typeIcon.classList.contains('icon-attach-anim')) { // 현재 src가 newSrc를 포함하지 않거나, 애니메이션이 아직 진행 중일 때
+            typeIcon.classList.remove('icon-attach-anim'); // 기존 애니메이션 클래스 제거 (혹시 남아있을 경우)
+            // 브라우저가 DOM 변경을 인식하고 애니메이션을 리셋하도록 강제하는 트릭
+            void typeIcon.offsetWidth; 
+            typeIcon.src = newSrc;
+            typeIcon.classList.add('icon-attach-anim'); // 애니메이션 클래스 추가
+
+            typeIcon.onanimationend = () => {
+                typeIcon.classList.remove('icon-attach-anim');
+                typeIcon.onanimationend = null; // 이벤트 리스너 제거
+            };
+        } else { // 아이콘 변경이 없을 때
+            typeIcon.src = newSrc;
+        }
+        hyperFill.style.background = newBackground;
     }
 
     function drawGrid() {
@@ -640,7 +799,7 @@
                                     let finalDmg = player.damage * ((player.isHyper && player.hyperType===HYPER_RAPID)?2:1);
                                     if(b.isCrit) finalDmg *= player.critDamage;
                                     e.hp -= finalDmg; 
-                                    let color = b.isCrit ? '#ff4757' : 'white'; let size = b.isCrit ? 20 : 12; let txt = Math.floor(finalDmg) + (b.isCrit ? "!" : ""); 
+                                    let color = b.isCrit ? '#ff4757' : 'white'; let size = b.isCrit ? 20 : 12; let txt = Math.floor(finalDmg); 
                                     spawnText(txt, e.wx, e.wy, color, size);
                                     const kbPower = e.isElite ? 0.3 : 4.0; e.wx += b.vx * 0.5 * kbPower; e.wy += b.vy * 0.5 * kbPower; 
                                     if(e.hp<=0) killEnemy(e);
@@ -652,7 +811,7 @@
                 }
             }
         });
-        enemies.forEach(e=>{ if(e.active) e.update(); }); gems.forEach(e=>{ if(e.active) e.update(); }); texts.forEach(e=>{ if(e.active) e.update(); }); effects.forEach(e=>{ if(e.active) e.update(); });
+        enemies.forEach(e=>{ if(e.active) e.update(); }); gems.forEach(e=>{ if(e.active) e.update(); }); texts.forEach(e=>{ if(e.active) e.update(); }); effects.forEach(e=>{ if(e.active) e.update(); }); hyperOrbs.forEach(e=>{ if(e.active) e.update(); });
     }
 
     function draw() {
@@ -671,7 +830,7 @@
         ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(CW/2, CH/2, player.grazeR, 0, Math.PI*2); ctx.stroke();
         ctx.globalAlpha = 1.0; // 투명도 복구
 
-        gems.forEach(e=>{ if(e.active) e.draw(); }); effects.forEach(e=>{ if(e.active) e.draw(); }); bullets.forEach(e=>{ if(e.active) e.draw(); }); enemies.forEach(e=>{ if(e.active) e.draw(); }); texts.forEach(e=>{ if(e.active) e.draw(); });
+        gems.forEach(e=>{ if(e.active) e.draw(); }); effects.forEach(e=>{ if(e.active) e.draw(); }); bullets.forEach(e=>{ if(e.active) e.draw(); }); enemies.forEach(e=>{ if(e.active) e.draw(); }); texts.forEach(e=>{ if(e.active) e.draw(); }); hyperOrbs.forEach(e=>{ if(e.active) e.draw(); });
 
         if(player.isHyper && player.hyperType === HYPER_SHIELD) {
             const pulseOffset = Math.sin(player.shieldPulse) * 3;
@@ -688,6 +847,33 @@
         ctx.fillStyle = (player.isHyper && player.hyperType===HYPER_RAPID) ? '#fffa65' : player.color;
         if(player.isDashing) { ctx.shadowColor = '#f1c40f'; ctx.shadowBlur = 20; ctx.fillStyle = '#fff'; } else if(player.isHyper) { ctx.shadowColor=ctx.fillStyle; ctx.shadowBlur=15; }
         ctx.beginPath(); ctx.arc(CW/2, CH/2, player.r, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur=0;
+
+        // 흰 점 그리기
+        let lookX = joystick.vx;
+        let lookY = joystick.vy;
+
+        // 조이스틱 입력이 없으면 기본적으로 위쪽을 바라보도록
+        if (lookX === 0 && lookY === 0) {
+            lookY = -1; // 위쪽
+        }
+
+        const indicatorRadius = player.r - 5; // 주인공 반지름보다 살짝 안쪽
+        const indicatorSize = 2; // 흰 점의 반지름
+
+        // 방향 벡터 정규화
+        const magnitude = Math.hypot(lookX, lookY);
+        if (magnitude > 0) {
+            lookX /= magnitude;
+            lookY /= magnitude;
+        }
+
+        const dotX = CW/2 + lookX * indicatorRadius;
+        const dotY = CH/2 + lookY * indicatorRadius;
+
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.arc(dotX, dotY, indicatorSize, 0, Math.PI*2);
+        ctx.fill();
 
         enemies.forEach(e => {
             if (e.active) {
@@ -723,13 +909,13 @@
 
         // 1. 일반 스탯 옵션
         const statOpts = [
-            {t:"공격력 UP", d:"데미지 +5", img: "atk.png", f:()=>{player.damage+=5; showMessage("DAMAGE UP!", "#e17055");}}, 
-            {t:"연사속도 UP", d:"공격속도 +10%", img: "speed.png", f:()=>{player.baseFireRate*=0.9; showMessage("FIRE RATE UP!", "#fdcb6e");}},
-            {t:"치명타 UP", d:"확률 +5%", img: "cri.png", f:()=>{player.critChance+=0.05; showMessage("CRIT CHANCE UP!", "#d63031");}}, 
-            {t:"멀티샷", d:"탄환 +1", img: "multi.png", f:()=>{player.bulletCount++; showMessage("MULTISHOT +1", "#0984e3");}},
-            {t:"대쉬 쿨다운", d:"재사용 대기시간 -1초", img: "dash.png", f:()=>{player.dashMaxCool = Math.max(180, player.dashMaxCool - 60); showMessage("DASH COOL DOWN", "#00b894");}}, 
-            {t:"체력회복", d:"HP +30", img: "hp.png", f:()=>{player.hp=Math.min(player.maxHp, player.hp+30); showMessage("HEALED!", "#55efc4");}},
-            {t:"자석 강화", d:"흡수 범위 +15", img: "mag.png", f:()=>{player.magnet += 15; showMessage("MAGNET UP!", "#a29bfe");}} 
+            {t:"공격력 UP", d:"데미지 +5", img: "atk.png", f:()=>{player.damage+=5;}}, 
+            {t:"연사속도 UP", d:"공격속도 +10%", img: "speed.png", f:()=>{player.baseFireRate*=0.9;}},
+            {t:"치명타 UP", d:"확률 +5%", img: "cri.png", f:()=>{player.critChance+=0.05;}}, 
+            {t:"멀티샷", d:"탄환 +1", img: "multi.png", f:()=>{player.bulletCount++;}},
+            {t:"대쉬 쿨다운", d:"재사용 대기시간 -1초", img: "dash.png", f:()=>{player.dashMaxCool = Math.max(180, player.dashMaxCool - 60);}}, 
+            {t:"체력회복", d:"HP +30", img: "hp.png", f:()=>{player.hp=Math.min(player.maxHp, player.hp+30);}},
+            {t:"자석 강화", d:"흡수 범위 +15", img: "mag.png", f:()=>{player.magnet += 15;}} 
         ];
 
         // 2. 하이퍼 스킬 옵션
@@ -760,15 +946,21 @@
                 </div>
             `;
             
-            div.style.animationDelay = `${i * 0.1}s`; 
-            div.onclick=()=>{ 
-                item.f(); 
-                if(item.c) showMessage(item.t+" 장착됨", "#a29bfe"); // 하이퍼 장착 메시지
-                levelUpScreen.style.display='none'; 
-                gameState='PLAY'; 
-            }; 
-            cardsBox.appendChild(div);
-        }
+                        div.style.animationDelay = `${i * 0.1}s`;
+                        div.onclick=()=>{
+                            item.f();
+                            // 기존 if(item.c) showMessage(...) 부분을 통합
+                            let msgColor = item.c ? "#a29bfe" : "#c8aa6e"; // 하이퍼 카드면 보라색, 아니면 레벨업 카드 색상
+                            let msgText = item.t;
+                            if (item.c) msgText += " 장착됨"; // 하이퍼 카드면 "장착됨" 추가
+                            else msgText += "!"; // 일반 스킬은 "!" 추가
+            
+                            showMessage(msgText, msgColor, item.img); // 이미지 경로 전달
+            
+                            levelUpScreen.style.display='none';
+                            gameState='PLAY';
+                        };
+                        cardsBox.appendChild(div);        }
     }
 
     // --- [Logic Update] 1-Time Rush Mode ---
@@ -789,22 +981,24 @@
         
         // 1회 한정 Rush 체크
         if (!hasRushed) {
-            rushCountEl.style.display = "block";
-            rushBtn.innerText = "⚡ 강화된 재도전";
-            rushSubText.innerText = "(Keep Stats / Lv.1 Start)";
-            rushLabel.style.display = "none"; // [수정] 텍스트 제거
+            rushCountEl.style.display = "none"; // 타이머는 버튼 안에 표시되므로 숨김
             
-            let timeLeft = 5;
-            rushCountEl.innerText = timeLeft;
+            let timeLeft = 5; // 초기 타이머 값
+            rushBtn.innerHTML = `<span style="font-size: 1.5em; vertical-align: middle;">${timeLeft}</span> &nbsp; 강화된 재도전`; // 타이머를 버튼 텍스트에 포함, 크기/간격 조절
+            rushBtn.className = "btn-enhanced"; // 스타일 적용
+            rushSubText.innerText = "단 한번! 현재 스킬을 유지한 채 재시작.";
+            rushLabel.style.display = "none"; 
             
             if(rushTimerInterval) clearInterval(rushTimerInterval);
             rushTimerInterval = setInterval(() => {
                 timeLeft--;
-                rushCountEl.innerText = timeLeft;
-                if(timeLeft <= 0) {
+                if(timeLeft > 0) { // 타이머가 0보다 클 때만 업데이트
+                    rushBtn.innerHTML = `<span style="font-size: 1.5em; vertical-align: middle;">${timeLeft}</span> &nbsp; 강화된 재도전`;
+                } else {
                     clearInterval(rushTimerInterval);
                     // 타임아웃 -> 일반 리셋으로 변경
                     rushBtn.innerText = "↻ 처음부터";
+                    rushBtn.className = "btn-reset"; // 스타일 변경
                     rushSubText.innerText = "";
                     rushCountEl.innerText = "";
                     rushCountEl.style.display = "none";
@@ -815,6 +1009,7 @@
             rushCountEl.style.display = "none";
             rushLabel.style.display = "none";
             rushBtn.innerText = "↻ 처음부터";
+            rushBtn.className = "btn-reset"; // 스타일 변경
             rushSubText.innerText = "";
             if(rushTimerInterval) clearInterval(rushTimerInterval);
         }
@@ -828,7 +1023,7 @@
         // [수정] 한글 텍스트에 맞춰 조건 변경
         const canRush = btnText.includes("강화된");
         
-        enemies.length = 0; bullets.length = 0; gems.length = 0; texts.length = 0; effects.length = 0;
+        enemies.length = 0; bullets.length = 0; gems.length = 0; texts.length = 0; effects.length = 0; hyperOrbs.length = 0;
         player.wx = 0; player.wy = 0; joystick.active = false;
         
         if(canRush) {
@@ -852,12 +1047,18 @@
         player.killCount = 0; player.killTimer = 0;
         frameCount = 0; 
         
+        // 화면 진동 초기화
+        screenShake = 0;
+        ctx.setTransform(1, 0, 0, 1, 0, 0); // 캔버스 변환 초기화
+
         comboEl.style.display = 'none';
         comboLabel.style.display = 'none';
         infoMsg.style.opacity = 0;
 
         gameOverScreen.style.display = 'none';
         gameState = 'PLAY';
+        
+        bestVal.innerText = parseInt(highScore).toLocaleString();
         
         updateUI(); updateTypeIcon(); updateDashUI();
     }
