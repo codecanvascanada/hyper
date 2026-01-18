@@ -55,12 +55,9 @@
             pointer-events: auto; z-index: 100; 
         }
 
-        /* [수정] 카드 레이아웃: 폭 줄임 + 가운데 정렬 */
+        /* [수정] 카드 레이아웃: 가로 배치 */
         .card { 
-            background: #0f1218; color: #c8aa6e; 
-            width: 55%;           /* [변경] 너비를 90% -> 55%로 줄임 */
-            min-width: 240px;     /* [변경] 최소 너비 설정 (모바일 대응) */
-            margin: 6px; padding: 12px 15px; 
+            background: #0f1218; color: #c8aa6e; width: 90%; margin: 6px; padding: 12px 15px; 
             border: 1px solid #c8aa6e; 
             box-shadow: 0 0 10px rgba(200, 170, 110, 0.2); 
             transition: transform 0.1s; cursor: pointer;
@@ -68,11 +65,11 @@
             transform: translateY(20px) scale(0.9);
             animation: cardEntry 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
             
-            /* 가로 배치 */
+            /* Flexbox: 가로 정렬 */
             display: flex; 
             flex-direction: row; 
             align-items: center; 
-            text-align: left;
+            text-align: left; /* 텍스트 왼쪽 정렬 */
         }
         @keyframes cardEntry {
             to { opacity: 1; transform: translateY(0) scale(1); }
@@ -81,14 +78,16 @@
         .card:active { transform: scale(0.98); background: #1e2328; }
         .card.hyper-card { border: 1px solid #0acde5; color: #0acde5; background: #0a1a20;}
         
+        /* [수정] 아이콘 스타일 */
         .card-icon {
             width: 48px; height: 48px; 
-            margin-right: 15px;
+            margin-right: 15px; /* 텍스트와 간격 */
             object-fit: contain;
-            flex-shrink: 0;
+            flex-shrink: 0; /* 이미지 찌그러짐 방지 */
             filter: drop-shadow(0 0 5px rgba(255,255,255,0.2)); 
         }
 
+        /* [NEW] 텍스트 그룹 (제목+내용) */
         .card-text-group {
             display: flex;
             flex-direction: column;
@@ -681,15 +680,18 @@
         if(canSwitchHyper) {
             levelUpTitle.innerText = "TACTICAL UPGRADE";
             const hyperOpts = [
-                {t:"HYPER: RAPID", d:"[고속 연사] 모드로 전환", c:'hyper-card', f:()=>{player.hyperType=HYPER_RAPID; updateTypeLabel();}},
-                {t:"HYPER: EMP", d:"[광역 폭발] 모드로 전환", c:'hyper-card', f:()=>{player.hyperType=HYPER_EMP; updateTypeLabel();}},
-                {t:"HYPER: SHIELD", d:"[완전 방어] 모드로 전환", c:'hyper-card', f:()=>{player.hyperType=HYPER_SHIELD; updateTypeLabel();}},
+                {t:"HYPER: RAPID", d:"[고속 연사] 모드로 전환", c:'hyper-card', img:'rapid.png', f:()=>{player.hyperType=HYPER_RAPID; updateTypeLabel();}},
+                {t:"HYPER: EMP", d:"[광역 폭발] 모드로 전환", c:'hyper-card', img:'emp.png', f:()=>{player.hyperType=HYPER_EMP; updateTypeLabel();}},
+                {t:"HYPER: SHIELD", d:"[완전 방어] 모드로 전환", c:'hyper-card', img:'shield.png', f:()=>{player.hyperType=HYPER_SHIELD; updateTypeLabel();}},
             ];
             hyperOpts.forEach(item => {
                 const div = document.createElement('div'); div.className = `card ${item.c}`; 
                 
-                // [NEW] HTML structure for horizontal layout
+                // [NEW] HTML structure for horizontal layout with images
+                let imgHTML = item.img ? `<img src="${item.img}" class="card-icon">` : '';
+
                 div.innerHTML = `
+                    ${imgHTML}
                     <div class="card-text-group">
                         <h3>${item.t}</h3>
                         <p>${item.d}</p>
