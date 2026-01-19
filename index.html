@@ -5,42 +5,59 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>SPARCRUSH</title>
     <style>
-        /* [기본 스타일 - 모바일 고정 강화] */
+        /* [기본 설정] */
         * { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; box-sizing: border-box; }
         
         html, body {
-            margin: 0; 
-            padding: 0;
+            margin: 0; padding: 0;
             background: #000; 
-            width: 100%; 
-            height: 100%;       /* 구형 브라우저 대비 */
-            height: 100dvh;     /* [수정] 모바일 주소창 대응 높이 */
-            overflow: hidden;   /* 스크롤 방지 */
-            position: fixed;    /* [수정] 화면 튕김 방지 */
-            font-family: 'Segoe UI', sans-serif; 
-            color: white; 
-            touch-action: none; 
+            width: 100%; height: 100dvh; /* 모바일 높이 대응 */
+            overflow: hidden; 
+            position: fixed; /* 스크롤 튕김 방지 */
+            font-family: 'Segoe UI', sans-serif; color: white; touch-action: none; 
+            
+            /* [수정] 내용을 정중앙에 배치 */
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
 
+        /* [게임 컨테이너 수정 - 비율 고정 핵심] */
         #gameContainer { 
             position: relative; 
-            width: 100%;        /* 모바일 꽉 채우기 */
-            height: 100%; 
-            max-width: 56.25vh; /* PC에서는 비율 유지 */
-            margin: 0 auto;     /* 중앙 정렬 */
             background: #0f1218; 
             overflow: hidden; 
-            box-shadow: 0 0 30px rgba(0,210,211,0.2); 
+            box-shadow: 0 0 30px rgba(0,210,211,0.2);
+            
+            /* [핵심] 화면이 줄든 늘든 9:16 비율 절대 사수 */
+            aspect-ratio: 9 / 16;
+            
+            /* 화면에 꽉 차게 하되 비율을 넘지 않음 */
+            width: auto;
+            height: auto;
+            max-width: 100%;
+            max-height: 100dvh;
         }
         
+        /* [반응형 처리] 화면 비율에 따라 기준을 바꿈 */
+        @media (min-aspect-ratio: 9/16) {
+            /* 화면이 게임보다 넓을 때 (PC, 태블릿 등) -> 높이를 꽉 채움 */
+            #gameContainer { height: 100dvh; width: auto; }
+        }
+        @media (max-aspect-ratio: 9/16) {
+            /* 화면이 게임보다 길쭉할 때 (대부분의 스마트폰) -> 너비를 꽉 채움 */
+            #gameContainer { width: 100%; height: auto; }
+        }
+
         canvas { display: block; width: 100%; height: 100%; }
         
         /* [UI 레이어] */
-        #uiLayer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; padding: 15px; display: flex; flex-direction: column; }
-        /* 아이폰 노치 안전 구역 확보 */
-        #uiLayer {
-            padding-top: env(safe-area-inset-top, 15px);
-            padding-bottom: env(safe-area-inset-bottom, 15px);
+        #uiLayer { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; padding: 15px; 
+            display: flex; flex-direction: column; 
+            /* 노치 대응 안전 구역 */
+            padding-top: max(15px, env(safe-area-inset-top));
+            padding-bottom: max(15px, env(safe-area-inset-bottom));
         }
 
         .header-ui { width: 100%; display: flex; flex-direction: column; gap: 5px; }
@@ -49,20 +66,20 @@
         #expBar { height: 100%; width: 0%; background: #0acde5; transition: width 0.1s; }
         .stats { display: flex; justify-content: space-between; font-size: 12px; color: #a0a0a0; margin-top: 4px; }
         
-        /* [알림 메시지] */
-        #infoMsg { position: absolute; top: 100px; left: 15px; pointer-events: none; opacity: 0; transition: opacity 0.1s; display: flex; align-items: center; }
+        /* [알림 메시지 위치 조정] */
+        #infoMsg { position: absolute; top: 15%; left: 15px; pointer-events: none; opacity: 0; transition: opacity 0.1s; display: flex; align-items: center; }
         #infoText { font-size: 18px; font-weight: 800; color: #fff; text-shadow: 1px 1px 3px rgba(0,0,0,0.9); font-family: 'Segoe UI', sans-serif; letter-spacing: 0.5px; }
         #infoIcon { width:20px; height:20px; object-fit:contain; margin-right:5px; display:none; }
         .pop-in { animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         @keyframes popIn { 0% { transform: scale(0.8) translateX(-20px); opacity: 0; } 100% { transform: scale(1) translateX(0); opacity: 1; } }
 
         /* [콤보 및 중앙 텍스트] */
-        #centerMsg { position: absolute; top: 20%; left: 50%; transform: translateX(-50%); text-align: center; width: 100%; pointer-events: none; z-index: 5; }
+        #centerMsg { position: absolute; top: 25%; left: 50%; transform: translateX(-50%); text-align: center; width: 100%; pointer-events: none; z-index: 5; }
         #comboCount { font-size: 48px; font-weight: 900; color: #fffa65; text-shadow: 0 0 15px rgba(255, 165, 2, 0.8); display: none; transition: transform 0.05s; }
         #comboLabel { font-size: 12px; color: #81ecec; letter-spacing: 3px; font-weight: bold; display:none; text-shadow: 0 0 5px #00cec9; }
 
-        /* [우측 HUD & 하이퍼 게이지] */
-        #rightHud { position: absolute; right: 15px; top: 150px; height: 30%; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+        /* [우측 HUD & 하이퍼 게이지 위치 조정] */
+        #rightHud { position: absolute; right: 15px; top: 25%; height: 30%; display: flex; flex-direction: column; align-items: center; gap: 2px; }
         #typeIcon { width: 20px; height: 20px; margin-top: 2px; object-fit: contain; filter: drop-shadow(0 0 2px rgba(255,255,255,0.3)); }
         #hyperContainer { width: 10px; flex: 1; background: rgba(0,0,0,0.6); border: 1px solid #555; display: flex; flex-direction: column-reverse; box-shadow: 0 0 5px rgba(0,0,0,0.5); transition: box-shadow 0.1s; }
         #hyperFill { width: 100%; height: 0%; background: linear-gradient(to top, #6c5ce7, #a29bfe); transition: height 0.1s linear, filter 0.1s; }
@@ -70,7 +87,7 @@
         @keyframes gaugeBlink { 0% { border-color: rgba(255,255,255,0.9); } 50% { border-color: rgba(255,0,0,0.9); } 100% { border-color: rgba(255,255,255,0.9); } }
 
         /* [대쉬 버튼] */
-        #dashZone { position: absolute; right: 30px; bottom: 100px; pointer-events: auto; display: flex; flex-direction: column; align-items: center; }
+        #dashZone { position: absolute; right: 30px; bottom: 15%; pointer-events: auto; display: flex; flex-direction: column; align-items: center; }
         #dashIcon { width: 70px; height: 70px; border-radius: 50%; border: 3px solid #fff; background: rgba(241, 196, 15, 0.2); display: flex; justify-content: center; align-items: center; color: white; font-weight: bold; font-size: 14px; box-shadow: 0 0 10px rgba(241, 196, 15, 0.3); transition: opacity 0.2s; cursor: pointer; }
         #dashIcon.ready { background: rgba(241, 196, 15, 0.6); opacity: 1; border-color: #fff; }
         #dashIcon.cooldown { background: rgba(0,0,0,0.5); opacity: 0.4; border-color: #555; font-size: 24px;}
@@ -110,20 +127,12 @@
         }
         #btnName:active { transform: scale(0.95); }
 
-        /* [리더보드 - 높이 자동 조절] */
-        #leaderboardContainer { 
-            width: 85%; margin: 5px 0 15px 0; 
-            background: rgba(0,0,0,0.5); border: 1px solid #444; 
-            padding: 10px; 
-            min-height: 100px; /* 최소 높이 */
-            max-height: 250px; /* 최대 높이 */
-            overflow-y: auto; 
-            border-radius: 5px; 
-        }
+        /* [리더보드] */
+        #leaderboardContainer { width: 85%; margin: 5px 0 15px 0; background: rgba(0,0,0,0.5); border: 1px solid #444; padding: 10px; min-height: 100px; max-height: 250px; overflow-y: auto; border-radius: 5px; }
         #leaderboardTable { width: 100%; border-collapse: collapse; font-size: 12px; color: #ddd; }
         #leaderboardTable th { text-align: left; border-bottom: 1px solid #666; padding: 4px; color: #0acde5; position: sticky; top: 0; background: #0f1218; }
         #leaderboardTable td { border-bottom: 1px solid #333; padding: 4px; }
-        #leaderboardTable tr:nth-child(1) td { color: #f1c40f; font-weight: bold; }
+        #leaderboardTable tr:nth-child(1) td { color: #f1c40f; font-weight: bold; } 
         #leaderboardTable tr:nth-child(2) td { color: #bdc3c7; font-weight: bold; }
         #leaderboardTable tr:nth-child(3) td { color: #d35400; font-weight: bold; }
         #loadingRank { font-size: 12px; color: #aaa; text-align: center; margin: 10px 0; }
@@ -258,7 +267,7 @@
         if(!llSessionToken) return;
         try {
             document.getElementById('loadingRank').innerText = "Loading Leaderboard...";
-            // [수정] count=5 로 변경하여 5명만 가져옴
+            // count=5 로 제한
             const res = await fetch(`https://api.lootlocker.io/game/leaderboards/${LOOTLOCKER_LEADERBOARD_KEY}/list?count=5`, {
                 method: "GET",
                 headers: { "x-session-token": llSessionToken }
@@ -334,7 +343,7 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     
-    // Canvas Size Setup for Mobile
+    // Canvas Size
     const CW = 360, CH = 640;
     canvas.width = CW; canvas.height = CH;
 
