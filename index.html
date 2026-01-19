@@ -122,14 +122,15 @@
         }
 
         @keyframes iconBounceAndAttach {
-            0% { transform: scale(0.5) rotate(-30deg); opacity: 0; }
-            50% { transform: scale(1.2) rotate(10deg); opacity: 1; }
-            70% { transform: scale(0.9) rotate(-5deg); opacity: 1; }
-            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+            0% { transform: scale(2.5); opacity: 0; }
+            40% { transform: scale(0.7); opacity: 1; }
+            60% { transform: scale(1.3); }
+            80% { transform: scale(0.85); }
+            100% { transform: scale(1); opacity: 1; }
         }
 
         .icon-attach-anim {
-            animation: iconBounceAndAttach 0.4s ease-out forwards;
+            animation: iconBounceAndAttach 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
         }
         
         #centerMsg { position: absolute; top: 20%; left: 50%; transform: translateX(-50%); text-align: center; width: 100%; pointer-events: none; z-index: 5; }
@@ -704,7 +705,8 @@
         draw() {
             const sx = this.wx - player.wx + CW/2; const sy = this.wy - player.wy + CH/2;
             if (this.type === 'EMP') {
-                ctx.strokeStyle = '#2ecc71'; 
+                const alpha = Math.max(0, 1 - (this.r / this.maxR)); // 확장될수록 투명해짐
+                ctx.strokeStyle = `rgba(46, 204, 113, ${alpha})`; // '#2ecc71' (녹색)
                 ctx.lineWidth = 10; ctx.beginPath(); ctx.arc(sx, sy, this.r, 0, Math.PI*2); ctx.stroke();
             } else if (this.type === 'EXPLOSION') {
                 ctx.fillStyle = `rgba(255, 69, 0, ${1 - this.r/this.maxR})`; // 오렌지색, 퍼질수록 투명
@@ -771,7 +773,7 @@
             // spawnBullet에 radius 인자 추가하거나 spawn 후 수정
             let b = getObj(bullets, Bullet);
             b.spawn(e.wx, e.wy, angle, true);
-            b.r = 3; // 자폭 탄막 크기 절반
+            b.r = 6; // 자폭 탄막 크기 (엘리트와 동일하게 6)
         }
 
         // 플레이어 피격 체크 (반경 4배)
@@ -1137,6 +1139,8 @@
     // --- [Logic Update] 1-Time Rush Mode ---
     function gameOver() {
         gameState='GAMEOVER';
+        screenShake = 0; // 게임오버 시 화면 흔들림 즉시 정지
+
         gameOverScreen.style.display='flex'; // [수정] 모달을 먼저 표시하여 리플로우가 동작하게 함
 
         let isNewRecord = false;
