@@ -65,6 +65,14 @@
         #newRecordMsg { color: #fffa65; font-size: 18px; font-weight: bold; margin-bottom: 10px; display: none; animation: blink 0.5s infinite alternate; }
         @keyframes blink { from { opacity: 1; } to { opacity: 0.5; } }
         
+        /* [이름 입력창] */
+        #nameInputBox { margin-bottom: 10px; display: flex; gap: 5px; justify-content: center; }
+        #inputName { background: #0f1218; border: 1px solid #444; color: #fff; padding: 8px; border-radius: 4px; outline: none; font-weight: bold; text-align: center; width: 140px; font-family: 'Segoe UI', sans-serif; }
+        #inputName:focus { border-color: #0acde5; box-shadow: 0 0 5px #0acde5; }
+        #btnName { background: #0acde5; color: #000; border: none; padding: 0 15px; font-weight: bold; cursor: pointer; border-radius: 4px; font-family: 'Segoe UI', sans-serif; transition: transform 0.1s; }
+        #btnName:active { transform: scale(0.95); }
+
+        /* [리더보드] */
         #leaderboardContainer { width: 85%; margin: 10px 0 20px 0; background: rgba(0,0,0,0.5); border: 1px solid #444; padding: 10px; max-height: 200px; overflow-y: auto; border-radius: 5px; }
         #leaderboardTable { width: 100%; border-collapse: collapse; font-size: 12px; color: #ddd; }
         #leaderboardTable th { text-align: left; border-bottom: 1px solid #666; padding: 4px; color: #0acde5; position: sticky; top: 0; background: #0f1218; }
@@ -128,6 +136,11 @@
         <div id="newRecordMsg">🏆 NEW RECORD! 🏆</div>
         <div id="resultContainer" style="color:#ddd; margin-bottom:5px;"></div>
 
+        <div id="nameInputBox">
+            <input type="text" id="inputName" placeholder="NAME (Max 8)" maxlength="8">
+            <button id="btnName" onclick="saveName()">CHANGE</button>
+        </div>
+
         <div id="leaderboardContainer">
             <div id="loadingRank">Connecting to LootLocker...</div>
             <table id="leaderboardTable">
@@ -174,7 +187,7 @@
                 console.log("✅ LootLocker Connected. Player ID:", llPlayerID);
             } else {
                 console.error("❌ LootLocker Login Failed:", data);
-                document.getElementById('loadingRank').innerText = "Login Failed (Check Console)";
+                document.getElementById('loadingRank').innerText = "Login Failed: " + (data.message || "Error");
             }
         } catch(e) { console.error("Connection Error:", e); }
     }
@@ -187,10 +200,10 @@
             const res = await fetch(`https://api.lootlocker.io/game/leaderboards/${LOOTLOCKER_LEADERBOARD_KEY}/submit`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "x-session-token": llSessionToken },
-                body: JSON.stringify({ score: score, metadata: "Player" })
+                body: JSON.stringify({ score: score })
             });
-            await res.json(); // 결과 대기
-            fetchLeaderboardLL(); // 제출 후 목록 갱신
+            await res.json(); 
+            fetchLeaderboardLL(); 
         } catch(e) { console.error("Submit Error:", e); }
     }
 
@@ -212,8 +225,10 @@
                 document.getElementById('loadingRank').style.display = 'none';
                 data.items.forEach(item => {
                     const tr = document.createElement('tr');
+                    // 플레이어 이름 표시 (없으면 Guest_ID)
                     let nameDisplay = item.player.name ? item.player.name : `Guest_${item.player.id}`;
                     if(item.player.id == llPlayerID) nameDisplay += " (ME)";
+                    
                     tr.innerHTML = `<td>${item.rank}</td><td>${nameDisplay}</td><td style="text-align:right;">${item.score.toLocaleString()}</td>`;
                     tbody.appendChild(tr);
                 });
@@ -223,6 +238,43 @@
         } catch(e) { 
             console.error("Fetch Error:", e);
             document.getElementById('loadingRank').innerText = "Error Loading.";
+        }
+    }
+
+    // [4] 이름 변경 기능
+    async function saveName() {
+        const nameInput = document.getElementById('inputName');
+        const newName = nameInput.value.trim();
+
+        if(!newName) return alert("Please enter a name!");
+        if(!llSessionToken) return alert("Not logged in.");
+
+        const btn = document.getElementById('btnName');
+        const originText = btn.innerText;
+        btn.innerText = "...";
+
+        try {
+            const res = await fetch("https://api.lootlocker.io/game/player/name", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json", "x-session-token": llSessionToken },
+                body: JSON.stringify({ name: newName })
+            });
+            
+            const data = await res.json();
+            
+            if(data.name) {
+                console.log("Name Updated:", data.name);
+                fetchLeaderboardLL(); // 리더보드 갱신
+                btn.innerText = "DONE";
+                setTimeout(() => btn.innerText = originText, 2000);
+            } else {
+                alert("Error: " + (data.message || "Failed to update"));
+                btn.innerText = originText;
+            }
+        } catch(e) {
+            console.error("Name Change Error:", e);
+            alert("Network Error");
+            btn.innerText = originText;
         }
     }
 
@@ -448,7 +500,6 @@
             } else if(dist < player.grazeR + this.r && this.grazeCool<=0) {
                 addHyper(this.isElite?5:1); this.grazeCool=20;
             }
-            // Elite Shooting Logic (Simplified)
             if(this.isElite) {
                 this.shootTimer--;
                 if(this.shootTimer <= 0) {
@@ -810,16 +861,15 @@
         gameState = 'GAMEOVER'; screenShake = 0;
         gameOverScreen.style.display = 'flex';
         
-        // 1. 점수 저장 및 기록 갱신 UI
         let isNew = false;
         if(player.score > highScore) { highScore = player.score; localStorage.setItem('survival_highscore', highScore); isNew = true; }
         newRecordMsg.style.display = isNew ? 'block' : 'none';
         resultContainer.innerHTML = `<div>SCORE: ${player.score.toLocaleString()}</div><div>BEST: ${parseInt(highScore).toLocaleString()}</div>`;
 
-        // 2. [LootLocker] 점수 제출 & 리더보드 불러오기
+        // LootLocker 점수 제출
         submitScoreLL(player.score);
 
-        // 3. Rush 버튼 처리
+        // Rush 버튼
         if (!hasRushed) {
             let timeLeft = 5;
             rushBtn.className = "btn-enhanced timed-rush"; rushSubText.innerText = "단 한번! 스탯 유지 재시작";
