@@ -161,6 +161,29 @@
 
         .hyper-active #gameContainer { animation: shake 0.2s infinite; }
         @keyframes shake { 0% { transform: translate(1px, 1px); } 50% { transform: translate(-1px, -1px); } 100% { transform: translate(1px, -1px); } }
+
+        #rushBtn {
+            position: relative;
+            overflow: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+        #rushBtnGauge {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background: #f1c40f;
+            width: 0;
+        }
+        #rushBtnText {
+            position: relative;
+            z-index: 1;
+            white-space: nowrap;
+        }
+        .btn-enhanced.timed-rush {
+            color: #000;
+            transition: color 0.1s 4.8s; /* Change color to white just before timer ends */
+        }
     </style>
 </head>
 <body>
@@ -206,9 +229,10 @@
         <div id="rushTimerBox">
             <div id="rushLabel" style="display:none;"></div> 
             <div style="position: relative; display: inline-block; margin-top: 10px;">
-                <div id="rushProgressBar" style="position: absolute; top: -5px; left: 0; width: 100%; height: 5px; background-color: rgba(255,255,255,0.2); border-radius: 2px 2px 0 0; overflow: hidden; display: none; z-index: 10;">
-                                    <div id="rushProgressBarFill" style="width: 100%; height: 100%; background-color: #f1c40f;"></div>
-                                </div>                <button id="rushBtn" onclick="rushStart()" style="margin-top: 0;">⚡ 강화된 재도전</button>
+                <button id="rushBtn" onclick="rushStart()" style="margin-top: 0;">
+                    <span id="rushBtnGauge"></span>
+                    <span id="rushBtnText"></span>
+                </button>
             </div>
             <div id="rushSubText"></div>
         </div>
@@ -268,9 +292,9 @@
     const resultContainer = document.getElementById('resultContainer'); 
     const newRecordMsg = document.getElementById('newRecordMsg');
     const rushCountEl = document.getElementById('rushCount'); // (참조는 남겨둠, 사용 안 함)
-    const rushProgressBar = document.getElementById('rushProgressBar');
-    const rushProgressBarFill = document.getElementById('rushProgressBarFill');
     const rushBtn = document.getElementById('rushBtn');
+    const rushBtnGauge = document.getElementById('rushBtnGauge');
+    const rushBtnText = document.getElementById('rushBtnText');
     const rushSubText = document.getElementById('rushSubText');
     const rushLabel = document.getElementById('rushLabel');
 
@@ -464,11 +488,11 @@
             ctx.shadowBlur = 15;
             ctx.fillStyle = curColor;
             
-            // 삼각형 그리기 (크기 20% 증가)
+            // 삼각형 그리기 (크기 100% 증가)
             ctx.beginPath();
-            ctx.moveTo(0, -3.6); 
-            ctx.lineTo(3, 2.4); 
-            ctx.lineTo(-3, 2.4); 
+            ctx.moveTo(0, -7.2); 
+            ctx.lineTo(6, 4.8); 
+            ctx.lineTo(-6, 4.8); 
             ctx.closePath();
             ctx.fill();
             
@@ -1141,7 +1165,7 @@
         gameState='GAMEOVER';
         screenShake = 0; // 게임오버 시 화면 흔들림 즉시 정지
 
-        gameOverScreen.style.display='flex'; // [수정] 모달을 먼저 표시하여 리플로우가 동작하게 함
+        gameOverScreen.style.display='flex';
 
         let isNewRecord = false;
         if(player.score > highScore) { 
@@ -1158,63 +1182,54 @@
         
         // 1회 한정 Rush 체크
         if (!hasRushed) {
-            // rushCountEl.style.display = "none"; // 삭제됨
-            rushProgressBar.style.display = "block"; // 프로그레스 바 표시
+            let timeLeft = 5;
             
-            // 프로그레스 바 애니메이션 리셋 및 시작 (5초간 주~욱 줄어듦)
-            rushProgressBarFill.style.transition = 'none';
-            rushProgressBarFill.style.width = "100%"; 
-            
-            // 모달이 뜬 직후 브라우저가 렌더링할 시간을 아주 잠깐 주고 애니메이션 시작
-            setTimeout(() => {
-                rushProgressBarFill.style.transition = 'width 5s linear';
-                rushProgressBarFill.style.width = "0%";
-            }, 50);
-
-            let timeLeft = 5; // 초기 타이머 값
-            // const maxTime = timeLeft; // (CSS 애니메이션 사용으로 불필요)
-            
-            rushBtn.innerHTML = `<span style="font-size: 1.5em; vertical-align: middle;">${timeLeft}</span> &nbsp; 강화된 재도전`; 
-            rushBtn.className = "btn-enhanced"; 
+            rushBtn.className = "btn-enhanced timed-rush"; 
             rushSubText.innerText = "단 한번! 현재 스킬을 유지한 채 재시작.";
             rushLabel.style.display = "none"; 
+            
+            // 게이지 애니메이션
+            rushBtnGauge.style.transition = 'none'; // Reset transition
+            rushBtnGauge.style.width = '100%';
+            
+            setTimeout(() => {
+                rushBtnGauge.style.transition = 'width 5s linear';
+                rushBtnGauge.style.width = '0%';
+            }, 50);
+
+            const updateButtonText = () => {
+                rushBtnText.innerHTML = `<span style="font-size: 1.5em; vertical-align: middle;">${timeLeft}</span> &nbsp; 강화된 재도전`;
+            };
+            updateButtonText();
             
             if(rushTimerInterval) clearInterval(rushTimerInterval);
             rushTimerInterval = setInterval(() => {
                 timeLeft--;
-                // rushProgressBarFill.style.width 업데이트 제거 (CSS transition이 처리)
-                
-                if(timeLeft > 0) { 
-                    rushBtn.innerHTML = `<span style="font-size: 1.5em; vertical-align: middle;">${timeLeft}</span> &nbsp; 강화된 재도전`;
+                if (timeLeft > 0) {
+                    updateButtonText();
                 } else {
                     clearInterval(rushTimerInterval);
-                    // 타임아웃 -> 일반 리셋으로 변경
-                    rushBtn.innerText = "↻ 처음부터";
-                    rushBtn.className = "btn-reset"; 
+                    rushBtn.className = "btn-reset";
+                    rushBtnText.innerText = "↻ 처음부터";
                     rushSubText.innerText = "";
-                    // rushCountEl 삭제됨
-                    rushProgressBar.style.display = "none"; 
                 }
             }, 1000);
+
         } else {
             // 이미 Rush를 씀 -> 바로 리셋 버튼
-            // rushCountEl 삭제됨
             rushLabel.style.display = "none";
-            rushBtn.innerText = "↻ 처음부터";
-            rushBtn.className = "btn-reset"; 
+            rushBtn.className = "btn-reset";
+            rushBtnText.innerText = "↻ 처음부터";
             rushSubText.innerText = "";
             if(rushTimerInterval) clearInterval(rushTimerInterval);
-            rushProgressBar.style.display = "none"; 
+            rushBtnGauge.style.width = '0%';
         }
-        
-        // gameOverScreen.style.display='flex'; // [수정] 위로 이동함
     }
 
     function rushStart() {
         if(rushTimerInterval) clearInterval(rushTimerInterval);
-        const btnText = rushBtn.innerText;
-        // [수정] 한글 텍스트에 맞춰 조건 변경
-        const canRush = btnText.includes("강화된");
+        // 클래스 유무로 강화된 재도전 상태인지 확인
+        const canRush = rushBtn.classList.contains('btn-enhanced');
         
         enemies.length = 0; bullets.length = 0; gems.length = 0; texts.length = 0; effects.length = 0; hyperOrbs.length = 0;
         player.wx = 0; player.wy = 0; joystick.active = false;
