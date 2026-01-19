@@ -47,7 +47,7 @@
         #pcGuide { position: absolute; bottom: 20px; width: 100%; text-align: center; color: #666; font-size: 11px; pointer-events: none; font-weight: bold; }
 
         /* [모달 공통] */
-        .modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); display: none; flex-direction: column; justify-content: center; align-items: center; pointer-events: auto; z-index: 100; }
+        .modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); display: none; flex-direction: column; justify-content: center; align-items: center; pointer-events: auto; z-index: 100; }
 
         /* [레벨업 카드] */
         .card { background: #0f1218; color: #c8aa6e; width: 240px; margin: 8px auto; padding: 12px 15px; border: 1px solid #c8aa6e; box-shadow: 0 0 10px rgba(200, 170, 110, 0.2); transition: transform 0.1s; cursor: pointer; opacity: 0; transform: translateY(20px) scale(0.9); animation: cardEntry 0.3s forwards; display: flex; flex-direction: row; align-items: center; text-align: left; }
@@ -59,21 +59,29 @@
         .card-text-group p { margin: 0; font-size: 12px; color: #ccc; }
 
         /* [게임오버 화면 & 리더보드] */
-        #gameOverTitle { color: #00f3ff; font-size: 32px; font-weight: 900; margin: 20px 0; letter-spacing: 3px; font-style: italic; text-shadow: 0 0 10px rgba(0,243,255,0.6); animation: neonPulse 1.5s infinite alternate; }
+        #gameOverTitle { color: #00f3ff; font-size: 32px; font-weight: 900; margin: 10px 0; letter-spacing: 3px; font-style: italic; text-shadow: 0 0 10px rgba(0,243,255,0.6); animation: neonPulse 1.5s infinite alternate; }
         @keyframes neonPulse { from { text-shadow: 0 0 8px rgba(0,243,255,0.5); transform: scale(1); } to { text-shadow: 0 0 20px rgba(0,243,255,0.8); transform: scale(1.02); } }
         
-        #newRecordMsg { color: #fffa65; font-size: 18px; font-weight: bold; margin-bottom: 10px; display: none; animation: blink 0.5s infinite alternate; }
+        #newRecordMsg { color: #fffa65; font-size: 18px; font-weight: bold; margin-bottom: 5px; display: none; animation: blink 0.5s infinite alternate; }
         @keyframes blink { from { opacity: 1; } to { opacity: 0.5; } }
         
-        /* [이름 입력창] */
-        #nameInputBox { margin-bottom: 10px; display: flex; gap: 5px; justify-content: center; }
-        #inputName { background: #0f1218; border: 1px solid #444; color: #fff; padding: 8px; border-radius: 4px; outline: none; font-weight: bold; text-align: center; width: 140px; font-family: 'Segoe UI', sans-serif; }
-        #inputName:focus { border-color: #0acde5; box-shadow: 0 0 5px #0acde5; }
-        #btnName { background: #0acde5; color: #000; border: none; padding: 0 15px; font-weight: bold; cursor: pointer; border-radius: 4px; font-family: 'Segoe UI', sans-serif; transition: transform 0.1s; }
+        /* [이름 입력창 - 확실히 보이게 스타일 강화] */
+        #nameInputBox { margin: 10px 0; display: flex; gap: 5px; justify-content: center; z-index: 101; }
+        #inputName { 
+            background: #1e2328; border: 1px solid #0acde5; color: #fff; 
+            padding: 8px; border-radius: 4px; outline: none; font-weight: bold; 
+            text-align: center; width: 140px; font-family: 'Segoe UI', sans-serif; 
+        }
+        #inputName:focus { box-shadow: 0 0 8px #0acde5; background: #2d3436; }
+        #btnName { 
+            background: #0acde5; color: #000; border: none; 
+            padding: 0 15px; font-weight: bold; cursor: pointer; border-radius: 4px; 
+            font-family: 'Segoe UI', sans-serif; transition: transform 0.1s; 
+        }
         #btnName:active { transform: scale(0.95); }
 
         /* [리더보드] */
-        #leaderboardContainer { width: 85%; margin: 10px 0 20px 0; background: rgba(0,0,0,0.5); border: 1px solid #444; padding: 10px; max-height: 200px; overflow-y: auto; border-radius: 5px; }
+        #leaderboardContainer { width: 85%; margin: 5px 0 15px 0; background: rgba(0,0,0,0.5); border: 1px solid #444; padding: 10px; max-height: 180px; overflow-y: auto; border-radius: 5px; }
         #leaderboardTable { width: 100%; border-collapse: collapse; font-size: 12px; color: #ddd; }
         #leaderboardTable th { text-align: left; border-bottom: 1px solid #666; padding: 4px; color: #0acde5; position: sticky; top: 0; background: #0f1218; }
         #leaderboardTable td { border-bottom: 1px solid #333; padding: 4px; }
@@ -83,14 +91,14 @@
         #loadingRank { font-size: 12px; color: #aaa; text-align: center; margin: 10px 0; }
 
         /* [재시작/Rush 버튼] */
-        #rushTimerBox { text-align: center; }
-        #rushBtn { position: relative; overflow: hidden; margin-top: 10px; cursor: pointer; transition: transform 0.1s; -webkit-tap-highlight-color: transparent; }
+        #rushTimerBox { text-align: center; margin-top: 5px; }
+        #rushBtn { position: relative; overflow: hidden; cursor: pointer; transition: transform 0.1s; -webkit-tap-highlight-color: transparent; }
         #rushBtn:active { transform: scale(0.95); }
         .btn-enhanced { padding: 15px 30px; font-size: 18px; font-weight: bold; background: #6c5ce7; color: white; border: 2px solid #fff; box-shadow: 0 0 15px #6c5ce7; }
         .btn-reset { padding: 12px 24px; font-size: 14px; font-weight: bold; background: #555; color: white; border: none; }
         #rushBtnGauge { position: absolute; top: 0; left: 0; height: 100%; background: #f1c40f; width: 0; }
         #rushBtnText { position: relative; z-index: 1; white-space: nowrap; }
-        #rushSubText { font-size: 12px; color: white; margin-top: 10px; min-height: 15px; }
+        #rushSubText { font-size: 12px; color: white; margin-top: 5px; min-height: 15px; }
 
         /* [이펙트 애니메이션] */
         .hyper-active #gameContainer { animation: shake 0.2s infinite; }
