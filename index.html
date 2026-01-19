@@ -5,11 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SPARCRUSH</title>
     <style>
-        /* 선택 방지 */
+        /* [기본 스타일] */
         * { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; box-sizing: border-box; }
         body { margin: 0; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; font-family: 'Segoe UI', sans-serif; color: white; touch-action: none; }
         #gameContainer { position: relative; width: 100vh; max-width: 56.25vh; height: 100vh; background: #0f1218; overflow: hidden; box-shadow: 0 0 30px rgba(0,210,211,0.2); }
         canvas { display: block; width: 100%; height: 100%; }
+        
+        /* [UI 레이어] */
         #uiLayer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; padding: 15px; display: flex; flex-direction: column; }
         .header-ui { width: 100%; display: flex; flex-direction: column; gap: 5px; }
         .score-row { display: flex; justify-content: space-between; font-size: 14px; font-weight: bold; color: #c8aa6e; text-shadow: 1px 1px 2px #000; }
@@ -17,197 +19,76 @@
         #expBar { height: 100%; width: 0%; background: #0acde5; transition: width 0.1s; }
         .stats { display: flex; justify-content: space-between; font-size: 12px; color: #a0a0a0; margin-top: 4px; }
         
+        /* [알림 메시지] */
         #infoMsg { position: absolute; top: 80px; left: 15px; pointer-events: none; opacity: 0; transition: opacity 0.1s; display: flex; align-items: center; }
         #infoText { font-size: 18px; font-weight: 800; color: #fff; text-shadow: 1px 1px 3px rgba(0,0,0,0.9); font-family: 'Segoe UI', sans-serif; letter-spacing: 0.5px; }
         #infoIcon { width:20px; height:20px; object-fit:contain; margin-right:5px; display:none; }
         .pop-in { animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         @keyframes popIn { 0% { transform: scale(0.8) translateX(-20px); opacity: 0; } 100% { transform: scale(1) translateX(0); opacity: 1; } }
 
+        /* [콤보 및 중앙 텍스트] */
         #centerMsg { position: absolute; top: 20%; left: 50%; transform: translateX(-50%); text-align: center; width: 100%; pointer-events: none; z-index: 5; }
         #comboCount { font-size: 48px; font-weight: 900; color: #fffa65; text-shadow: 0 0 15px rgba(255, 165, 2, 0.8); display: none; transition: transform 0.05s; }
         #comboLabel { font-size: 12px; color: #81ecec; letter-spacing: 3px; font-weight: bold; display:none; text-shadow: 0 0 5px #00cec9; }
 
-        #rightHud { 
-            position: absolute; right: 15px; top: 130px; height: 30%; 
-            display: flex; flex-direction: column; align-items: center; 
-            gap: 2px; 
-        }
-        
-        #typeIcon { 
-            width: 20px; height: 20px; 
-            margin-top: 2px; 
-            object-fit: contain; 
-            filter: drop-shadow(0 0 2px rgba(255,255,255,0.3));
-        }
-        
-        #hyperContainer {
-            width: 10px; flex: 1; background: rgba(0,0,0,0.6); 
-            border: 1px solid #555; 
-            border-radius: 0; 
-            overflow: hidden; 
-            display: flex; flex-direction: column-reverse; 
-            box-shadow: 0 0 5px rgba(0,0,0,0.5); 
-            transition: box-shadow 0.1s; 
-        }
+        /* [우측 HUD & 하이퍼 게이지] */
+        #rightHud { position: absolute; right: 15px; top: 130px; height: 30%; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+        #typeIcon { width: 20px; height: 20px; margin-top: 2px; object-fit: contain; filter: drop-shadow(0 0 2px rgba(255,255,255,0.3)); }
+        #hyperContainer { width: 10px; flex: 1; background: rgba(0,0,0,0.6); border: 1px solid #555; display: flex; flex-direction: column-reverse; box-shadow: 0 0 5px rgba(0,0,0,0.5); transition: box-shadow 0.1s; }
         #hyperFill { width: 100%; height: 0%; background: linear-gradient(to top, #6c5ce7, #a29bfe); transition: height 0.1s linear, filter 0.1s; }
-        
-        @keyframes gaugeBlink {
-            0% { border-color: rgba(255, 255, 255, 0.9); box-shadow: 0 0 4px rgba(255, 255, 255, 0.6); }
-            50% { border-color: rgba(255, 0, 0, 0.9); box-shadow: 0 0 4px rgba(255, 0, 0, 0.6); }
-            100% { border-color: rgba(255, 255, 255, 0.9); box-shadow: 0 0 4px rgba(255, 255, 255, 0.6); }
-        }
-        .gauge-charging #hyperContainer { 
-            animation: gaugeBlink 0.2s infinite;
-        }
-        .gauge-charging #hyperFill { filter: brightness(1.2); }
+        .gauge-charging #hyperContainer { animation: gaugeBlink 0.2s infinite; }
+        @keyframes gaugeBlink { 0% { border-color: rgba(255,255,255,0.9); } 50% { border-color: rgba(255,0,0,0.9); } 100% { border-color: rgba(255,255,255,0.9); } }
 
+        /* [대쉬 버튼] */
         #dashZone { position: absolute; right: 30px; bottom: 100px; pointer-events: auto; display: flex; flex-direction: column; align-items: center; }
         #dashIcon { width: 70px; height: 70px; border-radius: 50%; border: 3px solid #fff; background: rgba(241, 196, 15, 0.2); display: flex; justify-content: center; align-items: center; color: white; font-weight: bold; font-size: 14px; box-shadow: 0 0 10px rgba(241, 196, 15, 0.3); transition: opacity 0.2s; cursor: pointer; }
         #dashIcon.ready { background: rgba(241, 196, 15, 0.6); opacity: 1; border-color: #fff; }
         #dashIcon.cooldown { background: rgba(0,0,0,0.5); opacity: 0.4; border-color: #555; font-size: 24px;}
         #pcGuide { position: absolute; bottom: 20px; width: 100%; text-align: center; color: #666; font-size: 11px; pointer-events: none; font-weight: bold; }
 
-        .modal { 
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.6); 
-            backdrop-filter: blur(4px);   
-            display: none; flex-direction: column; justify-content: center; align-items: center; 
-            pointer-events: auto; z-index: 100; 
-        }
+        /* [모달 공통] */
+        .modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); display: none; flex-direction: column; justify-content: center; align-items: center; pointer-events: auto; z-index: 100; }
 
-        .card { 
-            background: #0f1218; color: #c8aa6e; 
-            width: 240px; 
-            margin: 8px auto; 
-            padding: 12px 15px; 
-            border: 1px solid #c8aa6e; 
-            box-shadow: 0 0 10px rgba(200, 170, 110, 0.2); 
-            transition: transform 0.1s; cursor: pointer;
-            opacity: 0; 
-            transform: translateY(20px) scale(0.9);
-            animation: cardEntry 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-            display: flex; flex-direction: row; align-items: center; text-align: left; 
-        }
+        /* [레벨업 카드] */
+        .card { background: #0f1218; color: #c8aa6e; width: 240px; margin: 8px auto; padding: 12px 15px; border: 1px solid #c8aa6e; box-shadow: 0 0 10px rgba(200, 170, 110, 0.2); transition: transform 0.1s; cursor: pointer; opacity: 0; transform: translateY(20px) scale(0.9); animation: cardEntry 0.3s forwards; display: flex; flex-direction: row; align-items: center; text-align: left; }
         @keyframes cardEntry { to { opacity: 1; transform: translateY(0) scale(1); } }
-
         .card:active { transform: scale(0.98); background: #1e2328; }
         .card.hyper-card { border: 1px solid #0acde5; color: #0acde5; background: #0a1a20;}
-        .card-icon { width: 40px; height: 40px; margin-right: 15px; object-fit: contain; flex-shrink: 0; filter: drop-shadow(0 0 5px rgba(255,255,255,0.2)); }
-        .card-text-group { display: flex; flex-direction: column; justify-content: center; }
-        .card-text-group h3 { margin: 0 0 4px 0; font-size: 16px; line-height: 1.2; }
-        .card-text-group p { margin: 0; font-size: 12px; color: #ccc; line-height: 1.2; }
+        .card-icon { width: 40px; height: 40px; margin-right: 15px; object-fit: contain; flex-shrink: 0; }
+        .card-text-group h3 { margin: 0 0 4px 0; font-size: 16px; }
+        .card-text-group p { margin: 0; font-size: 12px; color: #ccc; }
 
-        #gameOverTitle { 
-            color: #00f3ff; font-size: 32px; font-weight: 900; 
-            margin-top: 20px; 
-            margin-bottom: 20px; 
-            letter-spacing: 3px; 
-            text-shadow: 0 0 10px rgba(0, 243, 255, 0.6);
-            font-style: italic;
-            /* position: absolute; top: 10%;  (위치 조정) */
-            animation: neonPulse 1.5s infinite alternate;
-        }
-        
-        @keyframes neonPulse {
-            0% { text-shadow: 0 0 8px rgba(0, 243, 255, 0.5), 0 0 12px rgba(0, 243, 255, 0.3); transform: scale(1); }
-            100% { text-shadow: 0 0 15px rgba(0, 243, 255, 0.8), 0 0 25px rgba(0, 243, 255, 0.6), 0 0 35px rgba(0, 243, 255, 0.4); transform: scale(1.02); }
-        }
-
-        @keyframes iconBounceAndAttach {
-            0% { transform: scale(2.5); opacity: 0; }
-            40% { transform: scale(0.7); opacity: 1; }
-            60% { transform: scale(1.3); }
-            80% { transform: scale(0.85); }
-            100% { transform: scale(1); opacity: 1; }
-        }
-
-        .icon-attach-anim {
-            animation: iconBounceAndAttach 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-        }
+        /* [게임오버 화면 & 리더보드] */
+        #gameOverTitle { color: #00f3ff; font-size: 32px; font-weight: 900; margin: 20px 0; letter-spacing: 3px; font-style: italic; text-shadow: 0 0 10px rgba(0,243,255,0.6); animation: neonPulse 1.5s infinite alternate; }
+        @keyframes neonPulse { from { text-shadow: 0 0 8px rgba(0,243,255,0.5); transform: scale(1); } to { text-shadow: 0 0 20px rgba(0,243,255,0.8); transform: scale(1.02); } }
         
         #newRecordMsg { color: #fffa65; font-size: 18px; font-weight: bold; margin-bottom: 10px; display: none; animation: blink 0.5s infinite alternate; }
         @keyframes blink { from { opacity: 1; } to { opacity: 0.5; } }
         
-        #resultContainer { margin-bottom: 10px; text-align: center; }
+        #leaderboardContainer { width: 85%; margin: 10px 0 20px 0; background: rgba(0,0,0,0.5); border: 1px solid #444; padding: 10px; max-height: 200px; overflow-y: auto; border-radius: 5px; }
+        #leaderboardTable { width: 100%; border-collapse: collapse; font-size: 12px; color: #ddd; }
+        #leaderboardTable th { text-align: left; border-bottom: 1px solid #666; padding: 4px; color: #0acde5; position: sticky; top: 0; background: #0f1218; }
+        #leaderboardTable td { border-bottom: 1px solid #333; padding: 4px; }
+        #leaderboardTable tr:nth-child(1) td { color: #f1c40f; font-weight: bold; } /* 1등 금색 */
+        #leaderboardTable tr:nth-child(2) td { color: #bdc3c7; font-weight: bold; } /* 2등 은색 */
+        #leaderboardTable tr:nth-child(3) td { color: #d35400; font-weight: bold; } /* 3등 동색 */
+        #loadingRank { font-size: 12px; color: #aaa; text-align: center; margin: 10px 0; }
 
-        #rushTimerBox { margin-top: 5px; text-align: center; }
-        #rushCount { font-size: 40px; font-weight: bold; color: #ff7675; min-height: 48px; }
-        #rushBtn { margin-top: 10px; cursor: pointer; transition: transform 0.1s; }
+        /* [재시작/Rush 버튼] */
+        #rushTimerBox { text-align: center; }
+        #rushBtn { position: relative; overflow: hidden; margin-top: 10px; cursor: pointer; transition: transform 0.1s; -webkit-tap-highlight-color: transparent; }
         #rushBtn:active { transform: scale(0.95); }
-        
-        .btn-enhanced {
-            padding: 15px 30px; font-size: 18px; font-weight: bold;
-            background: #6c5ce7; color: white; border: 2px solid #fff;
-            box-shadow: 0 0 15px #6c5ce7;
-        }
-        
-        .btn-reset {
-            padding: 12px 24px; font-size: 14px; font-weight: bold;
-            background: #555; color: white; border: none;
-            box-shadow: none;
-        }
-        .btn-reset:active { background: #666; }
+        .btn-enhanced { padding: 15px 30px; font-size: 18px; font-weight: bold; background: #6c5ce7; color: white; border: 2px solid #fff; box-shadow: 0 0 15px #6c5ce7; }
+        .btn-reset { padding: 12px 24px; font-size: 14px; font-weight: bold; background: #555; color: white; border: none; }
+        #rushBtnGauge { position: absolute; top: 0; left: 0; height: 100%; background: #f1c40f; width: 0; }
+        #rushBtnText { position: relative; z-index: 1; white-space: nowrap; }
         #rushSubText { font-size: 12px; color: white; margin-top: 10px; min-height: 15px; }
 
+        /* [이펙트 애니메이션] */
         .hyper-active #gameContainer { animation: shake 0.2s infinite; }
         @keyframes shake { 0% { transform: translate(1px, 1px); } 50% { transform: translate(-1px, -1px); } 100% { transform: translate(1px, -1px); } }
-
-        #rushBtn {
-            position: relative;
-            overflow: hidden;
-            -webkit-tap-highlight-color: transparent;
-        }
-        #rushBtnGauge {
-            position: absolute;
-            top: 0;
-            left: 0;
-            height: 100%;
-            background: #f1c40f;
-            width: 0;
-        }
-        #rushBtnText {
-            position: relative;
-            z-index: 1;
-            white-space: nowrap;
-        }
-        .btn-enhanced.timed-rush {
-            color: #000;
-            transition: color 0.1s 4.8s;
-        }
-
-        /* --- LEADERBOARD CSS --- */
-        #leaderboardContainer {
-            width: 85%;
-            margin-top: 10px;
-            margin-bottom: 15px;
-            background: rgba(0,0,0,0.5);
-            border: 1px solid #444;
-            padding: 10px;
-            max-height: 200px;
-            overflow-y: auto;
-            border-radius: 5px;
-        }
-        #leaderboardTable {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 12px;
-            color: #ddd;
-        }
-        #leaderboardTable th {
-            text-align: left;
-            border-bottom: 1px solid #666;
-            padding: 4px;
-            color: #0acde5;
-        }
-        #leaderboardTable td {
-            border-bottom: 1px solid #333;
-            padding: 4px;
-        }
-        #leaderboardTable tr:nth-child(1) td { color: #f1c40f; font-weight: bold; font-size: 13px; } /* 1등 금색 */
-        #leaderboardTable tr:nth-child(2) td { color: #95a5a6; font-weight: bold; } /* 2등 은색 */
-        #leaderboardTable tr:nth-child(3) td { color: #d35400; font-weight: bold; } /* 3등 동색 */
-        
-        #loadingRank { font-size: 12px; color: #aaa; text-align: center; margin: 10px 0; }
+        .icon-attach-anim { animation: iconAnim 0.6s forwards; }
+        @keyframes iconAnim { 0% { transform: scale(2.5); opacity: 0; } 40% { transform: scale(0.7); opacity: 1; } 100% { transform: scale(1); } }
     </style>
 </head>
 <body>
@@ -217,13 +98,13 @@
     
     <div id="uiLayer">
         <div class="header-ui">
-            <div class="score-row"><span>현재 스코어: <span id="scoreVal">0</span></span><span>최고 점수: <span id="bestVal">0</span></span></div>
+            <div class="score-row"><span>SCORE: <span id="scoreVal">0</span></span><span>BEST: <span id="bestVal">0</span></span></div>
             <div id="expBarContainer"><div id="expBar"></div></div>
             <div class="stats"><span id="lvText">LV. 1</span><span id="hpText" style="color:#ff7675;">HP: 100</span></div>
         </div>
         
         <div id="infoMsg">
-            <img id="infoIcon" src="" alt="Info Icon">
+            <img id="infoIcon" src="" alt="Info">
             <div id="infoText"></div>
         </div>
         <div id="centerMsg"><div id="comboCount">0</div><div id="comboLabel">COMBO</div></div>
@@ -238,39 +119,30 @@
     </div>
 
     <div id="levelUpScreen" class="modal">
-        <h2 id="levelUpTitle" style="color:#c8aa6e; margin-bottom:20px; text-shadow: 2px 2px 4px rgba(0,0,0,0.8);">LEVEL UP!</h2>
+        <h2 id="levelUpTitle" style="color:#c8aa6e; margin-bottom:20px;">LEVEL UP!</h2>
         <div id="cardsBox" style="width:100%; display:flex; flex-direction:column; align-items:center;"></div>
     </div>
 
     <div id="gameOverScreen" class="modal">
         <div id="gameOverTitle">SPARCRUSH</div>
-        <div id="newRecordMsg" style="text-shadow: 1px 1px 2px rgba(0,0,0,0.8);">🏆 NEW RECORD! 🏆</div>
-        
-        <div id="resultContainer"></div>
+        <div id="newRecordMsg">🏆 NEW RECORD! 🏆</div>
+        <div id="resultContainer" style="color:#ddd; margin-bottom:5px;"></div>
 
         <div id="leaderboardContainer">
             <div id="loadingRank">Connecting to LootLocker...</div>
             <table id="leaderboardTable">
                 <thead>
-                    <tr>
-                        <th style="width: 15%;">Rank</th>
-                        <th>Player</th>
-                        <th style="text-align:right;">Score</th>
-                    </tr>
+                    <tr><th style="width:15%;">Rank</th><th>Player</th><th style="text-align:right;">Score</th></tr>
                 </thead>
-                <tbody id="leaderboardBody">
-                    </tbody>
+                <tbody id="leaderboardBody"></tbody>
             </table>
         </div>
 
         <div id="rushTimerBox">
-            <div id="rushLabel" style="display:none;"></div> 
-            <div style="position: relative; display: inline-block; margin-top: 5px;">
-                <button id="rushBtn" onclick="rushStart()" style="margin-top: 0;">
-                    <span id="rushBtnGauge"></span>
-                    <span id="rushBtnText"></span>
-                </button>
-            </div>
+            <button id="rushBtn" onclick="rushStart()">
+                <span id="rushBtnGauge"></span>
+                <span id="rushBtnText"></span>
+            </button>
             <div id="rushSubText"></div>
         </div>
     </div>
@@ -278,17 +150,16 @@
 
 <script>
     // ==========================================
-    // [LootLocker Config]
-    // LootLocker 대시보드에서 확인한 값을 입력하세요.
+    // [LootLocker Configuration]
     // ==========================================
-    const LOOTLOCKER_GAME_KEY = "dev_45f9a56c611c47e1be2fcd6e5edecdda"; // Settings > API Keys > Game Key
-    const LOOTLOCKER_LEADERBOARD_KEY = "32752"; // Leaderboards > Key (string)
-    const GAME_VERSION = "0.1.0";
+    const LOOTLOCKER_GAME_KEY = "dev_45f9a56c611c47e1be2fcd6e5edecdda"; 
+    const LOOTLOCKER_LEADERBOARD_KEY = "32752"; 
+    const GAME_VERSION = "0.1.0.0";
     
     let llSessionToken = "";
     let llPlayerID = "";
 
-    // [LootLocker] 1. 게스트 로그인
+    // [1] 초기화 및 게스트 로그인
     async function initLootLocker() {
         try {
             const res = await fetch("https://api.lootlocker.io/game/v2/session/guest", {
@@ -300,14 +171,15 @@
             if(data.session_token) {
                 llSessionToken = data.session_token;
                 llPlayerID = data.player_id;
-                console.log("✅ LootLocker Login OK:", llPlayerID);
+                console.log("✅ LootLocker Connected. Player ID:", llPlayerID);
             } else {
                 console.error("❌ LootLocker Login Failed:", data);
+                document.getElementById('loadingRank').innerText = "Login Failed (Check Console)";
             }
-        } catch(e) { console.error("Login Error:", e); }
+        } catch(e) { console.error("Connection Error:", e); }
     }
 
-    // [LootLocker] 2. 점수 제출
+    // [2] 점수 제출
     async function submitScoreLL(score) {
         if(!llSessionToken) return;
         try {
@@ -315,16 +187,14 @@
             const res = await fetch(`https://api.lootlocker.io/game/leaderboards/${LOOTLOCKER_LEADERBOARD_KEY}/submit`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "x-session-token": llSessionToken },
-                body: JSON.stringify({ score: score, metadata: "Player" }) // 메타데이터(예: 캐릭터명) 가능
+                body: JSON.stringify({ score: score, metadata: "Player" })
             });
-            const data = await res.json();
-            console.log("📤 Score Submitted:", data);
-            // 점수 제출이 끝나면 랭킹 목록을 불러옴
-            fetchLeaderboardLL();
+            await res.json(); // 결과 대기
+            fetchLeaderboardLL(); // 제출 후 목록 갱신
         } catch(e) { console.error("Submit Error:", e); }
     }
 
-    // [LootLocker] 3. 랭킹 불러오기
+    // [3] 순위표 가져오기
     async function fetchLeaderboardLL() {
         if(!llSessionToken) return;
         try {
@@ -336,21 +206,15 @@
             const data = await res.json();
             
             const tbody = document.getElementById('leaderboardBody');
-            tbody.innerHTML = ""; // 초기화
+            tbody.innerHTML = "";
             
             if(data.items && data.items.length > 0) {
                 document.getElementById('loadingRank').style.display = 'none';
                 data.items.forEach(item => {
                     const tr = document.createElement('tr');
-                    // 플레이어 ID 짧게 표시 (예: Guest_1234)
                     let nameDisplay = item.player.name ? item.player.name : `Guest_${item.player.id}`;
-                    if(item.player.id == llPlayerID) nameDisplay += " (ME)"; // 내 점수 표시
-
-                    tr.innerHTML = `
-                        <td>${item.rank}</td>
-                        <td>${nameDisplay}</td>
-                        <td style="text-align:right;">${item.score.toLocaleString()}</td>
-                    `;
+                    if(item.player.id == llPlayerID) nameDisplay += " (ME)";
+                    tr.innerHTML = `<td>${item.rank}</td><td>${nameDisplay}</td><td style="text-align:right;">${item.score.toLocaleString()}</td>`;
                     tbody.appendChild(tr);
                 });
             } else {
@@ -363,16 +227,17 @@
     }
 
     window.onload = function() {
-        initLootLocker(); // 게임 로드시 로그인 시도
+        initLootLocker();
     };
 
     // ==========================================
-    // [Game Logic]
+    // [Game Logic Starts Here]
     // ==========================================
-
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
-    
+    const CW = 360, CH = 640;
+    canvas.width = CW; canvas.height = CH;
+
     // --- Audio ---
     const bgm = new Audio('hyper.mp3');
     bgm.loop = true; bgm.volume = 0.5;
@@ -385,17 +250,619 @@
     window.addEventListener('click', startBgm);
     window.addEventListener('touchstart', startBgm);
     window.addEventListener('keydown', startBgm);
-
     document.addEventListener('visibilitychange', () => {
-        if (document.hidden) { bgm.pause(); } 
-        else { if (gameState === 'PLAY' && bgmStarted) { bgm.play().catch(e => {}); } }
+        if (document.hidden) bgm.pause();
+        else if (gameState === 'PLAY' && bgmStarted) bgm.play().catch(e=>{});
     });
 
-    // --- Refs ---
+    // --- UI Elements ---
     const expBar = document.getElementById('expBar');
     const lvText = document.getElementById('lvText');
     const hpText = document.getElementById('hpText');
     const scoreVal = document.getElementById('scoreVal');
     const bestVal = document.getElementById('bestVal');
     const infoMsg = document.getElementById('infoMsg');
-    const infoText = document.getElementById('info
+    const infoText = document.getElementById('infoText');
+    const infoIcon = document.getElementById('infoIcon');
+    const comboEl = document.getElementById('comboCount');
+    const comboLabel = document.getElementById('comboLabel');
+    const hyperFill = document.getElementById('hyperFill');
+    const rightHud = document.getElementById('rightHud');
+    const typeIcon = document.getElementById('typeIcon');
+    const dashIcon = document.getElementById('dashIcon');
+    const levelUpScreen = document.getElementById('levelUpScreen');
+    const cardsBox = document.getElementById('cardsBox');
+    const gameOverScreen = document.getElementById('gameOverScreen');
+    const resultContainer = document.getElementById('resultContainer');
+    const newRecordMsg = document.getElementById('newRecordMsg');
+    const rushBtn = document.getElementById('rushBtn');
+    const rushBtnGauge = document.getElementById('rushBtnGauge');
+    const rushBtnText = document.getElementById('rushBtnText');
+    const rushSubText = document.getElementById('rushSubText');
+
+    // --- Game Variables ---
+    let highScore = localStorage.getItem('survival_highscore') || 0;
+    bestVal.innerText = parseInt(highScore).toLocaleString();
+
+    let gameState = 'PLAY';
+    let frameCount = 0;
+    let screenShake = 0;
+    let rushTimerInterval = null;
+    let hasRushed = false; 
+
+    const HYPER_RAPID = 0;
+    const HYPER_EMP = 1;
+    const HYPER_SHIELD = 2;
+
+    const player = {
+        wx: 0, wy: 0, r: 10, hitR: 5, grazeR: 45, color: '#0acde5',
+        hp: 100, maxHp: 100, speed: 3.2, baseSpeed: 3.2,
+        damage: 15, critChance: 0.15, critDamage: 2.0,
+        fireRate: 25, baseFireRate: 25, bulletCount: 1, magnet: 20,
+        level: 1, exp: 0, nextExp: 10, score: 0,
+        hyperGauge: 0, isHyper: false, hyperTime: 0, hyperType: HYPER_RAPID,
+        combo: 0, comboTimer: 0, lastShot: 0, showHpTimer: 0,
+        killCount: 0, killTimer: 0,
+        dashReady: true, dashCool: 0, dashMaxCool: 600,
+        isDashing: false, dashTime: 0, dashDuration: 15, dashVx: 0, dashVy: 0,
+        pendingLevelUps: 0, shieldAngle: 0, shieldPulse: 0, isGrazingNow: false
+    };
+
+    let joystick = { active: false, baseX: CW*0.2, baseY: CH*0.8, stickX: CW*0.2, stickY: CH*0.8, maxRadius: 30, vx: 0, vy: 0 };
+
+    // --- Input Handling ---
+    const dashZone = document.getElementById('dashZone');
+    window.addEventListener('keydown', e => { if(e.code === 'Space') useDash(); });
+    dashZone.addEventListener('touchstart', e => { e.preventDefault(); useDash(); }, {passive:false});
+    dashZone.addEventListener('mousedown', e => { e.preventDefault(); useDash(); });
+
+    function inputStart(cx, cy) {
+        if(gameState!=='PLAY') return;
+        const rect = canvas.getBoundingClientRect();
+        const x = (cx - rect.left) * (CW / rect.width);
+        const y = (cy - rect.top) * (CH / rect.height);
+        if(x > CW*0.6 && y > CH*0.75) return; 
+        joystick.active = true; joystick.baseX = x; joystick.baseY = y; joystick.stickX = x; joystick.stickY = y; joystick.vx = 0; joystick.vy = 0;
+        startBgm();
+    }
+    function inputMove(cx, cy) {
+        if(!joystick.active || gameState!=='PLAY') return;
+        const rect = canvas.getBoundingClientRect();
+        const x = (cx - rect.left) * (CW / rect.width);
+        const y = (cy - rect.top) * (CH / rect.height);
+        const dx = x - joystick.baseX; const dy = y - joystick.baseY;
+        const dist = Math.hypot(dx, dy); const limit = Math.min(dist, joystick.maxRadius); const angle = Math.atan2(dy, dx);
+        joystick.stickX = joystick.baseX + Math.cos(angle)*limit; joystick.stickY = joystick.baseY + Math.sin(angle)*limit;
+        if (dist > 5) { joystick.vx=Math.cos(angle); joystick.vy=Math.sin(angle); } else { joystick.vx=0; joystick.vy=0; }
+    }
+    function inputEnd() { joystick.active = false; joystick.vx = 0; joystick.vy = 0; }
+
+    canvas.addEventListener('mousedown', e=>inputStart(e.clientX, e.clientY));
+    window.addEventListener('mousemove', e=>inputMove(e.clientX, e.clientY));
+    window.addEventListener('mouseup', inputEnd);
+    canvas.addEventListener('touchstart', e=>{ e.preventDefault(); for(let i=0; i<e.changedTouches.length; i++) inputStart(e.changedTouches[i].clientX, e.changedTouches[i].clientY); }, {passive:false});
+    window.addEventListener('touchmove', e=>{ e.preventDefault(); if(joystick.active) inputMove(e.touches[0].clientX, e.touches[0].clientY); }, {passive:false});
+    window.addEventListener('touchend', e=>{ if(e.touches.length === 0) inputEnd(); });
+
+    function useDash() {
+        if(!player.dashReady || player.isDashing) return;
+        let dx = joystick.vx; let dy = joystick.vy;
+        if(dx === 0 && dy === 0) { dy = -1; }
+        player.isDashing = true; player.dashTime = player.dashDuration;
+        player.dashVx = dx; player.dashVy = dy;
+        player.dashReady = false; player.dashCool = player.dashMaxCool;
+        showMessage("DASH!", "#f1c40f");
+        updateDashUI();
+    }
+
+    // --- Message System ---
+    let msgTimer = null;
+    function showMessage(text, color, iconSrc = null) {
+        infoText.innerText = text;
+        infoText.style.color = color;
+        infoMsg.style.opacity = 1;
+        infoText.classList.remove('pop-in');
+        void infoText.offsetWidth;
+        infoText.classList.add('pop-in');
+        if (iconSrc) { infoIcon.src = iconSrc; infoIcon.style.display = 'block'; } else { infoIcon.style.display = 'none'; }
+        if(msgTimer) clearTimeout(msgTimer);
+        msgTimer = setTimeout(() => { infoMsg.style.opacity = 0; }, 600);
+    }
+
+    // --- Entities & Object Pools ---
+    let enemies = []; let bullets = []; let gems = []; let texts = []; let effects = []; let hyperOrbs = [];
+    function getObj(arr, Class) { let o = arr.find(x=>!x.active); if(!o) { o=new Class(); arr.push(o); } return o; }
+
+    class HyperOrb {
+        constructor() { this.active = false; }
+        spawn(wx, wy, color) {
+            this.wx = wx; this.wy = wy; this.color = color; this.active = true;
+            this.progress = 0; this.startX = wx; this.startY = wy;
+            this.targetRelX = CW/2 - 20; this.targetRelY = -CH/2 + 250;
+            this.currentSpeed = 0.005; this.colorCycle = 0; this.angle = 0;
+        }
+        update() {
+            if (this.progress < 0.3) this.currentSpeed += 0.0005; else if (this.progress < 0.6) this.currentSpeed = Math.max(0.003, this.currentSpeed * 0.95); else this.currentSpeed *= 1.1;
+            this.progress += this.currentSpeed; this.angle += 0.15;
+            if (this.progress >= 1) { this.active = false; addHyper(20); showMessage("SHUTDOWN", "#fdcb6e"); return; }
+            const t = this.progress; const u = 1 - t;
+            const targetX = player.wx + this.targetRelX; const targetY = player.wy + this.targetRelY;
+            const cpX = this.startX + 100; const cpY = this.startY - 200;
+            this.wx = (u * u * this.startX) + (2 * u * t * cpX) + (t * t * targetX);
+            this.wy = (u * u * this.startY) + (2 * u * t * cpY) + (t * t * targetY);
+        }
+        draw() {
+            const sx = this.wx - player.wx + CW/2; const sy = this.wy - player.wy + CH/2;
+            const curColor = (Math.floor(frameCount/4)%2 === 0) ? "#ffffff" : "#ff0000";
+            ctx.save(); ctx.translate(sx, sy); ctx.rotate(this.angle);
+            ctx.shadowColor = curColor; ctx.shadowBlur = 15; ctx.fillStyle = curColor;
+            ctx.beginPath(); ctx.moveTo(0, -7); ctx.lineTo(6, 5); ctx.lineTo(-6, 5); ctx.closePath(); ctx.fill();
+            ctx.restore();
+        }
+    }
+
+    class Enemy {
+        constructor() { this.active=false; }
+        spawn(isElite) {
+            const angle = Math.random() * Math.PI * 2; const dist = 480;
+            this.wx = player.wx + Math.cos(angle)*dist; this.wy = player.wy + Math.sin(angle)*dist;
+            this.isElite = isElite; this.active = true; this.grazeCool = 0; this.isSuicide = false; this.suicideTimer = 0;
+            let speedBonus = (player.level > 5) ? player.level * 0.05 : 0;
+            
+            if(isElite) {
+                this.hp = 150 + (player.level * 40) + Math.pow(player.level, 2.5); this.maxHp = this.hp;
+                this.speed = Math.min(5.0, (player.baseSpeed * 0.40) + (speedBonus * 0.5));
+                this.r = 30; this.color = '#e17055'; this.xp = 200; this.scoreVal = 1000;
+                this.shootTimer = 60; this.patternAngle = 0; this.rapidCount = 0;
+            } else {
+                let baseHp = 20 + (player.level * 8) + Math.pow(player.level, 2.2);
+                let baseSpeed = Math.min(6.5, (1.2 + Math.random() * 0.5) + speedBonus);
+                if (Math.random() < 0.1) {
+                    this.isSuicide = true; this.hp = baseHp * 1.5; this.speed = baseSpeed * 1.5; this.color = '#555';
+                } else {
+                    this.hp = baseHp; this.speed = baseSpeed; this.color = '#ff6b81';
+                }
+                this.maxHp = this.hp; this.r = 10; this.xp = 5; this.scoreVal = 10;
+            }
+        }
+        update() {
+            const angleToPlayer = Math.atan2(player.wy - this.wy, player.wx - this.wx);
+            this.wx += Math.cos(angleToPlayer)*this.speed; this.wy += Math.sin(angleToPlayer)*this.speed;
+            if(this.grazeCool>0) this.grazeCool--;
+            const dist = Math.hypot(player.wx-this.wx, player.wy-this.wy);
+
+            if(dist < player.hitR + this.r) {
+                if(player.isDashing) {
+                    const dmg = 50 + (player.damage*2); this.hp -= dmg; spawnText("CRASH!", this.wx, this.wy, "#f1c40f", 16);
+                    this.wx -= Math.cos(angleToPlayer)*30; this.wy -= Math.sin(angleToPlayer)*30; if(this.hp <= 0) killEnemy(this);
+                } else if(player.isHyper && player.hyperType === HYPER_SHIELD) {
+                    spawnText("BLOCK", player.wx, player.wy, '#a29bfe'); this.wx -= Math.cos(angleToPlayer)*15; this.wy -= Math.sin(angleToPlayer)*15;
+                } else {
+                    if (this.isSuicide) { triggerSuicideExplosion(this); }
+                    else {
+                        const dmg = this.isElite?20:10; player.hp -= dmg; player.showHpTimer = 60; spawnText(`-${dmg}`, player.wx, player.wy, 'red');
+                        player.combo = 0; comboEl.style.display='none'; comboLabel.style.display='none';
+                        if(!this.isElite) this.active=false; updateUI(); if(player.hp<=0) gameOver();
+                    }
+                }
+            } else if(dist < player.grazeR + this.r && this.grazeCool<=0) {
+                addHyper(this.isElite?5:1); this.grazeCool=20;
+            }
+            // Elite Shooting Logic (Simplified)
+            if(this.isElite) {
+                this.shootTimer--;
+                if(this.shootTimer <= 0) {
+                    let spdMult = 1 + Math.min(1.0, player.level * 0.02);
+                    spawnBullet(this.wx, this.wy, angleToPlayer, true, spdMult);
+                    this.shootTimer = 90; 
+                }
+            }
+            if(this.isSuicide && this.suicideTimer > 0) {
+                this.suicideTimer++; if(this.suicideTimer >= 240) triggerSuicideExplosion(this);
+            } else if (this.isSuicide && this.hp < this.maxHp && this.suicideTimer === 0) { this.suicideTimer = 1; }
+            
+            if(dist > 1000) this.active=false;
+        }
+        draw() {
+            const sx = this.wx - player.wx + CW/2; const sy = this.wy - player.wy + CH/2;
+            if(sx<-60||sx>CW+60||sy<-60||sy>CH+60) return;
+            ctx.beginPath(); ctx.arc(sx, sy, this.r, 0, Math.PI*2); ctx.fillStyle = this.color; ctx.fill();
+            if(this.suicideTimer > 0) {
+                ctx.fillStyle = "white"; ctx.font = "bold 12px Arial"; ctx.textAlign="center"; 
+                ctx.fillText(4 - Math.floor(this.suicideTimer/60), sx, sy+4);
+            }
+            // HP Bar
+            const hpPct = Math.max(0, this.hp / this.maxHp);
+            let barW = this.isElite?40:18; let barH = this.isElite?6:3; let barY = this.isElite?40:20;
+            if(this.isElite) { ctx.lineWidth=3; ctx.strokeStyle='#fff'; ctx.stroke(); }
+            ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(sx - barW/2, sy - barY, barW, barH);
+            ctx.fillStyle = '#ff7675'; ctx.fillRect(sx - barW/2, sy - barY, barW * hpPct, barH);
+        }
+    }
+
+    class Bullet {
+        constructor() { this.active=false; }
+        spawn(wx, wy, a, isEnemyBullet=false, speedMult=1.0) {
+            this.wx=wx; this.wy=wy; this.isEnemyBullet = isEnemyBullet;
+            if(isEnemyBullet) { 
+                this.vx = Math.cos(a)*4*speedMult; this.vy = Math.sin(a)*4*speedMult; this.life = 300; this.r = 6; this.color = '#ff9f43';
+            } else { 
+                this.vx = Math.cos(a)*8; this.vy = Math.sin(a)*8; this.life = 50;
+                this.isCrit = Math.random() < player.critChance;
+                this.r = (player.isHyper && player.hyperType===HYPER_RAPID) ? 8 : 4;
+                this.color = this.isCrit ? '#ff4757' : (player.isHyper && player.hyperType===HYPER_RAPID ? '#fffa65' : '#0acde5');
+                this.hitList = [];
+            }
+            this.active=true;
+        }
+        update() { this.wx+=this.vx; this.wy+=this.vy; this.life--; if(this.life<=0) this.active=false; }
+        draw() {
+            const sx = this.wx - player.wx + CW/2; const sy = this.wy - player.wy + CH/2;
+            if(sx<-20||sx>CW+20||sy<-20||sy>CH+20) return;
+            ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(sx, sy, this.r, 0, Math.PI*2); ctx.fill();
+            if(this.isEnemyBullet) { ctx.strokeStyle='#fff'; ctx.lineWidth=1; ctx.stroke(); }
+        }
+    }
+
+    class Gem {
+        constructor() { this.active=false; }
+        spawn(wx, wy, v, isRare) { this.wx=wx; this.wy=wy; this.val=v; this.isRare = isRare; this.active=true; }
+        update() {
+            const dist = Math.hypot(player.wx-this.wx, player.wy-this.wy);
+            if(dist < player.magnet) {
+                const a = Math.atan2(player.wy-this.wy, player.wx-this.wx);
+                this.wx += Math.cos(a)*7; this.wy += Math.sin(a)*7; 
+                if(dist < 20) { addExp(this.val); this.active=false; }
+            }
+            if(dist > 1200) this.active=false;
+        }
+        draw() {
+            const sx = this.wx - player.wx + CW/2; const sy = this.wy - player.wy + CH/2;
+            if(sx<-20||sx>CW+20||sy<-20||sy>CH+20) return;
+            ctx.beginPath(); ctx.fillStyle='#0acde5'; ctx.arc(sx, sy, this.isRare?10:6, 0, Math.PI*2); ctx.fill();
+        }
+    }
+
+    class Effect {
+        constructor() { this.active = false; }
+        spawnEMP(wx, wy) { this.wx = wx; this.wy = wy; this.r = 0; this.maxR = 200; this.active = true; this.type = 'EMP'; }
+        spawnExplosion(wx, wy) { this.wx = wx; this.wy = wy; this.r = 0; this.maxR = 60; this.active = true; this.type = 'EXPLOSION'; }
+        update() { this.r += this.type === 'EXPLOSION' ? 5 : 40; if(this.r > this.maxR) this.active = false; }
+        draw() {
+            const sx = this.wx - player.wx + CW/2; const sy = this.wy - player.wy + CH/2;
+            if (this.type === 'EMP') {
+                ctx.strokeStyle = `rgba(46, 204, 113, ${Math.max(0, 1 - (this.r/this.maxR))})`;
+                ctx.lineWidth = 10; ctx.beginPath(); ctx.arc(sx, sy, this.r, 0, Math.PI*2); ctx.stroke();
+            } else {
+                ctx.fillStyle = `rgba(255, 69, 0, ${1 - this.r/this.maxR})`;
+                ctx.beginPath(); ctx.arc(sx, sy, this.r, 0, Math.PI*2); ctx.fill();
+            }
+        }
+    }
+
+    class FloatText {
+        constructor() { this.active=false; }
+        spawn(t, wx, wy, c, size=14) { this.t=t; this.wx=wx; this.wy=wy; this.c=c; this.size=size; this.life=40; this.active=true; }
+        update() { this.wy-=1; this.life--; if(this.life<=0) this.active=false; }
+        draw() { const sx = this.wx - player.wx + CW/2; const sy = this.wy - player.wy + CH/2; ctx.fillStyle=this.c; ctx.font=`bold ${this.size}px Arial`; ctx.fillText(this.t, sx, sy); }
+    }
+
+    function spawnText(t, wx, wy, c, s) { getObj(texts, FloatText).spawn(t, wx, wy, c, s); }
+    function spawnBullet(wx, wy, a, isEnemy=false, spd=1) { getObj(bullets, Bullet).spawn(wx, wy, a, isEnemy, spd); }
+    function spawnEffect() { return getObj(effects, Effect); }
+
+    function drawLightning(x1, y1, x2, y2, color) {
+        ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.shadowBlur = 10; ctx.shadowColor = color;
+        ctx.beginPath(); ctx.moveTo(x1, y1);
+        const dist = Math.hypot(x2 - x1, y2 - y1); const steps = Math.floor(dist / 10);
+        for (let i = 1; i < steps; i++) {
+            const t = i / steps; const tx = x1 + (x2 - x1) * t + (Math.random()-0.5)*20; const ty = y1 + (y2 - y1) * t + (Math.random()-0.5)*20;
+            ctx.lineTo(tx, ty);
+        }
+        ctx.lineTo(x2, y2); ctx.stroke(); ctx.restore();
+    }
+
+    // --- Core Functions ---
+    function addCombo(n) {
+        player.combo += n; player.comboTimer = 120; 
+        comboEl.style.display = 'block'; comboLabel.style.display = 'block';
+        comboEl.innerText = player.combo; 
+        comboEl.style.transform = 'scale(1.3)'; setTimeout(()=>comboEl.style.transform='scale(1)', 100);
+    }
+    
+    function addHyper(n) { 
+        if(player.isHyper) return; 
+        player.hyperGauge = Math.min(100, player.hyperGauge+n); 
+        if(player.hyperGauge>=100) activateHyper(); 
+        updateUI(); 
+    }
+
+    function activateHyper() {
+        if(player.hyperType === HYPER_RAPID) { player.isHyper = true; player.hyperTime = 300; document.body.classList.add('hyper-active'); showMessage("RAPID FIRE!", "#f1c40f"); } 
+        else if (player.hyperType === HYPER_EMP) { screenShake = 30; spawnEffect().spawnEMP(player.wx, player.wy); enemies.forEach(e => { if(e.active && Math.hypot(e.wx - player.wx, e.wy - player.wy) < 300) killEnemy(e); }); player.hyperGauge = 0; showMessage("EMP BLAST!", "#2ecc71"); }
+        else if (player.hyperType === HYPER_SHIELD) { player.isHyper = true; player.hyperTime = 600; document.body.classList.add('hyper-active'); showMessage("SHIELD ON", "#9b59b6"); }
+    }
+
+    function triggerSuicideExplosion(e) {
+        e.active = false; e.hp = 0; spawnEffect().spawnExplosion(e.wx, e.wy);
+        for(let i=0; i<12; i++) spawnBullet(e.wx, e.wy, (Math.PI*2/12)*i, true);
+        if(Math.hypot(player.wx - e.wx, player.wy - e.wy) < e.r * 4 + player.hitR) {
+            if(!player.isDashing && !(player.isHyper && player.hyperType === HYPER_SHIELD)) {
+                player.hp -= 20; player.showHpTimer = 60; spawnText("-20", player.wx, player.wy, 'red'); player.combo = 0;
+                updateUI(); if(player.hp<=0) gameOver();
+            } else spawnText("BLOCK", player.wx, player.wy, "#a29bfe");
+        }
+    }
+
+    function killEnemy(e) {
+        if(e.isSuicide) { triggerSuicideExplosion(e); addScore(e.scoreVal); player.killCount++; updateKillStreak(); return; }
+        e.hp = 0; e.active = false; addScore(e.scoreVal); getObj(gems, Gem).spawn(e.wx, e.wy, e.xp, e.isElite);
+        addCombo(1);
+        if(e.isElite && !player.isHyper) getObj(hyperOrbs, HyperOrb).spawn(e.wx, e.wy, e.color);
+        player.killCount++; player.killTimer = 180; updateKillStreak();
+    }
+
+    function updateKillStreak() {
+        let msg="", col="#fff";
+        if(player.killCount===2) { msg="DOUBLE KILL"; col="#ff7675"; }
+        else if(player.killCount===3) { msg="TRIPLE KILL"; col="#fd79a8"; }
+        else if(player.killCount===4) { msg="QUADRA KILL"; col="#fab1a0"; }
+        else if(player.killCount>=5) { msg="PENTA KILL"; col="#ff0000"; }
+        if(msg) showMessage(msg, col);
+    }
+
+    function addExp(n) {
+        player.exp += n;
+        if(player.exp >= player.nextExp) {
+            player.level++; player.exp = 0; player.nextExp = Math.floor(player.nextExp*1.4);
+            if(player.hyperGauge >= 90 && !player.isHyper) { player.pendingLevelUps++; showMessage("LEVEL PENDING!", "#fff"); }
+            else levelUp();
+        }
+        updateUI();
+    }
+
+    function addScore(val) { player.score += val; scoreVal.innerText = player.score.toLocaleString(); }
+    
+    function updateUI() { 
+        expBar.style.width = (player.exp/player.nextExp)*100 + "%"; 
+        lvText.innerText = "LV. " + player.level; hpText.innerText = "HP: " + Math.floor(player.hp); 
+        hyperFill.style.height = player.hyperGauge + "%"; 
+        if(player.isGrazingNow) rightHud.classList.add('gauge-charging'); else rightHud.classList.remove('gauge-charging');
+    }
+    function updateDashUI() { if(player.dashReady) { dashIcon.className='ready'; dashIcon.innerText="DASH"; } else { dashIcon.className='cooldown'; dashIcon.innerText=Math.ceil(player.dashCool/60); } }
+    
+    function updateTypeIcon() {
+        let src="rapid.png", bg='linear-gradient(to top, #f1c40f, #fffa65)';
+        if(player.hyperType === HYPER_EMP) { src="emp.png"; bg='linear-gradient(to top, #f1c40f, #2ecc71)'; }
+        else if(player.hyperType === HYPER_SHIELD) { src="shield.png"; bg='linear-gradient(to top, #54a0ff, #5f27cd)'; }
+        typeIcon.src = src; hyperFill.style.background = bg;
+        typeIcon.classList.remove('icon-attach-anim'); void typeIcon.offsetWidth; typeIcon.classList.add('icon-attach-anim');
+    }
+
+    function update() {
+        if(gameState!=='PLAY') return;
+        frameCount++; player.isGrazingNow = false;
+        if(screenShake > 0) screenShake *= 0.9;
+        if(player.killTimer > 0) player.killTimer--;
+        if(!player.dashReady) { player.dashCool--; if(player.dashCool<=0) { player.dashReady=true; updateDashUI(); } else if(frameCount%60===0) updateDashUI(); }
+
+        // Player Move
+        if(player.isDashing) {
+            player.wx += player.dashVx * 15; player.wy += player.dashVy * 15;
+            player.dashTime--; if(player.dashTime <= 0) player.isDashing = false;
+        } else {
+            const spd = (player.isHyper && player.hyperType===HYPER_RAPID) ? player.baseSpeed*1.5 : player.baseSpeed;
+            player.wx += joystick.vx * spd; player.wy += joystick.vy * spd;
+            // Auto Shoot
+            const fr = (player.isHyper && player.hyperType===HYPER_RAPID) ? 4 : player.baseFireRate;
+            if((joystick.vx!==0||joystick.vy!==0) && frameCount - player.lastShot > fr) {
+                let t=null, min=Infinity;
+                enemies.forEach(e=>{ if(!e.active) return; const d = Math.hypot(player.wx-e.wx, player.wy-e.wy); if(d<min) { min=d; t=e; } });
+                if(t && min<450) {
+                    const a = Math.atan2(t.wy-player.wy, t.wx-player.wx); const spread = 0.2; const startA = a - (spread*(player.bulletCount-1))/2;
+                    for(let i=0; i<player.bulletCount; i++) spawnBullet(player.wx, player.wy, startA + spread*i, false);
+                    player.lastShot = frameCount;
+                }
+            }
+        }
+
+        // Hyper Logic
+        if(player.isHyper) {
+            player.hyperTime--; player.hyperGauge = (player.hyperTime/(player.hyperType===HYPER_SHIELD?600:300))*100;
+            if(player.hyperType===HYPER_SHIELD) { player.shieldAngle+=0.05; player.shieldPulse+=0.1; if(frameCount%60===0) player.hp=Math.min(player.maxHp, player.hp+1); }
+            if(player.hyperTime<=0) { player.isHyper=false; player.hyperGauge=0; document.body.classList.remove('hyper-active'); if(player.pendingLevelUps>0) { player.pendingLevelUps--; levelUp(); } }
+            updateUI();
+        }
+        if(player.combo>0) { player.comboTimer--; if(player.comboTimer<=0) { player.combo=0; comboEl.style.display='none'; comboLabel.style.display='none'; } }
+
+        // Spawn
+        const rate = (player.isHyper && player.hyperType===HYPER_RAPID) ? 5 : Math.max(10, 60 - player.level);
+        if(frameCount % rate === 0) getObj(enemies, Enemy).spawn(false);
+        if(frameCount % 900 === 0 && player.level >= 3) {
+            const activeBosses = enemies.filter(e => e.active && e.isElite).length;
+            if(activeBosses < (player.level>=9?2:1)) getObj(enemies, Enemy).spawn(true);
+        }
+
+        // Updates
+        bullets.forEach(b => {
+            if(b.active) {
+                b.update();
+                if(b.isEnemyBullet) {
+                    if(Math.hypot(b.wx-player.wx, b.wy-player.wy) < player.hitR+b.r) {
+                        if((player.isHyper && player.hyperType === HYPER_SHIELD) || player.isDashing) { spawnText("BLOCK", player.wx, player.wy, "#a29bfe"); b.active=false; }
+                        else { player.hp-=10; player.showHpTimer=60; spawnText("-10", player.wx, player.wy, 'red'); player.combo=0; updateUI(); b.active=false; if(player.hp<=0) gameOver(); }
+                    }
+                } else {
+                    enemies.forEach(e => {
+                        if(e.active && Math.hypot(b.wx-e.wx, b.wy-e.wy) < b.r+e.r && !b.hitList.includes(e)) {
+                            let dmg = player.damage * ((player.isHyper && player.hyperType===HYPER_RAPID)?2:1); if(b.isCrit) dmg*=player.critDamage;
+                            e.hp -= dmg; spawnText(Math.floor(dmg), e.wx, e.wy, b.isCrit?'#ff4757':'white', b.isCrit?20:12);
+                            if(e.hp<=0) killEnemy(e);
+                            if(b.isCrit) b.hitList.push(e); else b.active=false;
+                        }
+                    });
+                }
+            }
+        });
+        enemies.forEach(x => { if(x.active) x.update(); });
+        gems.forEach(x => { if(x.active) x.update(); });
+        texts.forEach(x => { if(x.active) x.update(); });
+        effects.forEach(x => { if(x.active) x.update(); });
+        hyperOrbs.forEach(x => { if(x.active) x.update(); });
+    }
+
+    function draw() {
+        ctx.save();
+        if(screenShake>0) ctx.translate((Math.random()-0.5)*screenShake, (Math.random()-0.5)*screenShake);
+        
+        // Grid
+        ctx.fillStyle = '#0f1218'; ctx.fillRect(0, 0, CW, CH);
+        ctx.strokeStyle = '#1e2328'; ctx.lineWidth = 2; ctx.beginPath();
+        const sz=60, offX=((player.wx%sz)+sz)%sz, offY=((player.wy%sz)+sz)%sz;
+        for(let x=-offX; x<CW; x+=sz) { ctx.moveTo(x,0); ctx.lineTo(x,CH); }
+        for(let y=-offY; y<CH; y+=sz) { ctx.moveTo(0,y); ctx.lineTo(CW,y); }
+        ctx.stroke();
+
+        // Graze Circle
+        let hc = (player.hyperType === HYPER_RAPID) ? '#f1c40f' : (player.hyperType === HYPER_EMP ? '#2ecc71' : '#9b59b6');
+        ctx.strokeStyle = hc; ctx.globalAlpha = 0.4; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(CW/2, CH/2, player.grazeR, 0, Math.PI*2); ctx.stroke(); ctx.globalAlpha = 1.0;
+
+        // Objects
+        gems.forEach(x => { if(x.active) x.draw(); });
+        effects.forEach(x => { if(x.active) x.draw(); });
+        bullets.forEach(x => { if(x.active) x.draw(); });
+        enemies.forEach(x => { if(x.active) x.draw(); });
+        texts.forEach(x => { if(x.active) x.draw(); });
+        hyperOrbs.forEach(x => { if(x.active) x.draw(); });
+
+        // Player
+        if(player.isHyper && player.hyperType === HYPER_SHIELD) {
+            ctx.strokeStyle='rgba(162,155,254,0.8)'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(CW/2,CH/2,player.r+25+Math.sin(player.shieldPulse)*3,0,Math.PI*2); ctx.stroke();
+        }
+        ctx.fillStyle = (player.isHyper && player.hyperType===HYPER_RAPID) ? '#fffa65' : player.color;
+        if(player.isDashing) { ctx.shadowColor='#f1c40f'; ctx.shadowBlur=20; ctx.fillStyle='#fff'; }
+        ctx.beginPath(); ctx.arc(CW/2, CH/2, player.r, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur=0;
+        
+        // Direction Dot
+        let lx = joystick.vx, ly = joystick.vy; if(lx===0&&ly===0) ly=-1;
+        const mag = Math.hypot(lx,ly); if(mag>0) { lx/=mag; ly/=mag; }
+        ctx.fillStyle='white'; ctx.beginPath(); ctx.arc(CW/2+lx*5, CH/2+ly*5, 2, 0, Math.PI*2); ctx.fill();
+
+        // Lightning
+        enemies.forEach(e => {
+            if(e.active) {
+                const d = Math.hypot(e.wx-player.wx, e.wy-player.wy);
+                if(d < player.grazeR+e.r && d > player.hitR+e.r) { drawLightning(CW/2, CH/2, e.wx-player.wx+CW/2, e.wy-player.wy+CH/2, hc); player.isGrazingNow = true; }
+            }
+        });
+
+        // HP Damage Flash
+        if(player.showHpTimer > 0) {
+             const hpPct = Math.max(0, player.hp / player.maxHp);
+             ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(CW/2-15, CH/2-25, 30, 4);
+             ctx.fillStyle = '#ff7675'; ctx.fillRect(CW/2-15, CH/2-25, 30*hpPct, 4);
+        }
+        if(screenShake > 20) { ctx.fillStyle=`rgba(255,255,255,${screenShake/100})`; ctx.fillRect(0,0,CW,CH); }
+        ctx.restore();
+
+        // Joystick
+        if(joystick.active) {
+            ctx.beginPath(); ctx.arc(joystick.baseX, joystick.baseY, joystick.maxRadius, 0, Math.PI*2); ctx.strokeStyle='rgba(255,255,255,0.05)'; ctx.lineWidth=4; ctx.stroke();
+            ctx.beginPath(); ctx.arc(joystick.stickX, joystick.stickY, 20, 0, Math.PI*2); ctx.fillStyle='rgba(10,205,229,0.1)'; ctx.fill();
+        }
+    }
+
+    function loop() { requestAnimationFrame(loop); if(gameState==='PLAY') { update(); draw(); } }
+
+    function levelUp() {
+        gameState='PAUSE'; joystick.active=false; joystick.vx=0; joystick.vy=0;
+        levelUpScreen.style.display='flex'; cardsBox.innerHTML='';
+        const statOpts = [
+            {t:"공격력 UP", d:"데미지 +5", img: "atk.png", f:()=>{player.damage+=5;}}, 
+            {t:"연사속도 UP", d:"공격속도 +10%", img: "speed.png", f:()=>{player.baseFireRate*=0.9;}},
+            {t:"치명타 UP", d:"확률 +5%", img: "cri.png", f:()=>{player.critChance+=0.05;}}, 
+            {t:"멀티샷", d:"탄환 +1", img: "multi.png", f:()=>{player.bulletCount++;}},
+            {t:"대쉬 쿨다운", d:"재사용 대기시간 -1초", img: "dash.png", f:()=>{player.dashMaxCool = Math.max(180, player.dashMaxCool - 60);}}, 
+            {t:"체력회복", d:"HP +30", img: "hp.png", f:()=>{player.hp=Math.min(player.maxHp, player.hp+30);}},
+            {t:"자석 강화", d:"흡수 범위 +15", img: "mag.png", f:()=>{player.magnet += 15;}} 
+        ];
+        const hyperOpts = [
+            {t:"고속연사 스킬", d:"5초 동안 고속연사", c:'hyper-card', img:'rapid.png', f:()=>{player.hyperType=HYPER_RAPID; updateTypeIcon();}},
+            {t:"EMP 스킬", d:"EMP 광역 데미지", c:'hyper-card', img:'emp.png', f:()=>{player.hyperType=HYPER_EMP; updateTypeIcon();}},
+            {t:"완전방어 스킬", d:"10초 무적 + HP 회복", c:'hyper-card', img:'shield.png', f:()=>{player.hyperType=HYPER_SHIELD; updateTypeIcon();}},
+        ];
+        let pool = [...statOpts, ...hyperOpts];
+        for(let i=0; i<3; i++) {
+            if(pool.length===0) break;
+            const item = pool.splice(Math.floor(Math.random()*pool.length), 1)[0];
+            const div = document.createElement('div'); div.className = item.c ? `card ${item.c}` : 'card';
+            div.innerHTML = `${item.img?`<img src="${item.img}" class="card-icon">`:''}<div class="card-text-group"><h3>${item.t}</h3><p>${item.d}</p></div>`;
+            div.style.animationDelay = `${i * 0.1}s`;
+            div.onclick=()=>{
+                item.f(); showMessage(item.t + (item.c?" 장착됨":"!"), item.c?"#a29bfe":"#c8aa6e", item.img);
+                levelUpScreen.style.display='none'; gameState='PLAY';
+            };
+            cardsBox.appendChild(div);
+        }
+    }
+
+    function gameOver() {
+        gameState = 'GAMEOVER'; screenShake = 0;
+        gameOverScreen.style.display = 'flex';
+        
+        // 1. 점수 저장 및 기록 갱신 UI
+        let isNew = false;
+        if(player.score > highScore) { highScore = player.score; localStorage.setItem('survival_highscore', highScore); isNew = true; }
+        newRecordMsg.style.display = isNew ? 'block' : 'none';
+        resultContainer.innerHTML = `<div>SCORE: ${player.score.toLocaleString()}</div><div>BEST: ${parseInt(highScore).toLocaleString()}</div>`;
+
+        // 2. [LootLocker] 점수 제출 & 리더보드 불러오기
+        submitScoreLL(player.score);
+
+        // 3. Rush 버튼 처리
+        if (!hasRushed) {
+            let timeLeft = 5;
+            rushBtn.className = "btn-enhanced timed-rush"; rushSubText.innerText = "단 한번! 스탯 유지 재시작";
+            rushBtnGauge.style.transition='none'; rushBtnGauge.style.width='100%';
+            setTimeout(()=>{ rushBtnGauge.style.transition='width 5s linear'; rushBtnGauge.style.width='0%'; }, 50);
+            
+            rushBtnText.innerHTML = `<span style="font-size:1.5em; vertical-align:middle;">${timeLeft}</span> &nbsp; 강화 재도전`;
+            if(rushTimerInterval) clearInterval(rushTimerInterval);
+            rushTimerInterval = setInterval(() => {
+                timeLeft--;
+                if (timeLeft > 0) rushBtnText.innerHTML = `<span style="font-size:1.5em; vertical-align:middle;">${timeLeft}</span> &nbsp; 강화 재도전`;
+                else {
+                    clearInterval(rushTimerInterval);
+                    rushBtn.className = "btn-reset"; rushBtnText.innerText = "↻ 처음부터"; rushSubText.innerText = "";
+                }
+            }, 1000);
+        } else {
+            rushBtn.className = "btn-reset"; rushBtnText.innerText = "↻ 처음부터"; rushSubText.innerText = "";
+            rushBtnGauge.style.width='0%'; if(rushTimerInterval) clearInterval(rushTimerInterval);
+        }
+    }
+
+    function rushStart() {
+        if(rushTimerInterval) clearInterval(rushTimerInterval);
+        const canRush = rushBtn.classList.contains('btn-enhanced');
+        enemies=[]; bullets=[]; gems=[]; texts=[]; effects=[]; hyperOrbs=[];
+        player.wx=0; player.wy=0; joystick.active=false;
+        
+        if(canRush) { player.level=1; player.exp=0; player.nextExp=10; player.score=0; player.hp=player.maxHp; hasRushed=true; }
+        else {
+            player.hp=100; player.maxHp=100; player.level=1; player.exp=0; player.nextExp=10;
+            player.score=0; player.damage=15; player.fireRate=25; player.baseFireRate=25; player.bulletCount=1; player.critChance=0.15; player.magnet=20;
+            player.hyperGauge=0; player.isHyper=false; player.hyperType=HYPER_RAPID; player.dashMaxCool=600;
+            hasRushed=false;
+        }
+        player.lastShot=-100; player.dashReady=true; player.dashCool=0; player.combo=0; player.killCount=0; frameCount=0;
+        screenShake=0; ctx.setTransform(1,0,0,1,0,0);
+        comboEl.style.display='none'; comboLabel.style.display='none'; infoMsg.style.opacity=0;
+        gameOverScreen.style.display='none'; gameState='PLAY';
+        updateUI(); updateTypeIcon(); updateDashUI();
+    }
+
+    updateTypeIcon(); loop();
+</script>
+</body>
+</html>
