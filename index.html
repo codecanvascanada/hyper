@@ -851,23 +851,27 @@
         }
     }
 
-    // [수정] 게임오버 처리 로직
+    // [수정] 게임오버 로직: Rush 기회 있을 땐 랭킹 UI 숨김
     function gameOver() {
         gameState = 'GAMEOVER'; screenShake = 0;
         gameOverScreen.style.display = 'flex';
         
-        // 로컬 최고점수 갱신
         let isNew = false;
         if(player.score > highScore) { highScore = player.score; localStorage.setItem('survival_highscore', highScore); isNew = true; }
         newRecordMsg.style.display = isNew ? 'block' : 'none';
         resultContainer.innerHTML = `<div>SCORE: ${player.score.toLocaleString()}</div><div>BEST: ${parseInt(highScore).toLocaleString()}</div>`;
 
-        // 랭킹 초기화 (이전 게임 기록 안 보이게)
+        // UI 요소 가져오기
+        const lbContainer = document.getElementById('leaderboardContainer');
+        const nameInput = document.getElementById('nameInputBox');
+
+        // 초기화 (이전 랭킹 지움)
         document.getElementById('leaderboardBody').innerHTML = "";
 
         if (!hasRushed) {
-            // [첫 번째 죽음] -> 랭킹 제출 X
-            document.getElementById('loadingRank').innerText = "Rush Chance Available..."; 
+            // [첫 번째 죽음] -> UI 숨기고, 점수 제출 안 함
+            lbContainer.style.display = 'none';
+            nameInput.style.display = 'none';
 
             let timeLeft = 5;
             rushBtn.className = "btn-enhanced timed-rush"; rushSubText.innerText = "단 한번! 스탯 유지 재시작";
@@ -881,17 +885,23 @@
                 if (timeLeft > 0) {
                     rushBtnText.innerHTML = `<span style="font-size:1.5em; vertical-align:middle;">${timeLeft}</span> &nbsp; 강화 재도전`;
                 } else {
-                    // [타이머 종료] -> 이제 완전한 게임오버 -> 랭킹 제출
+                    // [타이머 종료] -> 완전한 게임오버 -> UI 보이고 제출
                     clearInterval(rushTimerInterval);
                     rushBtn.className = "btn-reset"; rushBtnText.innerText = "↻ 처음부터"; rushSubText.innerText = "";
-                    submitScoreLL(player.score); // 점수 제출
+                    
+                    lbContainer.style.display = 'block';
+                    nameInput.style.display = 'flex';
+                    submitScoreLL(player.score); 
                 }
             }, 1000);
         } else {
-            // [두 번째 죽음] -> 완전한 게임오버 -> 랭킹 제출
+            // [두 번째 죽음] -> UI 보이고 제출
             rushBtn.className = "btn-reset"; rushBtnText.innerText = "↻ 처음부터"; rushSubText.innerText = "";
             rushBtnGauge.style.width='0%'; if(rushTimerInterval) clearInterval(rushTimerInterval);
-            submitScoreLL(player.score); // 점수 제출
+            
+            lbContainer.style.display = 'block';
+            nameInput.style.display = 'flex';
+            submitScoreLL(player.score); 
         }
     }
 
