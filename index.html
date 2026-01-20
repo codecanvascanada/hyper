@@ -151,6 +151,9 @@
         /* Animation Keyframes for Score */
         .score-bounce { animation: scoreBounce 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
         @keyframes scoreBounce { 0% { transform: scale(0.5); opacity:0; } 60% { transform: scale(1.2); opacity:1; } 100% { transform: scale(1); opacity:1; } }
+        
+        .score-appear { animation: scoreAppear 0.3s ease-out forwards; }
+        @keyframes scoreAppear { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
@@ -1064,6 +1067,7 @@
         if (gameState === 'TITLE') {
             ctx.fillStyle = '#0f1218'; 
             ctx.fillRect(0, 0, CW, CH);
+            // [Modified] Sort by Z for fake 3D depth order
             bgAtoms.sort((a,b) => a.z - b.z).forEach(a => { a.update(); a.draw(ctx); });
         } else {
             drawGrid();
@@ -1163,7 +1167,7 @@
         gameState = 'GAMEOVER'; screenShake = 0;
         gameOverScreen.style.display = 'flex';
         
-        // 1. Calculate
+        // 1. Calculate Scores
         const maxComboBonus = player.maxCombo * 500;
         const baseScore = player.score; 
         const finalScore = baseScore + maxComboBonus;
@@ -1178,10 +1182,10 @@
         }
         newRecordMsg.style.display = isNew ? 'block' : 'none';
         
-        // 3. UI Setup
+        // 3. UI Setup (Text Visible, Values Empty or 0)
         const resultContainer = document.getElementById('resultContainer');
         resultContainer.innerHTML = `
-            <div style="color:#aaa; font-size:0.9em;">Base Score: <span id="goBaseScore">0</span></div>
+            <div style="color:#aaa; font-size:0.9em;">Base Score: <span id="goBaseScore" style="opacity:0;">0</span></div>
             <div style="color:#fffa65; font-size:0.9em; margin-bottom:5px; opacity:0;" id="goComboBonusBox">
                 Max Combo Bonus: <span id="goComboBonus">0</span> 
                 <span style="font-size:0.8em;">(x${player.maxCombo})</span>
@@ -1192,7 +1196,7 @@
             <div style="font-size:0.9em; color:#888; margin-top:5px;">BEST: ${parseInt(highScore).toLocaleString()}</div>
         `;
         
-        // Hide Buttons & Prepare Leaderboard
+        // Hide Buttons & Show Leaderboard immediately
         const rushTimerBox = document.getElementById('rushTimerBox');
         rushTimerBox.classList.remove('visible'); 
         const lbContainer = document.getElementById('leaderboardContainer');
@@ -1200,35 +1204,38 @@
         document.getElementById('leaderboardBody').innerHTML = ""; 
         lbContainer.style.display = 'block'; 
 
-        // 4. Submit Score & Wait for Leaderboard (with 3s timeout safety)
+        // 4. Submit Score & Wait (Async)
         const fetchPromise = submitScoreLL(player.score);
         const timeoutPromise = new Promise(resolve => setTimeout(resolve, 3000));
         
         await Promise.race([fetchPromise, timeoutPromise]);
 
-        // 5. Start Animation Sequence AFTER Leaderboard Loads
+        // 5. Start Animation Sequence
         const elBase = document.getElementById('goBaseScore');
         const elBonusBox = document.getElementById('goComboBonusBox');
         const elBonus = document.getElementById('goComboBonus');
         const elFinal = document.getElementById('goFinalScore');
 
-        // T=0: Base Score & Initial Final Score
+        // T=0: Base Score Appears & Final Score shows Base Score
         elBase.innerText = baseScore.toLocaleString();
+        elBase.style.opacity = 1; 
+        elBase.classList.add('score-appear');
+        
         elFinal.innerText = baseScore.toLocaleString();
 
-        // T+500ms: Bonus Bounce
+        // T+500ms: Bonus Bounces in
         setTimeout(() => {
             elBonus.innerText = "+" + maxComboBonus.toLocaleString();
             elBonusBox.style.opacity = 1;
             elBonusBox.classList.add('score-bounce');
         }, 500);
 
-        // T+1000ms: Rolling Final Score
+        // T+1000ms: Final Score Rolls Up
         setTimeout(() => {
             animateValue(elFinal, baseScore, finalScore, 1000);
         }, 1000);
 
-        // T+2500ms: Show Buttons Logic
+        // T+2500ms: Buttons Appear
         setTimeout(() => {
              rushTimerBox.classList.add('visible');
              startRushLogic(); 
