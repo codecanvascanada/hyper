@@ -64,6 +64,7 @@
         #comboCount { font-size: 48px; font-weight: 900; color: #fffa65; text-shadow: 0 0 15px rgba(255, 165, 2, 0.8); display: none; transition: transform 0.05s; }
         #comboLabel { font-size: 12px; color: #81ecec; letter-spacing: 3px; font-weight: bold; display:none; text-shadow: 0 0 5px #00cec9; }
 
+        /* [Hyper Gauge & Dynamic Blinking Effect] */
         #rightHud { 
             position: absolute; right: 15px; top: 25%; height: 30%; 
             display: flex; flex-direction: column; align-items: center; gap: 2px; 
@@ -73,15 +74,17 @@
         #hyperContainer { width: 10px; flex: 1; background: rgba(0,0,0,0.6); border: 1px solid #555; display: flex; flex-direction: column-reverse; box-shadow: 0 0 5px rgba(0,0,0,0.5); transition: box-shadow 0.1s; }
         #hyperFill { width: 100%; height: 0%; background: linear-gradient(to top, #6c5ce7, #a29bfe); transition: height 0.1s linear, filter 0.1s; }
         
-        /* [GAUGE BLINK EFFECT] */
-        .gauge-charging { transform: scale(1.15); }
+        /* Reduced intensity & Variable color */
+        .gauge-charging { transform: scale(1.05); } /* Slightly less pop */
         .gauge-charging #hyperContainer { 
             animation: gaugeBlink 0.1s infinite alternate; 
             border-color: #fff !important; 
         }
+        
+        /* Uses CSS Variable --skill-color set by JS */
         @keyframes gaugeBlink { 
-            0% { box-shadow: 0 0 5px #0acde5; border-color: #fff; } 
-            100% { box-shadow: 0 0 20px #0acde5, 0 0 10px #fff; border-color: #fff; } 
+            0% { box-shadow: 0 0 2px var(--skill-color, #fffa65); } 
+            100% { box-shadow: 0 0 10px var(--skill-color, #fffa65); } /* Reduced to 10px */
         }
 
         #dashZone { position: absolute; right: 30px; bottom: 40px; pointer-events: auto; display: flex; flex-direction: column; align-items: center; }
@@ -261,6 +264,7 @@
         } catch(e) { console.error("Connection Error:", e); }
     }
 
+    // [Waitable Submit Score]
     async function submitScoreLL(score) {
         if(!llSessionToken) return;
         try {
@@ -270,10 +274,12 @@
                 headers: { "Content-Type": "application/json", "x-session-token": llSessionToken },
                 body: JSON.stringify({ score: score })
             });
+            // After submit, fetch leaderboard
             await fetchLeaderboardLL(); 
         } catch(e) { console.error("Submit Error:", e); }
     }
 
+    // [Waitable Fetch Leaderboard]
     async function fetchLeaderboardLL() {
         if(!llSessionToken) return;
         try {
@@ -455,7 +461,7 @@
         constructor() {
             this.x = Math.random() * CW;
             this.y = Math.random() * CH;
-            this.z = Math.random(); 
+            this.z = Math.random(); // Depth: 0.0 (Far) ~ 1.0 (Near)
             this.baseVx = (Math.random() - 0.5) * 0.3; 
             this.baseVy = (Math.random() - 0.5) * 0.3;
             this.pushVx = 0;
@@ -473,6 +479,7 @@
                     r: this.size * (0.5 + Math.random() * 0.5),
                     a: (Math.PI * 2 / count) * i,
                     color: atomColors[Math.floor(Math.random() * atomColors.length)],
+                    // Perspective Scale: 0.6 ~ 1.4
                     scale: (0.7 + Math.random() * 0.6) * (0.6 + this.z * 0.4) 
                 });
             }
@@ -487,6 +494,7 @@
             if (dist < interactionRadius) {
                 const force = (interactionRadius - dist) / interactionRadius;
                 const angle = Math.atan2(dy, dx);
+                // Push Strength very low (subtle interaction)
                 const pushStrength = 0.05 * (0.5 + this.z * 0.5); 
                 
                 this.pushVx += Math.cos(angle) * force * pushStrength;
@@ -955,7 +963,19 @@
         lvText.innerText = "LV. " + player.level; hpText.innerText = "HP: " + Math.floor(player.hp); 
         hyperFill.style.height = player.hyperGauge + "%"; 
         
-        // This is handled in draw() now for consistent frame updates
+        // [UPDATE GAUGE BLINK BASED ON FLAG]
+        const rightHud = document.getElementById('rightHud');
+        if(player.isGrazingNow || player.flashGaugeTimer > 0) {
+             rightHud.classList.add('gauge-charging');
+             
+             // Update custom property for blinking color
+             let color = '#fffa65'; // Default Rapid
+             if (player.hyperType === 1) color = '#2ecc71'; // EMP
+             if (player.hyperType === 2) color = '#9b59b6'; // Shield
+             rightHud.style.setProperty('--skill-color', color);
+        } else {
+             rightHud.classList.remove('gauge-charging');
+        }
     }
     function updateDashUI() { if(player.dashReady) { dashIcon.className='ready'; dashIcon.innerText="DASH"; } else { dashIcon.className='cooldown'; dashIcon.innerText=Math.ceil(player.dashCool/60); } }
     
@@ -1097,12 +1117,8 @@
             });
             
             // [UPDATE GAUGE BLINK BASED ON FLAG]
-            const rightHud = document.getElementById('rightHud');
-            if(player.isGrazingNow || player.flashGaugeTimer > 0) {
-                 rightHud.classList.add('gauge-charging');
-            } else {
-                 rightHud.classList.remove('gauge-charging');
-            }
+            // We update this in draw() because grazing status changes every frame
+            updateUI(); 
 
             if(player.showHpTimer > 0) {
                  const hpPct = Math.max(0, player.hp / player.maxHp);
@@ -1154,6 +1170,7 @@
         }
     }
 
+    // Helper: Number Counting Animation
     function animateValue(obj, start, end, duration) {
         let startTimestamp = null;
         const step = (timestamp) => {
@@ -1171,11 +1188,13 @@
         gameState = 'GAMEOVER'; screenShake = 0;
         gameOverScreen.style.display = 'flex';
         
-        const maxComboBonus = player.maxCombo * 10;
+        // 1. Calculate Scores
+        const maxComboBonus = player.maxCombo * 10; // Multiplier: 10 (Reduced from 50)
         const baseScore = player.score; 
         const finalScore = baseScore + maxComboBonus;
         player.score = finalScore; 
 
+        // 2. High Score Check
         let isNew = false;
         if(player.score > highScore) { 
             highScore = player.score; 
@@ -1184,6 +1203,7 @@
         }
         newRecordMsg.style.display = isNew ? 'block' : 'none';
         
+        // 3. UI Setup (All text visible but values empty/0)
         const resultContainer = document.getElementById('resultContainer');
         resultContainer.innerHTML = `
             <div style="color:#aaa; font-size:0.9em;">Base Score: <span id="goBaseScore" style="opacity:0;">0</span></div>
@@ -1196,41 +1216,47 @@
             </div>
         `;
         
+        // Hide Buttons initially
         const rushTimerBox = document.getElementById('rushTimerBox');
         rushTimerBox.classList.remove('visible'); 
         
+        // Show Leaderboard container immediately
         const lbContainer = document.getElementById('leaderboardContainer');
         document.getElementById('loadingRank').style.display = 'block';
         document.getElementById('leaderboardBody').innerHTML = ""; 
         lbContainer.style.display = 'block'; 
 
+        // 4. Submit Score & Wait for Leaderboard (Async)
         const fetchPromise = submitScoreLL(player.score);
         const timeoutPromise = new Promise(resolve => setTimeout(resolve, 3000));
         
         await Promise.race([fetchPromise, timeoutPromise]);
 
+        // 5. Start Animation Sequence AFTER Leaderboard Loads
         const elBase = document.getElementById('goBaseScore');
         const elBonusBox = document.getElementById('goComboBonusBox');
         const elBonus = document.getElementById('goComboBonus');
         const elFinal = document.getElementById('goFinalScore');
 
+        // T=0
         elBase.innerText = baseScore.toLocaleString();
         elBase.style.opacity = 1; 
         elBase.classList.add('score-appear');
-        
         elFinal.innerText = baseScore.toLocaleString();
 
+        // T+500ms
         setTimeout(() => {
             elBonus.innerText = "+" + maxComboBonus.toLocaleString();
             elBonusBox.style.opacity = 1;
             elBonusBox.classList.add('score-bounce');
         }, 500);
 
+        // T+1000ms
         setTimeout(() => {
             animateValue(elFinal, baseScore, finalScore, 1000);
         }, 1000);
 
-        // [MODIFIED] Button appears immediately after score rolling (1000ms + 1000ms duration = 2000ms)
+        // T+2000ms (Immediate after rolling stops)
         setTimeout(() => {
              rushTimerBox.classList.add('visible');
              startRushLogic(); 
@@ -1284,14 +1310,17 @@
         enemies=[]; bullets=[]; gems=[]; texts=[]; effects=[]; hyperOrbs=[];
         player.wx=0; player.wy=0; joystick.active=false;
 
+        // [FIX] Reset score to 0 on ANY restart
         player.score = 0; 
         
         if(canRush) { 
+            // Rush: Keep stats, Reset level
             player.level=1; player.exp=0; player.nextExp=10; 
             player.hp=player.maxHp; 
             hasRushed=true; 
         }
         else {
+            // Hard Reset
             player.hp=100; player.maxHp=100; player.level=1; player.exp=0; player.nextExp=10;
             player.damage=15; player.fireRate=25; player.baseFireRate=25; 
             player.bulletCount=1; player.critChance=0.15; player.magnet=20;
@@ -1299,6 +1328,7 @@
             hasRushed=false;
         }
         
+        // Reset per-run stats
         player.lastShot=-100; player.dashReady=true; player.dashCool=0; 
         player.combo=0; player.maxCombo=0; 
         player.killCount=0; player.killTimer=0; 
@@ -1310,6 +1340,7 @@
         gameOverScreen.style.display='none'; 
         gameState='PLAY'; 
         
+        // [FIX] Update UI immediately to show 0 score & Latest High Score
         scoreVal.innerText = "0"; 
         bestVal.innerText = parseInt(highScore).toLocaleString();
         
