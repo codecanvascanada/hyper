@@ -64,7 +64,6 @@
         #comboCount { font-size: 48px; font-weight: 900; color: #fffa65; text-shadow: 0 0 15px rgba(255, 165, 2, 0.8); display: none; transition: transform 0.05s; }
         #comboLabel { font-size: 12px; color: #81ecec; letter-spacing: 3px; font-weight: bold; display:none; text-shadow: 0 0 5px #00cec9; }
 
-        /* [Hyper Gauge & UNIFIED Blinking Effect] */
         #rightHud { 
             position: absolute; right: 15px; top: 25%; height: 30%; 
             display: flex; flex-direction: column; align-items: center; gap: 2px; 
@@ -74,22 +73,11 @@
         #hyperContainer { width: 10px; flex: 1; background: rgba(0,0,0,0.6); border: 1px solid #555; display: flex; flex-direction: column-reverse; box-shadow: 0 0 5px rgba(0,0,0,0.5); transition: box-shadow 0.1s; }
         #hyperFill { width: 100%; height: 0%; background: linear-gradient(to top, #6c5ce7, #a29bfe); transition: height 0.1s linear, filter 0.1s; }
         
-        /* Unified Charging Effect (Fast Electric Pulse) */
-        .gauge-charging {
-            transform: scale(1.1); /* Slight pop */
-        }
-        .gauge-charging #hyperContainer { 
-            animation: gaugeBlink 0.08s infinite alternate; /* Very fast blink */
-        }
+        .gauge-charging { transform: scale(1.1); }
+        .gauge-charging #hyperContainer { animation: gaugeBlink 0.08s infinite alternate; }
         @keyframes gaugeBlink { 
-            0% { 
-                border-color: rgba(255,255,255,0.5); 
-                box-shadow: 0 0 5px rgba(10, 205, 229, 0.3); 
-            } 
-            100% { 
-                border-color: #fff; 
-                box-shadow: 0 0 15px rgba(10, 205, 229, 1.0), 0 0 5px #fff; 
-            } 
+            0% { border-color: rgba(255,255,255,0.5); box-shadow: 0 0 5px rgba(10, 205, 229, 0.3); } 
+            100% { border-color: #fff; box-shadow: 0 0 15px rgba(10, 205, 229, 1.0), 0 0 5px #fff; } 
         }
 
         #dashZone { position: absolute; right: 30px; bottom: 40px; pointer-events: auto; display: flex; flex-direction: column; align-items: center; }
@@ -100,40 +88,21 @@
         #pcGuide { position: absolute; bottom: 20px; width: 100%; text-align: center; color: #666; font-size: 11px; pointer-events: none; font-weight: bold; }
         @media (hover: none) and (pointer: coarse) { #pcGuide { display: none; } }
 
-        /* [Common Modal] */
+        /* [Modal] */
         .modal { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
             display: none; flex-direction: column; justify-content: center; align-items: center; pointer-events: auto; z-index: 100; 
         }
 
         /* [Title Screen] */
-        #titleScreen { 
-            display: flex; 
-            background: transparent;
-            z-index: 200; 
-        }
+        #titleScreen { display: flex; background: transparent; z-index: 200; }
         #gameTitle { color: #00f3ff; font-size: 40px; font-weight: 900; margin-bottom: 40px; letter-spacing: 4px; font-style: italic; text-shadow: 0 0 15px rgba(0,243,255,0.7); animation: neonPulse 1.5s infinite alternate; }
-        
-        /* [Version Display] */
-        #versionText {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            color: rgba(255, 255, 255, 0.4);
-            font-size: 12px;
-            font-weight: bold;
-            font-family: 'Segoe UI', sans-serif;
-            pointer-events: none;
-            letter-spacing: 1px;
-        }
+        #versionText { position: absolute; top: 20px; right: 20px; color: rgba(255, 255, 255, 0.4); font-size: 12px; font-weight: bold; font-family: 'Segoe UI', sans-serif; pointer-events: none; letter-spacing: 1px; }
 
         @keyframes neonPulse { from { text-shadow: 0 0 10px rgba(0,243,255,0.6); transform: scale(1); } to { text-shadow: 0 0 25px rgba(0,243,255,0.9); transform: scale(1.03); } }
 
         /* [GameOver & LevelUp Screen] */
-        #gameOverScreen, #levelUpScreen { 
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(5px);
-        }
+        #gameOverScreen, #levelUpScreen { background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px); }
 
         .card { background: #0f1218; color: #c8aa6e; width: 240px; margin: 8px auto; padding: 12px 15px; border: 1px solid #c8aa6e; box-shadow: 0 0 10px rgba(200, 170, 110, 0.2); transition: transform 0.1s; cursor: pointer; opacity: 0; transform: translateY(20px) scale(0.9); animation: cardEntry 0.3s forwards; display: flex; flex-direction: row; align-items: center; text-align: left; }
         @keyframes cardEntry { to { opacity: 1; transform: translateY(0) scale(1); } }
@@ -168,7 +137,9 @@
         #loadingRank { font-size: 12px; color: #aaa; text-align: center; margin: 10px 0; }
 
         /* Restart Button */
-        #rushTimerBox { text-align: center; margin-top: 5px; }
+        #rushTimerBox { text-align: center; margin-top: 5px; opacity: 0; transition: opacity 0.5s ease-in; pointer-events: none; }
+        #rushTimerBox.visible { opacity: 1; pointer-events: auto; }
+
         #rushBtn { position: relative; overflow: hidden; cursor: pointer; transition: transform 0.1s; -webkit-tap-highlight-color: transparent; }
         #rushBtn:active { transform: scale(0.95); }
         .btn-enhanced { padding: 15px 30px; font-size: 18px; font-weight: bold; background: #6c5ce7; color: white; border: 2px solid #fff; box-shadow: 0 0 15px #6c5ce7; }
@@ -177,10 +148,9 @@
         #rushBtnText { position: relative; z-index: 1; white-space: nowrap; }
         #rushSubText { font-size: 12px; color: white; margin-top: 5px; min-height: 15px; }
 
-        .hyper-active #gameContainer { animation: shake 0.2s infinite; }
-        @keyframes shake { 0% { transform: translate(1px, 1px); } 50% { transform: translate(-1px, -1px); } 100% { transform: translate(1px, -1px); } }
-        .icon-attach-anim { animation: iconAnim 0.6s forwards; }
-        @keyframes iconAnim { 0% { transform: scale(2.5); opacity: 0; } 40% { transform: scale(0.7); opacity: 1; } 100% { transform: scale(1); } }
+        /* Animation Keyframes for Score */
+        .score-bounce { animation: scoreBounce 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        @keyframes scoreBounce { 0% { transform: scale(0.5); opacity:0; } 60% { transform: scale(1.2); opacity:1; } 100% { transform: scale(1); opacity:1; } }
     </style>
 </head>
 <body>
@@ -188,7 +158,6 @@
 <div id="gameContainer">
     <div id="titleScreen" class="modal">
         <div id="versionText">v0.0.1</div>
-        
         <div id="gameTitle">SPARCRUSH</div>
         <div id="nameInputBox">
             <input type="text" id="inputName" placeholder="NAME (Max 8)" maxlength="8">
@@ -227,7 +196,7 @@
 
     <div id="gameOverScreen" class="modal">
         <div id="newRecordMsg">🏆 NEW RECORD! 🏆</div>
-        <div id="resultContainer" style="color:#ddd; margin-bottom:15px; font-size: 1.2em; text-align:center;"></div>
+        <div id="resultContainer" style="color:#ddd; margin-bottom:15px; font-size: 1.2em; text-align:center; min-height: 120px; display:flex; flex-direction:column; justify-content:center; gap:5px;"></div>
 
         <div id="leaderboardContainer">
             <div id="loadingRank">Connecting to LootLocker...</div>
@@ -647,7 +616,7 @@
         isDashing: false, dashTime: 0, dashDuration: 15, dashVx: 0, dashVy: 0,
         pendingLevelUps: 0, shieldAngle: 0, shieldPulse: 0, isGrazingNow: false,
         maxCombo: 0,
-        flashGaugeTimer: 0 // For visual flash
+        flashGaugeTimer: 0 
     };
 
     let joystick = { active: false, baseX: CW*0.2, baseY: CH*0.8, stickX: CW*0.2, stickY: CH*0.8, maxRadius: 30, vx: 0, vy: 0 };
@@ -985,7 +954,6 @@
         lvText.innerText = "LV. " + player.level; hpText.innerText = "HP: " + Math.floor(player.hp); 
         hyperFill.style.height = player.hyperGauge + "%"; 
         
-        // [FIX] Enable Charging Animation
         if(player.isGrazingNow || player.flashGaugeTimer > 0) { 
              rightHud.classList.add('gauge-charging'); 
         } else { 
@@ -1175,13 +1143,31 @@
         }
     }
 
+    // Helper function for score counting animation
+    function animateValue(obj, start, end, duration) {
+        let startTimestamp = null;
+        const step = (timestamp) => {
+            if (!startTimestamp) startTimestamp = timestamp;
+            const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+            obj.innerHTML = Math.floor(progress * (end - start) + start).toLocaleString();
+            if (progress < 1) {
+                window.requestAnimationFrame(step);
+            }
+        };
+        window.requestAnimationFrame(step);
+    }
+
     function gameOver() {
         gameState = 'GAMEOVER'; screenShake = 0;
         gameOverScreen.style.display = 'flex';
         
+        // 1. Calculate Scores
         const maxComboBonus = player.maxCombo * 500;
-        player.score += maxComboBonus;
+        const baseScore = player.score; // Score before bonus
+        const finalScore = baseScore + maxComboBonus;
+        player.score = finalScore; // Update global score for leaderboard
 
+        // 2. High Score Check
         let isNew = false;
         if(player.score > highScore) { 
             highScore = player.score; 
@@ -1190,46 +1176,99 @@
         }
         newRecordMsg.style.display = isNew ? 'block' : 'none';
         
-        const baseScore = player.score - maxComboBonus;
+        // 3. Reset UI for Animation
+        const resultContainer = document.getElementById('resultContainer');
         resultContainer.innerHTML = `
-            <div style="color:#aaa; font-size:0.9em;">Base Score: ${baseScore.toLocaleString()}</div>
-            <div style="color:#fffa65; font-size:0.9em; margin-bottom:5px;">Max Combo Bonus: +${maxComboBonus.toLocaleString()} <span style="font-size:0.8em;">(x${player.maxCombo})</span></div>
-            <div style="font-size:1.2em; font-weight:bold; color:white; border-top:1px solid #444; padding-top:5px;">FINAL: ${player.score.toLocaleString()}</div>
+            <div style="color:#aaa; font-size:0.9em;">Base Score: <span id="goBaseScore">0</span></div>
+            <div style="color:#fffa65; font-size:0.9em; margin-bottom:5px; opacity:0;" id="goComboBonusBox">
+                Max Combo Bonus: <span id="goComboBonus">0</span> 
+                <span style="font-size:0.8em;">(x${player.maxCombo})</span>
+            </div>
+            <div style="font-size:1.2em; font-weight:bold; color:white; border-top:1px solid #444; padding-top:5px;">
+                FINAL: <span id="goFinalScore">0</span>
+            </div>
             <div style="font-size:0.9em; color:#888; margin-top:5px;">BEST: ${parseInt(highScore).toLocaleString()}</div>
         `;
+        
+        const rushTimerBox = document.getElementById('rushTimerBox');
+        rushTimerBox.classList.remove('visible'); // Hide buttons initially
 
         const lbContainer = document.getElementById('leaderboardContainer');
-        document.getElementById('leaderboardBody').innerHTML = "";
+        document.getElementById('leaderboardBody').innerHTML = ""; // Clear leaderboard for now
+        lbContainer.style.display = 'block'; // Show container frame
 
+        // === Animation Sequence ===
+        const elBase = document.getElementById('goBaseScore');
+        const elBonusBox = document.getElementById('goComboBonusBox');
+        const elBonus = document.getElementById('goComboBonus');
+        const elFinal = document.getElementById('goFinalScore');
+
+        // T=0: Base Score Appears
+        elBase.innerText = baseScore.toLocaleString();
+        elFinal.innerText = baseScore.toLocaleString();
+
+        // T+500ms: Bonus Appears (Bounce)
+        setTimeout(() => {
+            elBonus.innerText = "+" + maxComboBonus.toLocaleString();
+            elBonusBox.style.opacity = 1;
+            elBonusBox.classList.add('score-bounce');
+        }, 500);
+
+        // T+1000ms: Final Score Counts Up
+        setTimeout(() => {
+            animateValue(elFinal, baseScore, finalScore, 1000);
+        }, 1000);
+
+        // T+2500ms (1000+1000+500 buffer): Show Buttons
+        setTimeout(() => {
+             rushTimerBox.classList.add('visible');
+             startRushLogic(); // Logic for timer/button swap
+             submitScoreLL(player.score); // Submit score then
+        }, 2500);
+    }
+
+    // Logic to handle the timed Rush Button vs Restart Button
+    function startRushLogic() {
         if (!hasRushed) {
-            lbContainer.style.display = 'none'; 
-
             let timeLeft = 5;
-            rushBtn.className = "btn-enhanced timed-rush"; rushSubText.innerText = "One Time! Keep Stats";
-            rushBtnGauge.style.transition='none'; rushBtnGauge.style.width='100%';
-            setTimeout(()=>{ rushBtnGauge.style.transition='width 5s linear'; rushBtnGauge.style.width='0%'; }, 50);
+            rushBtn.className = "btn-enhanced timed-rush"; 
+            rushSubText.innerText = "One Time! Keep Stats";
             
-            rushBtnText.innerHTML = `<span style="font-size:1.5em; vertical-align:middle;">${timeLeft}</span> &nbsp; RUSH START`;
+            // Reset Gauge Animation
+            rushBtnGauge.style.transition = 'none'; 
+            rushBtnGauge.style.width = '100%';
+            setTimeout(()=>{ 
+                rushBtnGauge.style.transition = 'width 5s linear'; 
+                rushBtnGauge.style.width = '0%'; 
+            }, 50);
+            
+            const updateText = () => {
+                rushBtnText.innerHTML = `<span style="font-size:1.5em; vertical-align:middle;">${timeLeft}</span> &nbsp; RUSH START`;
+            };
+            updateText();
+
             if(rushTimerInterval) clearInterval(rushTimerInterval);
             rushTimerInterval = setInterval(() => {
                 timeLeft--;
                 if (timeLeft > 0) {
-                    rushBtnText.innerHTML = `<span style="font-size:1.5em; vertical-align:middle;">${timeLeft}</span> &nbsp; RUSH START`;
+                    updateText();
                 } else {
+                    // Time Over -> Switch to Restart
                     clearInterval(rushTimerInterval);
-                    rushBtn.className = "btn-reset"; rushBtnText.innerText = "↻ RESTART"; rushSubText.innerText = "";
-                    
-                    lbContainer.style.display = 'block'; 
-                    submitScoreLL(player.score); 
+                    switchToRestartBtn();
                 }
             }, 1000);
         } else {
-            rushBtn.className = "btn-reset"; rushBtnText.innerText = "↻ RESTART"; rushSubText.innerText = "";
-            rushBtnGauge.style.width='0%'; if(rushTimerInterval) clearInterval(rushTimerInterval);
-            
-            lbContainer.style.display = 'block'; 
-            submitScoreLL(player.score); 
+            switchToRestartBtn();
         }
+    }
+
+    function switchToRestartBtn() {
+        rushBtn.className = "btn-reset"; 
+        rushBtnText.innerText = "↻ RESTART"; 
+        rushSubText.innerText = "";
+        rushBtnGauge.style.width = '0%';
+        if(rushTimerInterval) clearInterval(rushTimerInterval);
     }
 
     function rushStart() {
@@ -1238,14 +1277,17 @@
         enemies=[]; bullets=[]; gems=[]; texts=[]; effects=[]; hyperOrbs=[];
         player.wx=0; player.wy=0; joystick.active=false;
 
+        // [FIX] Reset score to 0 on ANY restart
         player.score = 0; 
         
         if(canRush) { 
+            // Rush: Keep stats, Reset level
             player.level=1; player.exp=0; player.nextExp=10; 
             player.hp=player.maxHp; 
             hasRushed=true; 
         }
         else {
+            // Hard Reset
             player.hp=100; player.maxHp=100; player.level=1; player.exp=0; player.nextExp=10;
             player.damage=15; player.fireRate=25; player.baseFireRate=25; 
             player.bulletCount=1; player.critChance=0.15; player.magnet=20;
@@ -1253,18 +1295,18 @@
             hasRushed=false;
         }
         
+        // Reset per-run stats
         player.lastShot=-100; player.dashReady=true; player.dashCool=0; 
         player.combo=0; player.maxCombo=0; 
         player.killCount=0; player.killTimer=0; 
         frameCount=0; 
         
-        // [FIX] Reset transform to stop shaking
         screenShake=0; ctx.setTransform(1,0,0,1,0,0);
-        
         comboEl.style.display='none'; comboLabel.style.display='none'; infoMsg.style.opacity=0;
         gameOverScreen.style.display='none'; 
         gameState='PLAY'; 
         
+        // [FIX] Update UI immediately to show 0 score & Latest High Score
         scoreVal.innerText = "0"; 
         bestVal.innerText = parseInt(highScore).toLocaleString();
         
