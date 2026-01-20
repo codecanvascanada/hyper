@@ -40,6 +40,8 @@
             display: flex; flex-direction: column; 
             padding-top: max(15px, env(safe-area-inset-top));
             padding-bottom: max(15px, env(safe-area-inset-bottom));
+            /* 타이틀 화면일 때는 숨김 */
+            display: none; 
         }
 
         .header-ui { width: 100%; display: flex; flex-direction: column; gap: 5px; }
@@ -65,14 +67,23 @@
         .gauge-charging #hyperContainer { animation: gaugeBlink 0.2s infinite; }
         @keyframes gaugeBlink { 0% { border-color: rgba(255,255,255,0.9); } 50% { border-color: rgba(255,0,0,0.9); } 100% { border-color: rgba(255,255,255,0.9); } }
 
-        #dashZone { position: absolute; right: 30px; bottom: 15%; pointer-events: auto; display: flex; flex-direction: column; align-items: center; }
+        #dashZone { position: absolute; right: 30px; bottom: max(40px, env(safe-area-inset-bottom)); pointer-events: auto; display: flex; flex-direction: column; align-items: center; }
         #dashIcon { width: 70px; height: 70px; border-radius: 50%; border: 3px solid #fff; background: rgba(241, 196, 15, 0.2); display: flex; justify-content: center; align-items: center; color: white; font-weight: bold; font-size: 14px; box-shadow: 0 0 10px rgba(241, 196, 15, 0.3); transition: opacity 0.2s; cursor: pointer; }
         #dashIcon.ready { background: rgba(241, 196, 15, 0.6); opacity: 1; border-color: #fff; }
         #dashIcon.cooldown { background: rgba(0,0,0,0.5); opacity: 0.4; border-color: #555; font-size: 24px;}
+        
         #pcGuide { position: absolute; bottom: 20px; width: 100%; text-align: center; color: #666; font-size: 11px; pointer-events: none; font-weight: bold; }
+        @media (hover: none) and (pointer: coarse) { #pcGuide { display: none; } }
 
+        /* [모달 공통] */
         .modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); display: none; flex-direction: column; justify-content: center; align-items: center; pointer-events: auto; z-index: 100; }
 
+        /* [타이틀 화면] */
+        #titleScreen { display: flex; background: #0f1218; z-index: 200; } /* 초기 화면 */
+        #gameTitle { color: #00f3ff; font-size: 40px; font-weight: 900; margin-bottom: 40px; letter-spacing: 4px; font-style: italic; text-shadow: 0 0 15px rgba(0,243,255,0.7); animation: neonPulse 1.5s infinite alternate; }
+        @keyframes neonPulse { from { text-shadow: 0 0 10px rgba(0,243,255,0.6); transform: scale(1); } to { text-shadow: 0 0 25px rgba(0,243,255,0.9); transform: scale(1.03); } }
+
+        /* [레벨업 카드] */
         .card { background: #0f1218; color: #c8aa6e; width: 240px; margin: 8px auto; padding: 12px 15px; border: 1px solid #c8aa6e; box-shadow: 0 0 10px rgba(200, 170, 110, 0.2); transition: transform 0.1s; cursor: pointer; opacity: 0; transform: translateY(20px) scale(0.9); animation: cardEntry 0.3s forwards; display: flex; flex-direction: row; align-items: center; text-align: left; }
         @keyframes cardEntry { to { opacity: 1; transform: translateY(0) scale(1); } }
         .card:active { transform: scale(0.98); background: #1e2328; }
@@ -81,27 +92,21 @@
         .card-text-group h3 { margin: 0 0 4px 0; font-size: 16px; }
         .card-text-group p { margin: 0; font-size: 12px; color: #ccc; }
 
-        #gameOverTitle { color: #00f3ff; font-size: 32px; font-weight: 900; margin: 10px 0; letter-spacing: 3px; font-style: italic; text-shadow: 0 0 10px rgba(0,243,255,0.6); animation: neonPulse 1.5s infinite alternate; }
-        @keyframes neonPulse { from { text-shadow: 0 0 8px rgba(0,243,255,0.5); transform: scale(1); } to { text-shadow: 0 0 20px rgba(0,243,255,0.8); transform: scale(1.02); } }
-        
+        /* [게임오버 화면] */
         #newRecordMsg { color: #fffa65; font-size: 18px; font-weight: bold; margin-bottom: 5px; display: none; animation: blink 0.5s infinite alternate; }
         @keyframes blink { from { opacity: 1; } to { opacity: 0.5; } }
         
-        /* 이름 입력창 */
+        /* 이름 입력창 (타이틀 화면용) */
         #nameInputBox { margin: 10px 0; display: flex; gap: 5px; justify-content: center; z-index: 101; }
         #inputName { background: #1e2328; border: 1px solid #0acde5; color: #fff; padding: 8px; border-radius: 4px; outline: none; font-weight: bold; text-align: center; width: 140px; font-family: 'Segoe UI', sans-serif; }
         #inputName:focus { box-shadow: 0 0 8px #0acde5; background: #2d3436; }
-        
-        /* [수정] 입력창 비활성화(읽기 전용) 스타일 */
         #inputName:disabled { background: #333; border-color: #555; color: #aaa; cursor: not-allowed; }
-
         #btnName { background: #0acde5; color: #000; border: none; padding: 0 15px; font-weight: bold; cursor: pointer; border-radius: 4px; font-family: 'Segoe UI', sans-serif; transition: transform 0.1s; }
         #btnName:active { transform: scale(0.95); }
-        
-        /* [수정] 버튼 스타일: EDIT 모드일 때 */
         #btnName.edit-mode { background: #555; color: #fff; }
+        #btnName:disabled { background: #555; color: #aaa; cursor: not-allowed; } /* 비활성화 스타일 */
 
-        /* 리더보드 */
+        /* 리더보드 (결과창용) */
         #leaderboardContainer { width: 85%; margin: 5px 0 15px 0; background: rgba(0,0,0,0.5); border: 1px solid #444; padding: 10px; min-height: 100px; max-height: 250px; overflow-y: auto; border-radius: 5px; }
         #leaderboardTable { width: 100%; border-collapse: collapse; font-size: 12px; color: #ddd; }
         #leaderboardTable th { text-align: left; border-bottom: 1px solid #666; padding: 4px; color: #0acde5; position: sticky; top: 0; background: #0f1218; }
@@ -111,6 +116,7 @@
         #leaderboardTable tr:nth-child(3) td { color: #d35400; font-weight: bold; }
         #loadingRank { font-size: 12px; color: #aaa; text-align: center; margin: 10px 0; }
 
+        /* 재시작 버튼 (결과창용) */
         #rushTimerBox { text-align: center; margin-top: 5px; }
         #rushBtn { position: relative; overflow: hidden; cursor: pointer; transition: transform 0.1s; -webkit-tap-highlight-color: transparent; }
         #rushBtn:active { transform: scale(0.95); }
@@ -129,6 +135,14 @@
 <body>
 
 <div id="gameContainer">
+    <div id="titleScreen" class="modal">
+        <div id="gameTitle">SPARCRUSH</div>
+        <div id="nameInputBox">
+            <input type="text" id="inputName" placeholder="NAME (Max 8)" maxlength="8">
+            <button id="btnName" onclick="handleNameBtn()">START</button>
+        </div>
+    </div>
+
     <canvas id="gameCanvas"></canvas>
     
     <div id="uiLayer">
@@ -159,14 +173,8 @@
     </div>
 
     <div id="gameOverScreen" class="modal">
-        <div id="gameOverTitle">SPARCRUSH</div>
         <div id="newRecordMsg">🏆 NEW RECORD! 🏆</div>
-        <div id="resultContainer" style="color:#ddd; margin-bottom:5px;"></div>
-
-        <div id="nameInputBox">
-            <input type="text" id="inputName" placeholder="NAME (Max 8)" maxlength="8">
-            <button id="btnName" onclick="handleNameBtn()">CHANGE</button>
-        </div>
+        <div id="resultContainer" style="color:#ddd; margin-bottom:15px; font-size: 1.2em;"></div>
 
         <div id="leaderboardContainer">
             <div id="loadingRank">Connecting to LootLocker...</div>
@@ -211,6 +219,7 @@
                 llSessionToken = data.session_token;
                 llPlayerID = data.player_id;
                 console.log("✅ LootLocker Connected. Player ID:", llPlayerID);
+                loadSavedName(); // 연결 성공 후 저장된 이름 로드
             } else {
                 console.error("❌ LootLocker Login Failed:", data);
                 document.getElementById('loadingRank').innerText = "Login Failed: " + (data.message || "Error");
@@ -267,29 +276,24 @@
     // [이름 관리 로직]
     let isNameLocked = false;
 
-    // 1. 저장된 이름 불러오기
     function loadSavedName() {
         const savedName = localStorage.getItem('sparcrush_name');
         if(savedName) {
             document.getElementById('inputName').value = savedName;
-            lockNameInput(true); // 저장된 이름이 있으면 잠금
+            lockNameInput(true); 
         } else {
-            lockNameInput(false); // 없으면 풀림
+            lockNameInput(false); 
         }
     }
 
-    // 2. 버튼 클릭 핸들러 (CHANGE <-> EDIT)
     function handleNameBtn() {
         if(isNameLocked) {
-            // [EDIT 모드] -> 잠금 해제
             lockNameInput(false);
         } else {
-            // [CHANGE 모드] -> 이름 저장 시도
             saveName();
         }
     }
 
-    // 3. 입력창 잠금/해제 UI 처리
     function lockNameInput(locked) {
         isNameLocked = locked;
         const input = document.getElementById('inputName');
@@ -297,17 +301,27 @@
         
         if(locked) {
             input.disabled = true;
-            btn.innerText = "EDIT";
-            btn.classList.add('edit-mode');
+            btn.innerText = "START"; // 타이틀 화면에서는 START
+            btn.classList.add('edit-mode'); // 스타일 재사용 (회색 버튼)
+            btn.disabled = false; // 잠겨있어도 START 버튼은 활성화
         } else {
             input.disabled = false;
-            btn.innerText = "CHANGE";
+            btn.innerText = "START";
             btn.classList.remove('edit-mode');
             input.focus();
+            // 이름이 없으면 START 버튼 비활성화
+            btn.disabled = input.value.trim() === "";
         }
     }
 
-    // 4. 실제 이름 변경 요청
+    // 입력창에 내용이 바뀔 때마다 버튼 활성화 상태 업데이트
+    document.getElementById('inputName').addEventListener('input', function() {
+        if (!isNameLocked) {
+            document.getElementById('btnName').disabled = this.value.trim() === "";
+        }
+    });
+
+
     async function saveName() {
         const nameInput = document.getElementById('inputName');
         const newName = nameInput.value.trim();
@@ -318,6 +332,7 @@
         const btn = document.getElementById('btnName');
         const originText = btn.innerText;
         btn.innerText = "...";
+        btn.disabled = true;
 
         try {
             const res = await fetch("https://api.lootlocker.io/game/player/name", {
@@ -330,26 +345,38 @@
             
             if(data.name) {
                 console.log("Name Updated:", data.name);
-                
-                // [저장 성공] 로컬 스토리지에 저장 및 UI 잠금
                 localStorage.setItem('sparcrush_name', data.name);
                 lockNameInput(true);
-                
-                fetchLeaderboardLL(); 
+                // 타이틀 화면에서 저장이 완료되면 게임 시작
+                if (gameState === 'TITLE') {
+                    startGameFromTitle();
+                }
             } else {
                 alert("Error: " + (data.message || "Failed to update"));
                 btn.innerText = originText;
+                btn.disabled = false;
             }
         } catch(e) {
             console.error("Name Change Error:", e);
             alert("Network Error");
             btn.innerText = originText;
+            btn.disabled = false;
         }
     }
 
+    function startGameFromTitle() {
+        const nameInput = document.getElementById('inputName');
+        if (nameInput.value.trim() === "") return; // 이름 없으면 시작 안 함
+
+        document.getElementById('titleScreen').style.display = 'none';
+        document.getElementById('uiLayer').style.display = 'flex'; // UI 표시
+        rushStart(); // 게임 시작
+    }
+
+
     window.onload = function() {
         initLootLocker();
-        loadSavedName(); // 저장된 이름 로드
+        // loadSavedName()는 initLootLocker 완료 후 호출됨
     };
 
     // ==========================================
@@ -358,7 +385,6 @@
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     
-    // Canvas Size
     const CW = 360, CH = 640;
     canvas.width = CW; canvas.height = CH;
 
@@ -405,7 +431,7 @@
     let highScore = localStorage.getItem('survival_highscore') || 0;
     bestVal.innerText = parseInt(highScore).toLocaleString();
 
-    let gameState = 'PLAY';
+    let gameState = 'TITLE'; // 초기 상태를 타이틀로 설정
     let frameCount = 0;
     let screenShake = 0;
     let rushTimerInterval = null;
@@ -914,17 +940,11 @@
         newRecordMsg.style.display = isNew ? 'block' : 'none';
         resultContainer.innerHTML = `<div>SCORE: ${player.score.toLocaleString()}</div><div>BEST: ${parseInt(highScore).toLocaleString()}</div>`;
 
-        // UI 요소 가져오기
         const lbContainer = document.getElementById('leaderboardContainer');
-        const nameInput = document.getElementById('nameInputBox');
-
-        // 초기화 (이전 랭킹 지움)
         document.getElementById('leaderboardBody').innerHTML = "";
 
         if (!hasRushed) {
-            // [첫 번째 죽음] -> UI 숨기고, 점수 제출 안 함
-            lbContainer.style.display = 'none';
-            nameInput.style.display = 'none';
+            lbContainer.style.display = 'none'; // 첫 번째 죽음: 리더보드 숨김
 
             let timeLeft = 5;
             rushBtn.className = "btn-enhanced timed-rush"; rushSubText.innerText = "단 한번! 스탯 유지 재시작";
@@ -938,22 +958,18 @@
                 if (timeLeft > 0) {
                     rushBtnText.innerHTML = `<span style="font-size:1.5em; vertical-align:middle;">${timeLeft}</span> &nbsp; 강화 재도전`;
                 } else {
-                    // [타이머 종료] -> 완전한 게임오버 -> UI 보이고 제출
                     clearInterval(rushTimerInterval);
                     rushBtn.className = "btn-reset"; rushBtnText.innerText = "↻ 처음부터"; rushSubText.innerText = "";
                     
-                    lbContainer.style.display = 'block';
-                    nameInput.style.display = 'flex';
+                    lbContainer.style.display = 'block'; // 타이머 종료: 리더보드 표시
                     submitScoreLL(player.score); 
                 }
             }, 1000);
         } else {
-            // [두 번째 죽음] -> UI 보이고 제출
             rushBtn.className = "btn-reset"; rushBtnText.innerText = "↻ 처음부터"; rushSubText.innerText = "";
             rushBtnGauge.style.width='0%'; if(rushTimerInterval) clearInterval(rushTimerInterval);
             
-            lbContainer.style.display = 'block';
-            nameInput.style.display = 'flex';
+            lbContainer.style.display = 'block'; // 두 번째 죽음: 리더보드 표시
             submitScoreLL(player.score); 
         }
     }
@@ -974,7 +990,12 @@
         player.lastShot=-100; player.dashReady=true; player.dashCool=0; player.combo=0; player.killCount=0; frameCount=0;
         screenShake=0; ctx.setTransform(1,0,0,1,0,0);
         comboEl.style.display='none'; comboLabel.style.display='none'; infoMsg.style.opacity=0;
-        gameOverScreen.style.display='none'; gameState='PLAY';
+        gameOverScreen.style.display='none'; 
+        gameState='PLAY'; // 게임 시작/재시작 시 PLAY 상태로 변경
+        
+        player.isGrazingNow = false;
+        document.getElementById('rightHud').classList.remove('gauge-charging');
+        
         updateUI(); updateTypeIcon(); updateDashUI();
     }
 
