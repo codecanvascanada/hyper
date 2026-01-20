@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>SPARCRUSH</title>
     <style>
-        /* [기본 설정] */
+        /* [Basic Settings] */
         * { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; box-sizing: border-box; }
         
         html, body {
@@ -15,47 +15,29 @@
             overflow: hidden; 
             position: fixed; 
             font-family: 'Segoe UI', sans-serif; color: white; touch-action: none; 
-            
-            /* [수정] 내용을 정중앙에 배치하되, 안전 구역(노치 등)을 침범하지 않도록 패딩 추가 */
-            display: flex; 
-            justify-content: center; 
-            align-items: center;
-            padding-top: env(safe-area-inset-top);
-            padding-bottom: env(safe-area-inset-bottom);
-            padding-left: env(safe-area-inset-left);
-            padding-right: env(safe-area-inset-right);
+            display: flex; justify-content: center; align-items: center;
         }
 
-        /* [게임 화면] */
+        /* [Game Screen] */
         #gameContainer { 
             position: relative; 
-            background: #0f1218; /* 짙은 남색 배경 */
+            background: #0f1218; /* Dark Navy Background */
             overflow: hidden; 
-            
-            /* [수정] 외곽선 녹색 블러(box-shadow) 제거 */
-            box-shadow: none; 
-            border: 1px solid #1e2328; /* 아주 얇은 경계선만 남김 (선택 사항) */
-
+            box-shadow: 0 0 30px rgba(0,210,211,0.2);
             aspect-ratio: 9 / 16;
-            
-            /* [수정] 안전 구역 내에서 최대 크기 유지 */
-            width: auto; 
-            height: auto;
-            max-width: 100%; 
-            max-height: 100%; /* 부모(body)의 패딩 안쪽 높이에 맞춤 */
+            width: auto; height: auto;
+            max-width: 100%; max-height: 100dvh;
         }
         
-        /* 화면 비율에 따라 꽉 채우는 방식 자동 전환 */
-        @media (min-aspect-ratio: 9/16) { #gameContainer { height: 100%; width: auto; } }
+        @media (min-aspect-ratio: 9/16) { #gameContainer { height: 100dvh; width: auto; } }
         @media (max-aspect-ratio: 9/16) { #gameContainer { width: 100%; height: auto; } }
 
         canvas { display: block; width: 100%; height: 100%; }
         
-        /* [UI 레이어] */
+        /* [UI Layer] */
         #uiLayer { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; padding: 15px; 
             display: flex; flex-direction: column; 
-            /* 내부 UI도 안전 구역을 한 번 더 고려 (이중 안전장치) */
             padding-top: max(15px, env(safe-area-inset-top));
             padding-bottom: max(15px, env(safe-area-inset-bottom));
             display: none; 
@@ -84,7 +66,7 @@
         .gauge-charging #hyperContainer { animation: gaugeBlink 0.2s infinite; }
         @keyframes gaugeBlink { 0% { border-color: rgba(255,255,255,0.9); } 50% { border-color: rgba(255,0,0,0.9); } 100% { border-color: rgba(255,255,255,0.9); } }
 
-        #dashZone { position: absolute; right: 30px; bottom: 40px; pointer-events: auto; display: flex; flex-direction: column; align-items: center; }
+        #dashZone { position: absolute; right: 30px; bottom: max(40px, env(safe-area-inset-bottom)); pointer-events: auto; display: flex; flex-direction: column; align-items: center; }
         #dashIcon { width: 70px; height: 70px; border-radius: 50%; border: 3px solid #fff; background: rgba(241, 196, 15, 0.2); display: flex; justify-content: center; align-items: center; color: white; font-weight: bold; font-size: 14px; box-shadow: 0 0 10px rgba(241, 196, 15, 0.3); transition: opacity 0.2s; cursor: pointer; }
         #dashIcon.ready { background: rgba(241, 196, 15, 0.6); opacity: 1; border-color: #fff; }
         #dashIcon.cooldown { background: rgba(0,0,0,0.5); opacity: 0.4; border-color: #555; font-size: 24px;}
@@ -92,13 +74,13 @@
         #pcGuide { position: absolute; bottom: 20px; width: 100%; text-align: center; color: #666; font-size: 11px; pointer-events: none; font-weight: bold; }
         @media (hover: none) and (pointer: coarse) { #pcGuide { display: none; } }
 
-        /* [모달 공통] */
+        /* [Common Modal] */
         .modal { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
             display: none; flex-direction: column; justify-content: center; align-items: center; pointer-events: auto; z-index: 100; 
         }
 
-        /* [타이틀 화면] - 원자가 잘 보이도록 완전 투명 */
+        /* [Title Screen] - Transparent BG for Atoms */
         #titleScreen { 
             display: flex; 
             background: transparent;
@@ -107,7 +89,7 @@
         #gameTitle { color: #00f3ff; font-size: 40px; font-weight: 900; margin-bottom: 40px; letter-spacing: 4px; font-style: italic; text-shadow: 0 0 15px rgba(0,243,255,0.7); animation: neonPulse 1.5s infinite alternate; }
         @keyframes neonPulse { from { text-shadow: 0 0 10px rgba(0,243,255,0.6); transform: scale(1); } to { text-shadow: 0 0 25px rgba(0,243,255,0.9); transform: scale(1.03); } }
 
-        /* [게임오버 & 레벨업 화면] - 블러 처리 */
+        /* [GameOver & LevelUp Screen] - Blurred BG */
         #gameOverScreen, #levelUpScreen { 
             background: rgba(0, 0, 0, 0.6);
             backdrop-filter: blur(5px);
@@ -124,6 +106,7 @@
         #newRecordMsg { color: #fffa65; font-size: 18px; font-weight: bold; margin-bottom: 5px; display: none; animation: blink 0.5s infinite alternate; }
         @keyframes blink { from { opacity: 1; } to { opacity: 0.5; } }
         
+        /* Name Input */
         #nameInputBox { margin: 10px 0; display: flex; gap: 5px; justify-content: center; z-index: 101; }
         #inputName { background: #1e2328; border: 1px solid #0acde5; color: #fff; padding: 8px; border-radius: 4px; outline: none; font-weight: bold; text-align: center; width: 140px; font-family: 'Segoe UI', sans-serif; transition: all 0.2s; }
         #inputName:focus { box-shadow: 0 0 8px #0acde5; background: #2d3436; }
@@ -134,6 +117,7 @@
         #btnName.edit-mode { background: #555; color: #fff; }
         #btnName:disabled { background: #555; color: #aaa; cursor: not-allowed; }
 
+        /* Leaderboard */
         #leaderboardContainer { width: 85%; margin: 5px 0 15px 0; background: rgba(0,0,0,0.5); border: 1px solid #444; padding: 10px; min-height: 100px; max-height: 250px; overflow-y: auto; border-radius: 5px; }
         #leaderboardTable { width: 100%; border-collapse: collapse; font-size: 12px; color: #ddd; }
         #leaderboardTable th { text-align: left; border-bottom: 1px solid #666; padding: 4px; color: #0acde5; position: sticky; top: 0; background: #0f1218; }
@@ -143,6 +127,7 @@
         #leaderboardTable tr:nth-child(3) td { color: #d35400; font-weight: bold; }
         #loadingRank { font-size: 12px; color: #aaa; text-align: center; margin: 10px 0; }
 
+        /* Restart Button */
         #rushTimerBox { text-align: center; margin-top: 5px; }
         #rushBtn { position: relative; overflow: hidden; cursor: pointer; transition: transform 0.1s; -webkit-tap-highlight-color: transparent; }
         #rushBtn:active { transform: scale(0.95); }
@@ -428,15 +413,15 @@
     window.addEventListener('touchmove', updateMousePos, {passive: true});
     window.addEventListener('touchstart', updateMousePos, {passive: true});
 
-    // [배경 원자 색상 팔레트]
+    // [Atom Colors Palette]
     const atomColors = ['#0acde5', '#fffa65', '#ff4757', '#e17055', '#9b59b6', '#2ecc71'];
 
-    // [배경 원자/분자 효과 클래스 - 3D Depth & Bounding Box]
+    // [Atom/Molecule Effect Class]
     class AtomCluster {
         constructor() {
             this.x = Math.random() * CW;
             this.y = Math.random() * CH;
-            this.z = Math.random(); 
+            this.z = Math.random(); // Depth: 0.0 (Far) ~ 1.0 (Near)
             this.baseVx = (Math.random() - 0.5) * 0.3; 
             this.baseVy = (Math.random() - 0.5) * 0.3;
             this.pushVx = 0;
@@ -454,6 +439,7 @@
                     r: this.size * (0.5 + Math.random() * 0.5),
                     a: (Math.PI * 2 / count) * i,
                     color: atomColors[Math.floor(Math.random() * atomColors.length)],
+                    // Perspective Scale: 0.6 ~ 1.4
                     scale: (0.7 + Math.random() * 0.6) * (0.6 + this.z * 0.4) 
                 });
             }
@@ -468,7 +454,7 @@
             if (dist < interactionRadius) {
                 const force = (interactionRadius - dist) / interactionRadius;
                 const angle = Math.atan2(dy, dx);
-                // [미세 조정] 밀어내는 힘을 0.05로 매우 약하게 설정
+                // Push Strength very low (subtle interaction)
                 const pushStrength = 0.05 * (0.5 + this.z * 0.5); 
                 
                 this.pushVx += Math.cos(angle) * force * pushStrength;
@@ -1013,6 +999,7 @@
         if (gameState === 'TITLE') {
             ctx.fillStyle = '#0f1218'; 
             ctx.fillRect(0, 0, CW, CH);
+            // [Modified] Sort by Z for fake 3D depth order
             bgAtoms.sort((a,b) => a.z - b.z).forEach(a => { a.update(); a.draw(ctx); });
         } else {
             drawGrid();
@@ -1063,18 +1050,18 @@
         gameState='PAUSE'; joystick.active=false; joystick.vx=0; joystick.vy=0;
         levelUpScreen.style.display='flex'; cardsBox.innerHTML='';
         const statOpts = [
-            {t:"공격력 UP", d:"데미지 +5", img: "atk.png", f:()=>{player.damage+=5;}}, 
-            {t:"연사속도 UP", d:"공격속도 +10%", img: "speed.png", f:()=>{player.baseFireRate*=0.9;}},
-            {t:"치명타 UP", d:"확률 +5%", img: "cri.png", f:()=>{player.critChance+=0.05;}}, 
-            {t:"멀티샷", d:"탄환 +1", img: "multi.png", f:()=>{player.bulletCount++;}},
-            {t:"대쉬 쿨다운", d:"재사용 대기시간 -1초", img: "dash.png", f:()=>{player.dashMaxCool = Math.max(180, player.dashMaxCool - 60);}}, 
-            {t:"체력회복", d:"HP +30", img: "hp.png", f:()=>{player.hp=Math.min(player.maxHp, player.hp+30);}},
-            {t:"자석 강화", d:"흡수 범위 +15", img: "mag.png", f:()=>{player.magnet += 15;}} 
+            {t:"Attack UP", d:"Damage +5", img: "atk.png", f:()=>{player.damage+=5;}}, 
+            {t:"Fire Rate UP", d:"Attack Speed +10%", img: "speed.png", f:()=>{player.baseFireRate*=0.9;}},
+            {t:"Crit Rate UP", d:"Chance +5%", img: "cri.png", f:()=>{player.critChance+=0.05;}}, 
+            {t:"Multishot", d:"Bullet +1", img: "multi.png", f:()=>{player.bulletCount++;}},
+            {t:"Dash Cooldown", d:"Cooldown -1s", img: "dash.png", f:()=>{player.dashMaxCool = Math.max(180, player.dashMaxCool - 60);}}, 
+            {t:"Heal", d:"HP +30", img: "hp.png", f:()=>{player.hp=Math.min(player.maxHp, player.hp+30);}},
+            {t:"Magnet Range", d:"Pickup Range +15", img: "mag.png", f:()=>{player.magnet += 15;}} 
         ];
         const hyperOpts = [
-            {t:"고속연사 스킬", d:"5초 동안 고속연사", c:'hyper-card', img:'rapid.png', f:()=>{player.hyperType=HYPER_RAPID; updateTypeIcon();}},
-            {t:"EMP 스킬", d:"EMP 광역 데미지", c:'hyper-card', img:'emp.png', f:()=>{player.hyperType=HYPER_EMP; updateTypeIcon();}},
-            {t:"완전방어 스킬", d:"10초 무적 + HP 회복", c:'hyper-card', img:'shield.png', f:()=>{player.hyperType=HYPER_SHIELD; updateTypeIcon();}},
+            {t:"Equip: Rapid Fire", d:"5s High Speed Fire", c:'hyper-card', img:'rapid.png', f:()=>{player.hyperType=HYPER_RAPID; updateTypeIcon();}},
+            {t:"Equip: EMP", d:"Area Damage Blast", c:'hyper-card', img:'emp.png', f:()=>{player.hyperType=HYPER_EMP; updateTypeIcon();}},
+            {t:"Equip: Shield", d:"10s Invincible + Heal", c:'hyper-card', img:'shield.png', f:()=>{player.hyperType=HYPER_SHIELD; updateTypeIcon();}},
         ];
         let pool = [...statOpts, ...hyperOpts];
         for(let i=0; i<3; i++) {
@@ -1084,7 +1071,10 @@
             div.innerHTML = `${item.img?`<img src="${item.img}" class="card-icon">`:''}<div class="card-text-group"><h3>${item.t}</h3><p>${item.d}</p></div>`;
             div.style.animationDelay = `${i * 0.1}s`;
             div.onclick=()=>{
-                item.f(); showMessage(item.t + (item.c?" 장착됨":"!"), item.c?"#a29bfe":"#c8aa6e", item.img);
+                item.f(); 
+                let msgColor = item.c ? "#a29bfe" : "#c8aa6e"; 
+                let msgText = item.t + (item.c ? " Equipped" : "!");
+                showMessage(msgText, msgColor, item.img);
                 levelUpScreen.style.display='none'; gameState='PLAY';
             };
             cardsBox.appendChild(div);
@@ -1107,26 +1097,26 @@
             lbContainer.style.display = 'none'; 
 
             let timeLeft = 5;
-            rushBtn.className = "btn-enhanced timed-rush"; rushSubText.innerText = "단 한번! 스탯 유지 재시작";
+            rushBtn.className = "btn-enhanced timed-rush"; rushSubText.innerText = "One Time! Keep Stats";
             rushBtnGauge.style.transition='none'; rushBtnGauge.style.width='100%';
             setTimeout(()=>{ rushBtnGauge.style.transition='width 5s linear'; rushBtnGauge.style.width='0%'; }, 50);
             
-            rushBtnText.innerHTML = `<span style="font-size:1.5em; vertical-align:middle;">${timeLeft}</span> &nbsp; 강화 재도전`;
+            rushBtnText.innerHTML = `<span style="font-size:1.5em; vertical-align:middle;">${timeLeft}</span> &nbsp; RUSH START`;
             if(rushTimerInterval) clearInterval(rushTimerInterval);
             rushTimerInterval = setInterval(() => {
                 timeLeft--;
                 if (timeLeft > 0) {
-                    rushBtnText.innerHTML = `<span style="font-size:1.5em; vertical-align:middle;">${timeLeft}</span> &nbsp; 강화 재도전`;
+                    rushBtnText.innerHTML = `<span style="font-size:1.5em; vertical-align:middle;">${timeLeft}</span> &nbsp; RUSH START`;
                 } else {
                     clearInterval(rushTimerInterval);
-                    rushBtn.className = "btn-reset"; rushBtnText.innerText = "↻ 처음부터"; rushSubText.innerText = "";
+                    rushBtn.className = "btn-reset"; rushBtnText.innerText = "↻ RESTART"; rushSubText.innerText = "";
                     
                     lbContainer.style.display = 'block'; 
                     submitScoreLL(player.score); 
                 }
             }, 1000);
         } else {
-            rushBtn.className = "btn-reset"; rushBtnText.innerText = "↻ 처음부터"; rushSubText.innerText = "";
+            rushBtn.className = "btn-reset"; rushBtnText.innerText = "↻ RESTART"; rushSubText.innerText = "";
             rushBtnGauge.style.width='0%'; if(rushTimerInterval) clearInterval(rushTimerInterval);
             
             lbContainer.style.display = 'block'; 
