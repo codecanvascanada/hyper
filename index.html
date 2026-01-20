@@ -21,7 +21,7 @@
         /* [게임 화면] */
         #gameContainer { 
             position: relative; 
-            background: #0f1218; /* 짙은 남색 배경 (캔버스 배경색과 일치) */
+            background: #0f1218; /* 짙은 남색 배경 */
             overflow: hidden; 
             box-shadow: 0 0 30px rgba(0,210,211,0.2);
             aspect-ratio: 9 / 16;
@@ -74,17 +74,16 @@
         #pcGuide { position: absolute; bottom: 20px; width: 100%; text-align: center; color: #666; font-size: 11px; pointer-events: none; font-weight: bold; }
         @media (hover: none) and (pointer: coarse) { #pcGuide { display: none; } }
 
-        /* [모달 공통] - 기본 배경은 투명하거나 반투명 */
+        /* [모달 공통] */
         .modal { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            /* 기본적으로 숨김 */
             display: none; flex-direction: column; justify-content: center; align-items: center; pointer-events: auto; z-index: 100; 
         }
 
-        /* [타이틀 화면 - 배경 완전 투명] */
+        /* [타이틀 화면 - 배경 완전 투명, 원자가 보이게] */
         #titleScreen { 
             display: flex; 
-            background: transparent; /* 배경을 완전히 없애서 캔버스 그대로 노출 */
+            background: transparent;
             z-index: 200; 
         }
         #gameTitle { color: #00f3ff; font-size: 40px; font-weight: 900; margin-bottom: 40px; letter-spacing: 4px; font-style: italic; text-shadow: 0 0 15px rgba(0,243,255,0.7); animation: neonPulse 1.5s infinite alternate; }
@@ -92,7 +91,7 @@
 
         /* [게임오버 화면 - 텍스트 가독성을 위해 약간만 어둡게] */
         #gameOverScreen { 
-            background: rgba(0, 0, 0, 0.7); /* 70% 불투명 검정 -> 뒤의 원자가 은은하게 보임 */
+            background: rgba(0, 0, 0, 0.7);
         }
 
         .card { background: #0f1218; color: #c8aa6e; width: 240px; margin: 8px auto; padding: 12px 15px; border: 1px solid #c8aa6e; box-shadow: 0 0 10px rgba(200, 170, 110, 0.2); transition: transform 0.1s; cursor: pointer; opacity: 0; transform: translateY(20px) scale(0.9); animation: cardEntry 0.3s forwards; display: flex; flex-direction: row; align-items: center; text-align: left; }
@@ -433,7 +432,7 @@
                     a: (Math.PI * 2 / count) * i
                 });
             }
-            // [수정] 밝기(Opacity) 0.6 ~ 1.0 (매우 선명함)
+            // 밝기(Opacity) 0.6 ~ 1.0 (매우 선명함)
             this.color = `rgba(10, 205, 229, ${0.6 + Math.random() * 0.4})`; 
         }
         update() {
@@ -468,7 +467,7 @@
         }
         draw(ctx) {
             ctx.strokeStyle = this.color;
-            // [수정] 선 두께 2.5 (잘 보임)
+            // 선 두께 2.5 (잘 보임)
             ctx.lineWidth = 2.5;
             ctx.beginPath();
             
@@ -744,12 +743,13 @@
         spawn(wx, wy, a, isEnemyBullet=false, speedMult=1.0) {
             this.wx=wx; this.wy=wy; this.isEnemyBullet = isEnemyBullet;
             if(isEnemyBullet) { 
-                this.vx = Math.cos(a)*4*speedMult; this.vy = Math.sin(a)*4*speedMult; this.life = 300; this.r = 6; this.color = '#ff9f43';
+                this.vx = Math.cos(a)*4*speedMult; this.vy = Math.sin(a)*4*speedMult; this.life = 300; this.r = 6; this.color = '#ff9f43'; this.isCrit=false;
             } else { 
                 this.vx = Math.cos(a)*8; this.vy = Math.sin(a)*8; this.life = 50;
                 this.isCrit = Math.random() < player.critChance;
                 this.r = (player.isHyper && player.hyperType===HYPER_RAPID) ? 8 : 4;
-                this.color = this.isCrit ? '#ff4757' : (player.isHyper && player.hyperType===HYPER_RAPID ? '#fffa65' : '#0acde5');
+                if(this.isCrit) { this.color = '#ff4757'; } 
+                else { this.color = (player.isHyper && player.hyperType===HYPER_RAPID) ? '#fffa65' : '#0acde5'; }
                 this.hitList = [];
             }
             this.active=true;
@@ -889,21 +889,37 @@
         typeIcon.classList.remove('icon-attach-anim'); void typeIcon.offsetWidth; typeIcon.classList.add('icon-attach-anim');
     }
 
+    // [수정] 그리드 그리기 함수 복구
+    function drawGrid() {
+        ctx.fillStyle = '#0f1218'; ctx.fillRect(0, 0, CW, CH); // 배경색 채우기
+        ctx.strokeStyle = '#1e2328'; ctx.lineWidth = 2; ctx.beginPath();
+        const sz = 60; const offX = ((player.wx % sz) + sz) % sz; const offY = ((player.wy % sz) + sz) % sz;
+        for(let x = -offX; x < CW; x += sz) { ctx.moveTo(x, 0); ctx.lineTo(x, CH); }
+        for(let y = -offY; y < CH; y += sz) { ctx.moveTo(0, y); ctx.lineTo(CW, y); }
+        ctx.stroke();
+    }
+
+    function drawJoystick() {
+        if(!joystick.active) { if('ontouchstart' in window) { ctx.beginPath(); ctx.arc(CW*0.2, CH*0.8, 30, 0, Math.PI*2); ctx.strokeStyle = 'rgba(255, 255, 255, 0.02)'; ctx.lineWidth = 2; ctx.stroke(); } return; }
+        ctx.beginPath(); ctx.arc(joystick.baseX, joystick.baseY, joystick.maxRadius, 0, Math.PI*2); ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)'; ctx.lineWidth = 4; ctx.stroke();
+        ctx.beginPath(); ctx.arc(joystick.stickX, joystick.stickY, 20, 0, Math.PI*2); ctx.fillStyle = 'rgba(10, 205, 229, 0.1)'; ctx.fill();
+    }
+
     function update() {
         if(gameState!=='PLAY') return;
         frameCount++; player.isGrazingNow = false;
         if(screenShake > 0) screenShake *= 0.9;
-        if(player.killTimer > 0) player.killTimer--;
-        if(!player.dashReady) { player.dashCool--; if(player.dashCool<=0) { player.dashReady=true; updateDashUI(); } else if(frameCount%60===0) updateDashUI(); }
+        if(player.killTimer > 0) { player.killTimer--; if(player.killTimer <= 0) { player.killCount = 0; } }
+        if(!player.dashReady) { player.dashCool--; if(player.dashCool <= 0) { player.dashReady = true; updateDashUI(); } else if(frameCount%60===0) updateDashUI(); }
 
         if(player.isDashing) {
-            player.wx += player.dashVx * 15; player.wy += player.dashVy * 15;
-            player.dashTime--; if(player.dashTime <= 0) player.isDashing = false;
+            player.wx += player.dashVx * 15; player.wy += player.dashVy * 15; player.dashTime--; if(player.dashTime <= 0) player.isDashing = false;
         } else {
+            const isMoving = joystick.active && (joystick.vx !== 0 || joystick.vy !== 0);
             const spd = (player.isHyper && player.hyperType===HYPER_RAPID) ? player.baseSpeed*1.5 : player.baseSpeed;
             player.wx += joystick.vx * spd; player.wy += joystick.vy * spd;
             const fr = (player.isHyper && player.hyperType===HYPER_RAPID) ? 4 : player.baseFireRate;
-            if((joystick.vx!==0||joystick.vy!==0) && frameCount - player.lastShot > fr) {
+            if(isMoving && frameCount - player.lastShot > fr) {
                 let t=null, min=Infinity;
                 enemies.forEach(e=>{ if(!e.active) return; const d = Math.hypot(player.wx-e.wx, player.wy-e.wy); if(d<min) { min=d; t=e; } });
                 if(t && min<450) {
@@ -925,8 +941,8 @@
         const rate = (player.isHyper && player.hyperType===HYPER_RAPID) ? 5 : Math.max(10, 60 - player.level);
         if(frameCount % rate === 0) getObj(enemies, Enemy).spawn(false);
         if(frameCount % 900 === 0 && player.level >= 3) {
-            const activeBosses = enemies.filter(e => e.active && e.isElite).length;
-            if(activeBosses < (player.level>=9?2:1)) getObj(enemies, Enemy).spawn(true);
+            const activeBosses = enemies.filter(e => e.active && e.isElite).length; let maxBosses = 1; if(player.level >= 9) maxBosses = 2; if(player.level >= 18) maxBosses = 3;
+            if(activeBosses < maxBosses) getObj(enemies, Enemy).spawn(true);
         }
 
         bullets.forEach(b => {
@@ -956,17 +972,22 @@
         hyperOrbs.forEach(x => { if(x.active) x.update(); });
     }
 
+    // [수정] draw 함수 구조 변경: 상태에 따라 배경을 다르게 그림
     function draw() {
         ctx.save();
-        if(screenShake>0) ctx.translate((Math.random()-0.5)*screenShake, (Math.random()-0.5)*screenShake);
+        if(screenShake>0) { const rx = (Math.random() - 0.5) * screenShake; const ry = (Math.random() - 0.5) * screenShake; ctx.translate(rx, ry); }
         
-        // [수정] 배경색만 칠하고 그리드 그리기 코드는 삭제함
-        ctx.fillStyle = '#0f1218'; ctx.fillRect(0, 0, CW, CH);
-
-        // 배경 애니메이션 (항상 그리기)
-        bgAtoms.forEach(a => { a.update(); a.draw(ctx); });
+        if (gameState === 'PLAY') {
+            // 1. 게임 중: 그리드 배경 그리기
+            drawGrid(); 
+        } else {
+            // 2. 타이틀/게임오버: 단색 배경 + 원자 애니메이션 그리기
+            ctx.fillStyle = '#0f1218'; ctx.fillRect(0, 0, CW, CH);
+            bgAtoms.forEach(a => { a.update(); a.draw(ctx); });
+        }
 
         if (gameState === 'PLAY') {
+            // 게임 오브젝트 그리기 (플레이어, 적, 총알 등)
             let hc = (player.hyperType === HYPER_RAPID) ? '#f1c40f' : (player.hyperType === HYPER_EMP ? '#2ecc71' : '#9b59b6');
             ctx.strokeStyle = hc; ctx.globalAlpha = 0.4; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(CW/2, CH/2, player.grazeR, 0, Math.PI*2); ctx.stroke(); ctx.globalAlpha = 1.0;
 
@@ -994,19 +1015,19 @@
                     if(d < player.grazeR+e.r && d > player.hitR+e.r) { drawLightning(CW/2, CH/2, e.wx-player.wx+CW/2, e.wy-player.wy+CH/2, hc); player.isGrazingNow = true; }
                 }
             });
+        }
 
-            if(player.showHpTimer > 0) {
-                 const hpPct = Math.max(0, player.hp / player.maxHp);
-                 ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(CW/2-15, CH/2-25, 30, 4);
-                 ctx.fillStyle = '#ff7675'; ctx.fillRect(CW/2-15, CH/2-25, 30*hpPct, 4);
-            }
+        if(player.showHpTimer > 0 && gameState === 'PLAY') {
+             const hpPct = Math.max(0, player.hp / player.maxHp);
+             ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(CW/2-15, CH/2-25, 30, 4);
+             ctx.fillStyle = '#ff7675'; ctx.fillRect(CW/2-15, CH/2-25, 30*hpPct, 4);
         }
         
         if(screenShake > 20) { ctx.fillStyle=`rgba(255,255,255,${screenShake/100})`; ctx.fillRect(0,0,CW,CH); }
         ctx.restore(); drawJoystick();
     }
 
-    function loop() { requestAnimationFrame(loop); if(gameState==='PLAY') { update(); draw(); } }
+    function loop() { requestAnimationFrame(loop); if(gameState==='PLAY') { update(); } draw(); } // draw는 항상 호출
 
     function levelUp() {
         gameState='PAUSE'; joystick.active=false; joystick.vx=0; joystick.vy=0;
@@ -1053,7 +1074,7 @@
         document.getElementById('leaderboardBody').innerHTML = "";
 
         if (!hasRushed) {
-            lbContainer.style.display = 'none'; // 첫 번째 죽음: 리더보드 숨김
+            lbContainer.style.display = 'none'; 
 
             let timeLeft = 5;
             rushBtn.className = "btn-enhanced timed-rush"; rushSubText.innerText = "단 한번! 스탯 유지 재시작";
@@ -1070,7 +1091,7 @@
                     clearInterval(rushTimerInterval);
                     rushBtn.className = "btn-reset"; rushBtnText.innerText = "↻ 처음부터"; rushSubText.innerText = "";
                     
-                    lbContainer.style.display = 'block'; // 타이머 종료: 리더보드 표시
+                    lbContainer.style.display = 'block'; 
                     submitScoreLL(player.score); 
                 }
             }, 1000);
@@ -1078,7 +1099,7 @@
             rushBtn.className = "btn-reset"; rushBtnText.innerText = "↻ 처음부터"; rushSubText.innerText = "";
             rushBtnGauge.style.width='0%'; if(rushTimerInterval) clearInterval(rushTimerInterval);
             
-            lbContainer.style.display = 'block'; // 두 번째 죽음: 리더보드 표시
+            lbContainer.style.display = 'block'; 
             submitScoreLL(player.score); 
         }
     }
@@ -1100,7 +1121,7 @@
         screenShake=0; ctx.setTransform(1,0,0,1,0,0);
         comboEl.style.display='none'; comboLabel.style.display='none'; infoMsg.style.opacity=0;
         gameOverScreen.style.display='none'; 
-        gameState='PLAY'; // 게임 시작/재시작 시 PLAY 상태로 변경
+        gameState='PLAY'; 
         
         player.isGrazingNow = false;
         document.getElementById('rightHud').classList.remove('gauge-charging');
