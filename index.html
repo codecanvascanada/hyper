@@ -64,12 +64,33 @@
         #comboCount { font-size: 48px; font-weight: 900; color: #fffa65; text-shadow: 0 0 15px rgba(255, 165, 2, 0.8); display: none; transition: transform 0.05s; }
         #comboLabel { font-size: 12px; color: #81ecec; letter-spacing: 3px; font-weight: bold; display:none; text-shadow: 0 0 5px #00cec9; }
 
-        #rightHud { position: absolute; right: 15px; top: 25%; height: 30%; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+        /* [Hyper Gauge & UNIFIED Blinking Effect] */
+        #rightHud { 
+            position: absolute; right: 15px; top: 25%; height: 30%; 
+            display: flex; flex-direction: column; align-items: center; gap: 2px; 
+            transition: transform 0.1s;
+        }
         #typeIcon { width: 20px; height: 20px; margin-top: 2px; object-fit: contain; filter: drop-shadow(0 0 2px rgba(255,255,255,0.3)); }
         #hyperContainer { width: 10px; flex: 1; background: rgba(0,0,0,0.6); border: 1px solid #555; display: flex; flex-direction: column-reverse; box-shadow: 0 0 5px rgba(0,0,0,0.5); transition: box-shadow 0.1s; }
         #hyperFill { width: 100%; height: 0%; background: linear-gradient(to top, #6c5ce7, #a29bfe); transition: height 0.1s linear, filter 0.1s; }
-        .gauge-charging #hyperContainer { animation: gaugeBlink 0.2s infinite; }
-        @keyframes gaugeBlink { 0% { border-color: rgba(255,255,255,0.9); } 50% { border-color: rgba(255,0,0,0.9); } 100% { border-color: rgba(255,255,255,0.9); } }
+        
+        /* Unified Charging Effect (Fast Electric Pulse) */
+        .gauge-charging {
+            transform: scale(1.1); /* Slight pop */
+        }
+        .gauge-charging #hyperContainer { 
+            animation: gaugeBlink 0.08s infinite alternate; /* Very fast blink */
+        }
+        @keyframes gaugeBlink { 
+            0% { 
+                border-color: rgba(255,255,255,0.5); 
+                box-shadow: 0 0 5px rgba(10, 205, 229, 0.3); 
+            } 
+            100% { 
+                border-color: #fff; 
+                box-shadow: 0 0 15px rgba(10, 205, 229, 1.0), 0 0 5px #fff; 
+            } 
+        }
 
         #dashZone { position: absolute; right: 30px; bottom: 40px; pointer-events: auto; display: flex; flex-direction: column; align-items: center; }
         #dashIcon { width: 70px; height: 70px; border-radius: 50%; border: 3px solid #fff; background: rgba(241, 196, 15, 0.2); display: flex; justify-content: center; align-items: center; color: white; font-weight: bold; font-size: 14px; box-shadow: 0 0 10px rgba(241, 196, 15, 0.3); transition: opacity 0.2s; cursor: pointer; }
@@ -92,6 +113,20 @@
             z-index: 200; 
         }
         #gameTitle { color: #00f3ff; font-size: 40px; font-weight: 900; margin-bottom: 40px; letter-spacing: 4px; font-style: italic; text-shadow: 0 0 15px rgba(0,243,255,0.7); animation: neonPulse 1.5s infinite alternate; }
+        
+        /* [Version Display] */
+        #versionText {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 12px;
+            font-weight: bold;
+            font-family: 'Segoe UI', sans-serif;
+            pointer-events: none;
+            letter-spacing: 1px;
+        }
+
         @keyframes neonPulse { from { text-shadow: 0 0 10px rgba(0,243,255,0.6); transform: scale(1); } to { text-shadow: 0 0 25px rgba(0,243,255,0.9); transform: scale(1.03); } }
 
         /* [GameOver & LevelUp Screen] */
@@ -152,6 +187,8 @@
 
 <div id="gameContainer">
     <div id="titleScreen" class="modal">
+        <div id="versionText">v0.0.1</div>
+        
         <div id="gameTitle">SPARCRUSH</div>
         <div id="nameInputBox">
             <input type="text" id="inputName" placeholder="NAME (Max 8)" maxlength="8">
@@ -609,7 +646,8 @@
         dashReady: true, dashCool: 0, dashMaxCool: 600,
         isDashing: false, dashTime: 0, dashDuration: 15, dashVx: 0, dashVy: 0,
         pendingLevelUps: 0, shieldAngle: 0, shieldPulse: 0, isGrazingNow: false,
-        maxCombo: 0 
+        maxCombo: 0,
+        flashGaugeTimer: 0 // For visual flash
     };
 
     let joystick = { active: false, baseX: CW*0.2, baseY: CH*0.8, stickX: CW*0.2, stickY: CH*0.8, maxRadius: 30, vx: 0, vy: 0 };
@@ -694,7 +732,13 @@
             else { this.currentSpeed *= 1.1; }
             this.progress += this.currentSpeed;
             this.angle += 0.15;
-            if (this.progress >= 1) { this.active = false; addHyper(20); showMessage("SHUTDOWN", "#fdcb6e"); return; }
+            if (this.progress >= 1) { 
+                this.active = false; 
+                addHyper(20); 
+                player.flashGaugeTimer = 15; // Trigger Flash
+                showMessage("SHUTDOWN", "#fdcb6e"); 
+                return; 
+            }
             const t = this.progress; const u = 1 - t;
             const targetX = player.wx + this.targetRelX; const targetY = player.wy + this.targetRelY;
             const cpX = this.startX + 100; const cpY = this.startY - 200;
@@ -870,7 +914,7 @@
 
     function addCombo(n) {
         player.combo += n; 
-        if (player.combo > player.maxCombo) player.maxCombo = player.combo; // Track Max Combo
+        if (player.combo > player.maxCombo) player.maxCombo = player.combo; 
         
         player.comboTimer = 120; 
         comboEl.style.display = 'block'; comboLabel.style.display = 'block';
@@ -906,7 +950,6 @@
         if(e.isSuicide) { triggerSuicideExplosion(e); addScore(e.scoreVal); player.killCount++; updateKillStreak(); return; }
         e.hp = 0; e.active = false; 
         
-        // [New] Active Combo Bonus (Instant Score)
         const comboBonus = player.combo * 10;
         addScore(e.scoreVal + comboBonus); 
         
@@ -941,7 +984,13 @@
         expBar.style.width = (player.exp/player.nextExp)*100 + "%"; 
         lvText.innerText = "LV. " + player.level; hpText.innerText = "HP: " + Math.floor(player.hp); 
         hyperFill.style.height = player.hyperGauge + "%"; 
-        if(player.isGrazingNow) rightHud.classList.add('gauge-charging'); else rightHud.classList.remove('gauge-charging');
+        
+        // [FIX] Enable Charging Animation
+        if(player.isGrazingNow || player.flashGaugeTimer > 0) { 
+             rightHud.classList.add('gauge-charging'); 
+        } else { 
+             rightHud.classList.remove('gauge-charging'); 
+        }
     }
     function updateDashUI() { if(player.dashReady) { dashIcon.className='ready'; dashIcon.innerText="DASH"; } else { dashIcon.className='cooldown'; dashIcon.innerText=Math.ceil(player.dashCool/60); } }
     
@@ -971,6 +1020,9 @@
     function update() {
         if(gameState!=='PLAY') return;
         frameCount++; player.isGrazingNow = false;
+        
+        if(player.flashGaugeTimer > 0) player.flashGaugeTimer--; // Decrement Flash Timer
+
         if(screenShake > 0) screenShake *= 0.9;
         if(player.killTimer > 0) { player.killTimer--; if(player.killTimer <= 0) { player.killCount = 0; } }
         if(!player.dashReady) { player.dashCool--; if(player.dashCool <= 0) { player.dashReady = true; updateDashUI(); } else if(frameCount%60===0) updateDashUI(); }
@@ -1042,7 +1094,6 @@
         if (gameState === 'TITLE') {
             ctx.fillStyle = '#0f1218'; 
             ctx.fillRect(0, 0, CW, CH);
-            // [Modified] Sort by Z for fake 3D depth order
             bgAtoms.sort((a,b) => a.z - b.z).forEach(a => { a.update(); a.draw(ctx); });
         } else {
             drawGrid();
@@ -1128,15 +1179,17 @@
         gameState = 'GAMEOVER'; screenShake = 0;
         gameOverScreen.style.display = 'flex';
         
-        // [Logic] Calculate Final Score with Max Combo Bonus
         const maxComboBonus = player.maxCombo * 500;
         player.score += maxComboBonus;
 
         let isNew = false;
-        if(player.score > highScore) { highScore = player.score; localStorage.setItem('survival_highscore', highScore); isNew = true; }
+        if(player.score > highScore) { 
+            highScore = player.score; 
+            localStorage.setItem('survival_highscore', highScore); 
+            isNew = true; 
+        }
         newRecordMsg.style.display = isNew ? 'block' : 'none';
         
-        // [UI] Show Breakdown
         const baseScore = player.score - maxComboBonus;
         resultContainer.innerHTML = `
             <div style="color:#aaa; font-size:0.9em;">Base Score: ${baseScore.toLocaleString()}</div>
@@ -1185,17 +1238,14 @@
         enemies=[]; bullets=[]; gems=[]; texts=[]; effects=[]; hyperOrbs=[];
         player.wx=0; player.wy=0; joystick.active=false;
 
-        // [FIX] Reset score to 0 on ANY restart
         player.score = 0; 
         
         if(canRush) { 
-            // Rush: Keep stats, Reset level
             player.level=1; player.exp=0; player.nextExp=10; 
             player.hp=player.maxHp; 
             hasRushed=true; 
         }
         else {
-            // Hard Reset
             player.hp=100; player.maxHp=100; player.level=1; player.exp=0; player.nextExp=10;
             player.damage=15; player.fireRate=25; player.baseFireRate=25; 
             player.bulletCount=1; player.critChance=0.15; player.magnet=20;
@@ -1203,18 +1253,18 @@
             hasRushed=false;
         }
         
-        // Reset per-run stats
         player.lastShot=-100; player.dashReady=true; player.dashCool=0; 
         player.combo=0; player.maxCombo=0; 
         player.killCount=0; player.killTimer=0; 
         frameCount=0; 
         
+        // [FIX] Reset transform to stop shaking
         screenShake=0; ctx.setTransform(1,0,0,1,0,0);
+        
         comboEl.style.display='none'; comboLabel.style.display='none'; infoMsg.style.opacity=0;
         gameOverScreen.style.display='none'; 
         gameState='PLAY'; 
         
-        // [FIX] Update UI immediately to show 0 score & Latest High Score
         scoreVal.innerText = "0"; 
         bestVal.innerText = parseInt(highScore).toLocaleString();
         
