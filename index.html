@@ -264,6 +264,7 @@
         } catch(e) { console.error("Connection Error:", e); }
     }
 
+    // [Waitable Submit Score]
     async function submitScoreLL(score) {
         if(!llSessionToken) return;
         try {
@@ -273,15 +274,18 @@
                 headers: { "Content-Type": "application/json", "x-session-token": llSessionToken },
                 body: JSON.stringify({ score: score })
             });
+            // After submit, fetch leaderboard
             await fetchLeaderboardLL(); 
         } catch(e) { console.error("Submit Error:", e); }
     }
 
+    // [Waitable Fetch Leaderboard]
     async function fetchLeaderboardLL() {
         if(!llSessionToken) return;
         try {
             document.getElementById('loadingRank').innerText = "Loading Leaderboard...";
-            const res = await fetch(`https://api.lootlocker.io/game/leaderboards/${LOOTLOCKER_LEADERBOARD_KEY}/list?count=10`, {
+            // [MODIFIED] count=8
+            const res = await fetch(`https://api.lootlocker.io/game/leaderboards/${LOOTLOCKER_LEADERBOARD_KEY}/list?count=8`, {
                 method: "GET",
                 headers: { "x-session-token": llSessionToken }
             });
@@ -463,7 +467,7 @@
         constructor() {
             this.x = Math.random() * CW;
             this.y = Math.random() * CH;
-            this.z = Math.random(); 
+            this.z = Math.random(); // Depth: 0.0 (Far) ~ 1.0 (Near)
             this.baseVx = (Math.random() - 0.5) * 0.3; 
             this.baseVy = (Math.random() - 0.5) * 0.3;
             this.pushVx = 0;
@@ -481,6 +485,7 @@
                     r: this.size * (0.5 + Math.random() * 0.5),
                     a: (Math.PI * 2 / count) * i,
                     color: atomColors[Math.floor(Math.random() * atomColors.length)],
+                    // Perspective Scale: 0.6 ~ 1.4
                     scale: (0.7 + Math.random() * 0.6) * (0.6 + this.z * 0.4) 
                 });
             }
@@ -495,6 +500,7 @@
             if (dist < interactionRadius) {
                 const force = (interactionRadius - dist) / interactionRadius;
                 const angle = Math.atan2(dy, dx);
+                // Push Strength very low (subtle interaction)
                 const pushStrength = 0.05 * (0.5 + this.z * 0.5); 
                 
                 this.pushVx += Math.cos(angle) * force * pushStrength;
@@ -726,7 +732,15 @@
         }
         draw() {
             const sx = this.wx - player.wx + CW/2; const sy = this.wy - player.wy + CH/2;
-            const curColor = (Math.floor(frameCount/4)%2 === 0) ? "#ffffff" : "#ff0000";
+            
+            // [NEW LOGIC] Define color based on current player hyper type
+            let baseColor = '#f1c40f'; // Rapid (Yellow)
+            if (player.hyperType === 1) baseColor = '#2ecc71'; // EMP (Green)
+            if (player.hyperType === 2) baseColor = '#9b59b6'; // Shield (Purple)
+
+            // Blink logic: White <-> BaseColor
+            const curColor = (Math.floor(frameCount/4)%2 === 0) ? "#ffffff" : baseColor;
+
             ctx.save(); ctx.translate(sx, sy); ctx.rotate(this.angle);
             ctx.shadowColor = curColor; ctx.shadowBlur = 15; ctx.fillStyle = curColor;
             ctx.beginPath(); ctx.moveTo(0, -7); ctx.lineTo(6, 5); ctx.lineTo(-6, 5); ctx.closePath(); ctx.fill();
@@ -773,7 +787,7 @@
                     spawnText("BLOCK", player.wx, player.wy, '#a29bfe'); this.wx -= Math.cos(angleToPlayer)*15; this.wy -= Math.sin(angleToPlayer)*15;
                 } else {
                     if (this.isSuicide) { triggerSuicideExplosion(this); } else {
-                        // [HIT FLASH & HP BAR TRIGGER]
+                        // [HIT TRIGGER]
                         player.hitFlashTimer = 6; 
                         player.showHpTimer = 120;
                         const dmg = this.isElite?20:10; player.hp -= dmg; spawnText(`-${dmg}`, player.wx, player.wy, 'red');
@@ -1334,14 +1348,17 @@
         enemies=[]; bullets=[]; gems=[]; texts=[]; effects=[]; hyperOrbs=[];
         player.wx=0; player.wy=0; joystick.active=false;
 
+        // [FIX] Reset score to 0 on ANY restart
         player.score = 0; 
         
         if(canRush) { 
+            // Rush: Keep stats, Reset level
             player.level=1; player.exp=0; player.nextExp=10; 
             player.hp=player.maxHp; 
             hasRushed=true; 
         }
         else {
+            // Hard Reset
             player.hp=100; player.maxHp=100; player.level=1; player.exp=0; player.nextExp=10;
             player.damage=15; player.fireRate=25; player.baseFireRate=25; 
             player.bulletCount=1; player.critChance=0.15; player.magnet=20;
@@ -1349,6 +1366,7 @@
             hasRushed=false;
         }
         
+        // Reset per-run stats
         player.lastShot=-100; player.dashReady=true; player.dashCool=0; 
         player.combo=0; player.maxCombo=0; 
         player.killCount=0; player.killTimer=0; 
@@ -1360,6 +1378,7 @@
         gameOverScreen.style.display='none'; 
         gameState='PLAY'; 
         
+        // [FIX] Update UI immediately to show 0 score & Latest High Score
         scoreVal.innerText = "0"; 
         bestVal.innerText = parseInt(highScore).toLocaleString();
         
