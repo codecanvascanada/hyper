@@ -126,7 +126,7 @@
         #btnName.edit-mode { background: #555; color: #fff; }
         #btnName:disabled { background: #555; color: #aaa; cursor: not-allowed; }
 
-        /* Leaderboard - No Custom Colors except ME */
+        /* Leaderboard */
         #leaderboardContainer { width: 85%; margin: 5px 0 15px 0; background: rgba(0,0,0,0.5); border: 1px solid #444; padding: 10px; min-height: 100px; max-height: 250px; overflow-y: auto; border-radius: 5px; }
         #leaderboardTable { width: 100%; border-collapse: collapse; font-size: 12px; color: #ddd; }
         #leaderboardTable th { text-align: left; border-bottom: 1px solid #666; padding: 4px; color: #0acde5; position: sticky; top: 0; background: #0f1218; }
@@ -145,12 +145,16 @@
         #rushBtnText { position: relative; z-index: 1; white-space: nowrap; }
         #rushSubText { font-size: 12px; color: white; margin-top: 5px; min-height: 15px; }
 
-        /* Animation Keyframes for Score */
+        /* Animation Keyframes for Score, Icon */
         .score-bounce { animation: scoreBounce 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
         @keyframes scoreBounce { 0% { transform: scale(0.5); opacity:0; } 60% { transform: scale(1.2); opacity:1; } 100% { transform: scale(1); opacity:1; } }
         
         .score-appear { animation: scoreAppear 0.3s ease-out forwards; }
         @keyframes scoreAppear { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Icon Attach Animation */
+        .icon-attach-anim { animation: iconAnim 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        @keyframes iconAnim { 0% { transform: scale(2.5); opacity: 0; } 50% { transform: scale(0.8); opacity: 1; } 100% { transform: scale(1); } }
     </style>
 </head>
 <body>
@@ -964,8 +968,8 @@
              
              // Update custom property for blinking color
              let color = '#fffa65'; // Default Rapid
-             if (player.hyperType === 1) color = '#2ecc71'; // EMP
-             if (player.hyperType === 2) color = '#9b59b6'; // Shield
+             if (player.hyperType === HYPER_EMP) color = '#2ecc71'; // EMP
+             if (player.hyperType === HYPER_SHIELD) color = '#9b59b6'; // Shield
              rightHud.style.setProperty('--skill-color', color);
         } else {
              rightHud.classList.remove('gauge-charging');
@@ -977,8 +981,16 @@
         let src="rapid.png", bg='linear-gradient(to top, #f1c40f, #fffa65)';
         if(player.hyperType === HYPER_EMP) { src="emp.png"; bg='linear-gradient(to top, #f1c40f, #2ecc71)'; }
         else if(player.hyperType === HYPER_SHIELD) { src="shield.png"; bg='linear-gradient(to top, #54a0ff, #5f27cd)'; }
-        typeIcon.src = src; hyperFill.style.background = bg;
-        typeIcon.classList.remove('icon-attach-anim'); void typeIcon.offsetWidth; typeIcon.classList.add('icon-attach-anim');
+        
+        typeIcon.src = src; 
+        hyperFill.style.background = bg;
+        
+        // [FIX] Animation reset logic improved
+        typeIcon.classList.remove('icon-attach-anim');
+        void typeIcon.offsetWidth; // Trigger reflow
+        setTimeout(() => {
+            typeIcon.classList.add('icon-attach-anim');
+        }, 10);
     }
 
     function drawGrid() {
