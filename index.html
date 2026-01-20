@@ -467,7 +467,7 @@
         constructor() {
             this.x = Math.random() * CW;
             this.y = Math.random() * CH;
-            this.z = Math.random(); // Depth: 0.0 (Far) ~ 1.0 (Near)
+            this.z = Math.random(); 
             this.baseVx = (Math.random() - 0.5) * 0.3; 
             this.baseVy = (Math.random() - 0.5) * 0.3;
             this.pushVx = 0;
@@ -485,7 +485,6 @@
                     r: this.size * (0.5 + Math.random() * 0.5),
                     a: (Math.PI * 2 / count) * i,
                     color: atomColors[Math.floor(Math.random() * atomColors.length)],
-                    // Perspective Scale: 0.6 ~ 1.4
                     scale: (0.7 + Math.random() * 0.6) * (0.6 + this.z * 0.4) 
                 });
             }
@@ -500,7 +499,6 @@
             if (dist < interactionRadius) {
                 const force = (interactionRadius - dist) / interactionRadius;
                 const angle = Math.atan2(dy, dx);
-                // Push Strength very low (subtle interaction)
                 const pushStrength = 0.05 * (0.5 + this.z * 0.5); 
                 
                 this.pushVx += Math.cos(angle) * force * pushStrength;
@@ -632,7 +630,9 @@
         pendingLevelUps: 0, shieldAngle: 0, shieldPulse: 0, isGrazingNow: false,
         maxCombo: 0,
         flashGaugeTimer: 0,
-        hitFlashTimer: 0
+        hitFlashTimer: 0,
+        isDead: false,
+        deadTimer: 0
     };
 
     let joystick = { active: false, baseX: CW*0.2, baseY: CH*0.8, stickX: CW*0.2, stickY: CH*0.8, maxRadius: 30, vx: 0, vy: 0 };
@@ -792,7 +792,8 @@
                         player.showHpTimer = 120;
                         const dmg = this.isElite?20:10; player.hp -= dmg; spawnText(`-${dmg}`, player.wx, player.wy, 'red');
                         player.combo = 0; comboEl.style.display='none'; comboLabel.style.display='none'; 
-                        if(!this.isElite) this.active=false; updateUI(); if(player.hp<=0) gameOver();
+                        if(!this.isElite) this.active=false; updateUI(); 
+                        if(player.hp<=0) checkGameOver(); // [MODIFIED]
                     }
                 }
             } else if(dist < player.grazeR + this.r && this.grazeCool<=0) { addHyper(this.isElite?5:1); this.grazeCool=20; }
@@ -940,7 +941,7 @@
                 player.hitFlashTimer = 6; 
                 player.showHpTimer = 120;
                 player.hp -= 20; spawnText("-20", player.wx, player.wy, 'red'); player.combo = 0;
-                updateUI(); if(player.hp<=0) gameOver();
+                updateUI(); if(player.hp<=0) checkGameOver(); // [MODIFIED]
             } else spawnText("BLOCK", player.wx, player.wy, "#a29bfe");
         }
     }
@@ -1031,9 +1032,28 @@
         ctx.beginPath(); ctx.arc(joystick.stickX, joystick.stickY, 20, 0, Math.PI*2); ctx.fillStyle = 'rgba(10, 205, 229, 0.1)'; ctx.fill();
     }
 
+    function checkGameOver() {
+        if (!player.isDead) {
+            player.isDead = true;
+            player.deadTimer = 180; // 3 seconds delay
+            screenShake = 50; 
+            spawnEffect().spawnExplosion(player.wx, player.wy);
+        }
+    }
+
     function update() {
         if(gameState!=='PLAY') return;
         frameCount++; 
+
+        // [DEATH LOGIC]
+        if (player.isDead) {
+            player.deadTimer--;
+            if (player.deadTimer <= 0) {
+                gameOver();
+                return;
+            }
+        }
+        
         // [MODIFIED] Grazing reset handled in draw() loop to ensure visual sync
 
         if(player.flashGaugeTimer > 0) player.flashGaugeTimer--; 
@@ -1044,20 +1064,22 @@
         if(player.killTimer > 0) { player.killTimer--; if(player.killTimer <= 0) { player.killCount = 0; } }
         if(!player.dashReady) { player.dashCool--; if(player.dashCool <= 0) { player.dashReady = true; updateDashUI(); } else if(frameCount%60===0) updateDashUI(); }
 
-        if(player.isDashing) {
-            player.wx += player.dashVx * 15; player.wy += player.dashVy * 15; player.dashTime--; if(player.dashTime <= 0) player.isDashing = false;
-        } else {
-            const isMoving = joystick.active && (joystick.vx !== 0 || joystick.vy !== 0);
-            const spd = (player.isHyper && player.hyperType===HYPER_RAPID) ? player.baseSpeed*1.5 : player.baseSpeed;
-            player.wx += joystick.vx * spd; player.wy += joystick.vy * spd;
-            const fr = (player.isHyper && player.hyperType===HYPER_RAPID) ? 4 : player.baseFireRate;
-            if(isMoving && frameCount - player.lastShot > fr) {
-                let t=null, min=Infinity;
-                enemies.forEach(e=>{ if(!e.active) return; const d = Math.hypot(player.wx-e.wx, player.wy-e.wy); if(d<min) { min=d; t=e; } });
-                if(t && min<450) {
-                    const a = Math.atan2(t.wy-player.wy, t.wx-player.wx); const spread = 0.2; const startA = a - (spread*(player.bulletCount-1))/2;
-                    for(let i=0; i<player.bulletCount; i++) spawnBullet(player.wx, player.wy, startA + spread*i, false);
-                    player.lastShot = frameCount;
+        if (!player.isDead) {
+            if(player.isDashing) {
+                player.wx += player.dashVx * 15; player.wy += player.dashVy * 15; player.dashTime--; if(player.dashTime <= 0) player.isDashing = false;
+            } else {
+                const isMoving = joystick.active && (joystick.vx !== 0 || joystick.vy !== 0);
+                const spd = (player.isHyper && player.hyperType===HYPER_RAPID) ? player.baseSpeed*1.5 : player.baseSpeed;
+                player.wx += joystick.vx * spd; player.wy += joystick.vy * spd;
+                const fr = (player.isHyper && player.hyperType===HYPER_RAPID) ? 4 : player.baseFireRate;
+                if(isMoving && frameCount - player.lastShot > fr) {
+                    let t=null, min=Infinity;
+                    enemies.forEach(e=>{ if(!e.active) return; const d = Math.hypot(player.wx-e.wx, player.wy-e.wy); if(d<min) { min=d; t=e; } });
+                    if(t && min<450) {
+                        const a = Math.atan2(t.wy-player.wy, t.wx-player.wx); const spread = 0.2; const startA = a - (spread*(player.bulletCount-1))/2;
+                        for(let i=0; i<player.bulletCount; i++) spawnBullet(player.wx, player.wy, startA + spread*i, false);
+                        player.lastShot = frameCount;
+                    }
                 }
             }
         }
@@ -1087,7 +1109,7 @@
                             // [HIT TRIGGER]
                             player.hitFlashTimer = 6; 
                             player.showHpTimer = 120;
-                            player.hp-=10; spawnText("-10", player.wx, player.wy, 'red'); player.combo=0; updateUI(); b.active=false; if(player.hp<=0) gameOver(); 
+                            player.hp-=10; spawnText("-10", player.wx, player.wy, 'red'); player.combo=0; updateUI(); b.active=false; if(player.hp<=0) checkGameOver(); // [MODIFIED]
                         }
                     }
                 } else {
@@ -1129,40 +1151,43 @@
             texts.forEach(x => { if(x.active) x.draw(); });
             hyperOrbs.forEach(x => { if(x.active) x.draw(); });
 
-            if(player.isHyper && player.hyperType === HYPER_SHIELD) {
+            if(player.isHyper && player.hyperType === HYPER_SHIELD && !player.isDead) {
                 ctx.strokeStyle='rgba(162,155,254,0.8)'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(CW/2,CH/2,player.r+25+Math.sin(player.shieldPulse)*3,0,Math.PI*2); ctx.stroke();
             }
             
-            // [HIT FLASH EFFECT]
-            if (player.hitFlashTimer > 3) ctx.fillStyle = '#ff4757'; // Red
-            else if (player.hitFlashTimer > 0) ctx.fillStyle = '#ffffff'; // White
-            else ctx.fillStyle = (player.isHyper && player.hyperType===HYPER_RAPID) ? '#fffa65' : player.color; // Original
+            // [HIT FLASH EFFECT] - Only draw if alive
+            if (!player.isDead) {
+                if (player.hitFlashTimer > 3) ctx.fillStyle = '#ff4757'; // Red
+                else if (player.hitFlashTimer > 0) ctx.fillStyle = '#ffffff'; // White
+                else ctx.fillStyle = (player.isHyper && player.hyperType===HYPER_RAPID) ? '#fffa65' : player.color; // Original
 
-            if(player.isDashing) { ctx.shadowColor='#f1c40f'; ctx.shadowBlur=20; ctx.fillStyle='#fff'; }
-            ctx.beginPath(); ctx.arc(CW/2, CH/2, player.r, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur=0;
-            
-            let lx = joystick.vx, ly = joystick.vy; if(lx===0&&ly===0) ly=-1;
-            const mag = Math.hypot(lx,ly); if(mag>0) { lx/=mag; ly/=mag; }
-            ctx.fillStyle='white'; ctx.beginPath(); ctx.arc(CW/2+lx*5, CH/2+ly*5, 2, 0, Math.PI*2); ctx.fill();
+                if(player.isDashing) { ctx.shadowColor='#f1c40f'; ctx.shadowBlur=20; ctx.fillStyle='#fff'; }
+                ctx.beginPath(); ctx.arc(CW/2, CH/2, player.r, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur=0;
+                
+                let lx = joystick.vx, ly = joystick.vy; if(lx===0&&ly===0) ly=-1;
+                const mag = Math.hypot(lx,ly); if(mag>0) { lx/=mag; ly/=mag; }
+                ctx.fillStyle='white'; ctx.beginPath(); ctx.arc(CW/2+lx*5, CH/2+ly*5, 2, 0, Math.PI*2); ctx.fill();
+            }
 
             // [GRAZING LOGIC PER FRAME]
             player.isGrazingNow = false; // Reset first
-            enemies.forEach(e => {
-                if(e.active) {
-                    const d = Math.hypot(e.wx-player.wx, e.wy-player.wy);
-                    if(d < player.grazeR+e.r && d > player.hitR+e.r) { 
-                        drawLightning(CW/2, CH/2, e.wx-player.wx+CW/2, e.wy-player.wy+CH/2, hc); 
-                        player.isGrazingNow = true; // Set flag
+            if (!player.isDead) {
+                enemies.forEach(e => {
+                    if(e.active) {
+                        const d = Math.hypot(e.wx-player.wx, e.wy-player.wy);
+                        if(d < player.grazeR+e.r && d > player.hitR+e.r) { 
+                            drawLightning(CW/2, CH/2, e.wx-player.wx+CW/2, e.wy-player.wy+CH/2, hc); 
+                            player.isGrazingNow = true; // Set flag
+                        }
                     }
-                }
-            });
+                });
+            }
             
             // [UPDATE GAUGE BLINK BASED ON FLAG]
-            // We update this in draw() because grazing status changes every frame
             updateUI(); 
 
-            // [HP BAR]
-            if(player.showHpTimer > 0) {
+            // [HP BAR] - Only show if not dead
+            if(player.showHpTimer > 0 && !player.isDead) {
                  const hpPct = Math.max(0, player.hp / player.maxHp);
                  const barW = 30;
                  const barH = 4;
@@ -1372,6 +1397,12 @@
         player.killCount=0; player.killTimer=0; 
         frameCount=0; 
         
+        // Reset death flags
+        player.isDead = false;
+        player.deadTimer = 0;
+        player.hitFlashTimer = 0;
+        player.showHpTimer = 0;
+
         screenShake=0; ctx.setTransform(1,0,0,1,0,0);
         
         comboEl.style.display='none'; comboLabel.style.display='none'; infoMsg.style.opacity=0;
