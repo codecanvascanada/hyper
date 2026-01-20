@@ -132,6 +132,10 @@
         #leaderboardTable th { text-align: left; border-bottom: 1px solid #666; padding: 4px; color: #0acde5; position: sticky; top: 0; background: #0f1218; }
         #leaderboardTable td { border-bottom: 1px solid #333; padding: 4px; }
         #loadingRank { font-size: 12px; color: #aaa; text-align: center; margin: 10px 0; }
+        
+        .top-rank-1 { background: rgba(255, 250, 101, 0.2); }
+        .top-rank-2 { background: rgba(255, 250, 101, 0.15); }
+        .top-rank-3 { background: rgba(255, 250, 101, 0.1); }
 
         /* Restart Button */
         #rushTimerBox { text-align: center; margin-top: 5px; opacity: 0; transition: opacity 0.5s ease-in; pointer-events: none; }
@@ -145,14 +149,13 @@
         #rushBtnText { position: relative; z-index: 1; white-space: nowrap; }
         #rushSubText { font-size: 12px; color: white; margin-top: 5px; min-height: 15px; }
 
-        /* Animation Keyframes for Score, Icon */
+        /* Animation Keyframes */
         .score-bounce { animation: scoreBounce 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
         @keyframes scoreBounce { 0% { transform: scale(0.5); opacity:0; } 60% { transform: scale(1.2); opacity:1; } 100% { transform: scale(1); opacity:1; } }
         
         .score-appear { animation: scoreAppear 0.3s ease-out forwards; }
         @keyframes scoreAppear { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        /* Icon Attach Animation */
         .icon-attach-anim { animation: iconAnim 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
         @keyframes iconAnim { 0% { transform: scale(2.5); opacity: 0; } 50% { transform: scale(0.8); opacity: 1; } 100% { transform: scale(1); } }
     </style>
@@ -261,7 +264,6 @@
         } catch(e) { console.error("Connection Error:", e); }
     }
 
-    // [Waitable Submit Score]
     async function submitScoreLL(score) {
         if(!llSessionToken) return;
         try {
@@ -271,17 +273,15 @@
                 headers: { "Content-Type": "application/json", "x-session-token": llSessionToken },
                 body: JSON.stringify({ score: score })
             });
-            // After submit, fetch leaderboard
             await fetchLeaderboardLL(); 
         } catch(e) { console.error("Submit Error:", e); }
     }
 
-    // [Waitable Fetch Leaderboard]
     async function fetchLeaderboardLL() {
         if(!llSessionToken) return;
         try {
             document.getElementById('loadingRank').innerText = "Loading Leaderboard...";
-            const res = await fetch(`https://api.lootlocker.io/game/leaderboards/${LOOTLOCKER_LEADERBOARD_KEY}/list?count=5`, {
+            const res = await fetch(`https://api.lootlocker.io/game/leaderboards/${LOOTLOCKER_LEADERBOARD_KEY}/list?count=10`, {
                 method: "GET",
                 headers: { "x-session-token": llSessionToken }
             });
@@ -294,8 +294,12 @@
                 document.getElementById('loadingRank').style.display = 'none';
                 data.items.forEach(item => {
                     const tr = document.createElement('tr');
+                    
+                    if (item.rank === 1) tr.classList.add('top-rank-1');
+                    else if (item.rank === 2) tr.classList.add('top-rank-2');
+                    else if (item.rank === 3) tr.classList.add('top-rank-3');
+
                     let nameDisplay = item.player.name ? item.player.name : `Guest_${item.player.id}`;
-                    // [MODIFIED] Orange (ME)
                     if(item.player.id == llPlayerID) nameDisplay += " <span style='color:#e67e22'>(ME)</span>";
                     
                     tr.innerHTML = `<td>${item.rank}</td><td>${nameDisplay}</td><td style="text-align:right;">${item.score.toLocaleString()}</td>`;
@@ -459,7 +463,7 @@
         constructor() {
             this.x = Math.random() * CW;
             this.y = Math.random() * CH;
-            this.z = Math.random(); // Depth: 0.0 (Far) ~ 1.0 (Near)
+            this.z = Math.random(); 
             this.baseVx = (Math.random() - 0.5) * 0.3; 
             this.baseVy = (Math.random() - 0.5) * 0.3;
             this.pushVx = 0;
@@ -477,7 +481,6 @@
                     r: this.size * (0.5 + Math.random() * 0.5),
                     a: (Math.PI * 2 / count) * i,
                     color: atomColors[Math.floor(Math.random() * atomColors.length)],
-                    // Perspective Scale: 0.6 ~ 1.4
                     scale: (0.7 + Math.random() * 0.6) * (0.6 + this.z * 0.4) 
                 });
             }
@@ -492,7 +495,6 @@
             if (dist < interactionRadius) {
                 const force = (interactionRadius - dist) / interactionRadius;
                 const angle = Math.atan2(dy, dx);
-                // Push Strength very low (subtle interaction)
                 const pushStrength = 0.05 * (0.5 + this.z * 0.5); 
                 
                 this.pushVx += Math.cos(angle) * force * pushStrength;
@@ -623,7 +625,8 @@
         isDashing: false, dashTime: 0, dashDuration: 15, dashVx: 0, dashVy: 0,
         pendingLevelUps: 0, shieldAngle: 0, shieldPulse: 0, isGrazingNow: false,
         maxCombo: 0,
-        flashGaugeTimer: 0 
+        flashGaugeTimer: 0,
+        hitFlashTimer: 0
     };
 
     let joystick = { active: false, baseX: CW*0.2, baseY: CH*0.8, stickX: CW*0.2, stickY: CH*0.8, maxRadius: 30, vx: 0, vy: 0 };
@@ -770,7 +773,10 @@
                     spawnText("BLOCK", player.wx, player.wy, '#a29bfe'); this.wx -= Math.cos(angleToPlayer)*15; this.wy -= Math.sin(angleToPlayer)*15;
                 } else {
                     if (this.isSuicide) { triggerSuicideExplosion(this); } else {
-                        const dmg = this.isElite?20:10; player.hp -= dmg; player.showHpTimer = 60; spawnText(`-${dmg}`, player.wx, player.wy, 'red');
+                        // [HIT FLASH & HP BAR TRIGGER]
+                        player.hitFlashTimer = 6; 
+                        player.showHpTimer = 120;
+                        const dmg = this.isElite?20:10; player.hp -= dmg; spawnText(`-${dmg}`, player.wx, player.wy, 'red');
                         player.combo = 0; comboEl.style.display='none'; comboLabel.style.display='none'; 
                         if(!this.isElite) this.active=false; updateUI(); if(player.hp<=0) gameOver();
                     }
@@ -916,7 +922,10 @@
         for(let i=0; i<12; i++) spawnBullet(e.wx, e.wy, (Math.PI*2/12)*i, true);
         if(Math.hypot(player.wx - e.wx, player.wy - e.wy) < e.r * 4 + player.hitR) {
             if(!player.isDashing && !(player.isHyper && player.hyperType === HYPER_SHIELD)) {
-                player.hp -= 20; player.showHpTimer = 60; spawnText("-20", player.wx, player.wy, 'red'); player.combo = 0;
+                // [HIT TRIGGER]
+                player.hitFlashTimer = 6; 
+                player.showHpTimer = 120;
+                player.hp -= 20; spawnText("-20", player.wx, player.wy, 'red'); player.combo = 0;
                 updateUI(); if(player.hp<=0) gameOver();
             } else spawnText("BLOCK", player.wx, player.wy, "#a29bfe");
         }
@@ -1014,6 +1023,8 @@
         // [MODIFIED] Grazing reset handled in draw() loop to ensure visual sync
 
         if(player.flashGaugeTimer > 0) player.flashGaugeTimer--; 
+        if(player.hitFlashTimer > 0) player.hitFlashTimer--; // Hit Flash Decrement
+        if(player.showHpTimer > 0) player.showHpTimer--; // HP Bar Decrement
 
         if(screenShake > 0) screenShake *= 0.9;
         if(player.killTimer > 0) { player.killTimer--; if(player.killTimer <= 0) { player.killCount = 0; } }
@@ -1058,7 +1069,12 @@
                 if(b.isEnemyBullet) {
                     if(Math.hypot(b.wx-player.wx, b.wy-player.wy) < player.hitR+b.r) {
                         if((player.isHyper && player.hyperType === HYPER_SHIELD) || player.isDashing) { spawnText("BLOCK", player.wx, player.wy, "#a29bfe"); b.active=false; }
-                        else { player.hp-=10; player.showHpTimer=60; spawnText("-10", player.wx, player.wy, 'red'); player.combo=0; updateUI(); b.active=false; if(player.hp<=0) gameOver(); }
+                        else { 
+                            // [HIT TRIGGER]
+                            player.hitFlashTimer = 6; 
+                            player.showHpTimer = 120;
+                            player.hp-=10; spawnText("-10", player.wx, player.wy, 'red'); player.combo=0; updateUI(); b.active=false; if(player.hp<=0) gameOver(); 
+                        }
                     }
                 } else {
                     enemies.forEach(e => {
@@ -1102,7 +1118,12 @@
             if(player.isHyper && player.hyperType === HYPER_SHIELD) {
                 ctx.strokeStyle='rgba(162,155,254,0.8)'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(CW/2,CH/2,player.r+25+Math.sin(player.shieldPulse)*3,0,Math.PI*2); ctx.stroke();
             }
-            ctx.fillStyle = (player.isHyper && player.hyperType===HYPER_RAPID) ? '#fffa65' : player.color;
+            
+            // [HIT FLASH EFFECT]
+            if (player.hitFlashTimer > 3) ctx.fillStyle = '#ff4757'; // Red
+            else if (player.hitFlashTimer > 0) ctx.fillStyle = '#ffffff'; // White
+            else ctx.fillStyle = (player.isHyper && player.hyperType===HYPER_RAPID) ? '#fffa65' : player.color; // Original
+
             if(player.isDashing) { ctx.shadowColor='#f1c40f'; ctx.shadowBlur=20; ctx.fillStyle='#fff'; }
             ctx.beginPath(); ctx.arc(CW/2, CH/2, player.r, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur=0;
             
@@ -1126,10 +1147,19 @@
             // We update this in draw() because grazing status changes every frame
             updateUI(); 
 
+            // [HP BAR]
             if(player.showHpTimer > 0) {
                  const hpPct = Math.max(0, player.hp / player.maxHp);
-                 ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(CW/2-15, CH/2-25, 30, 4);
-                 ctx.fillStyle = '#ff7675'; ctx.fillRect(CW/2-15, CH/2-25, 30*hpPct, 4);
+                 const barW = 30;
+                 const barH = 4;
+                 const barX = CW/2 - barW/2;
+                 const barY = CH/2 - 25;
+                 
+                 ctx.fillStyle = 'rgba(0,0,0,0.5)'; 
+                 ctx.fillRect(barX, barY, barW, barH);
+                 
+                 ctx.fillStyle = '#ff7675'; 
+                 ctx.fillRect(barX, barY, barW * hpPct, barH);
             }
         }
         
@@ -1176,7 +1206,6 @@
         }
     }
 
-    // Helper: Number Counting Animation
     function animateValue(obj, start, end, duration) {
         let startTimestamp = null;
         const step = (timestamp) => {
@@ -1194,13 +1223,11 @@
         gameState = 'GAMEOVER'; screenShake = 0;
         gameOverScreen.style.display = 'flex';
         
-        // 1. Calculate Scores
-        const maxComboBonus = player.maxCombo * 10; // Multiplier: 10 (Reduced from 50)
+        const maxComboBonus = player.maxCombo * 10;
         const baseScore = player.score; 
         const finalScore = baseScore + maxComboBonus;
         player.score = finalScore; 
 
-        // 2. High Score Check
         let isNew = false;
         if(player.score > highScore) { 
             highScore = player.score; 
@@ -1209,7 +1236,6 @@
         }
         newRecordMsg.style.display = isNew ? 'block' : 'none';
         
-        // 3. UI Setup (All text visible but values empty/0)
         const resultContainer = document.getElementById('resultContainer');
         resultContainer.innerHTML = `
             <div style="color:#aaa; font-size:0.9em;">Base Score: <span id="goBaseScore" style="opacity:0;">0</span></div>
@@ -1222,47 +1248,39 @@
             </div>
         `;
         
-        // Hide Buttons initially
         const rushTimerBox = document.getElementById('rushTimerBox');
         rushTimerBox.classList.remove('visible'); 
         
-        // Show Leaderboard container immediately
         const lbContainer = document.getElementById('leaderboardContainer');
         document.getElementById('loadingRank').style.display = 'block';
         document.getElementById('leaderboardBody').innerHTML = ""; 
         lbContainer.style.display = 'block'; 
 
-        // 4. Submit Score & Wait for Leaderboard (Async)
         const fetchPromise = submitScoreLL(player.score);
         const timeoutPromise = new Promise(resolve => setTimeout(resolve, 3000));
         
         await Promise.race([fetchPromise, timeoutPromise]);
 
-        // 5. Start Animation Sequence AFTER Leaderboard Loads
         const elBase = document.getElementById('goBaseScore');
         const elBonusBox = document.getElementById('goComboBonusBox');
         const elBonus = document.getElementById('goComboBonus');
         const elFinal = document.getElementById('goFinalScore');
 
-        // T=0
         elBase.innerText = baseScore.toLocaleString();
         elBase.style.opacity = 1; 
         elBase.classList.add('score-appear');
         elFinal.innerText = baseScore.toLocaleString();
 
-        // T+500ms
         setTimeout(() => {
             elBonus.innerText = "+" + maxComboBonus.toLocaleString();
             elBonusBox.style.opacity = 1;
             elBonusBox.classList.add('score-bounce');
         }, 500);
 
-        // T+1000ms
         setTimeout(() => {
             animateValue(elFinal, baseScore, finalScore, 1000);
         }, 1000);
 
-        // T+2000ms (Immediate after rolling stops)
         setTimeout(() => {
              rushTimerBox.classList.add('visible');
              startRushLogic(); 
@@ -1316,17 +1334,14 @@
         enemies=[]; bullets=[]; gems=[]; texts=[]; effects=[]; hyperOrbs=[];
         player.wx=0; player.wy=0; joystick.active=false;
 
-        // [FIX] Reset score to 0 on ANY restart
         player.score = 0; 
         
         if(canRush) { 
-            // Rush: Keep stats, Reset level
             player.level=1; player.exp=0; player.nextExp=10; 
             player.hp=player.maxHp; 
             hasRushed=true; 
         }
         else {
-            // Hard Reset
             player.hp=100; player.maxHp=100; player.level=1; player.exp=0; player.nextExp=10;
             player.damage=15; player.fireRate=25; player.baseFireRate=25; 
             player.bulletCount=1; player.critChance=0.15; player.magnet=20;
@@ -1334,7 +1349,6 @@
             hasRushed=false;
         }
         
-        // Reset per-run stats
         player.lastShot=-100; player.dashReady=true; player.dashCool=0; 
         player.combo=0; player.maxCombo=0; 
         player.killCount=0; player.killTimer=0; 
@@ -1346,7 +1360,6 @@
         gameOverScreen.style.display='none'; 
         gameState='PLAY'; 
         
-        // [FIX] Update UI immediately to show 0 score & Latest High Score
         scoreVal.innerText = "0"; 
         bestVal.innerText = parseInt(highScore).toLocaleString();
         
