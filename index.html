@@ -1214,8 +1214,9 @@
         gameOverScreen.style.display='none'; 
         gameState='PLAY'; 
         
-        // [FIX] Update UI immediately to show 0 score
+        // [FIX] Update UI immediately to show 0 score & Latest High Score
         scoreVal.innerText = "0"; 
+        bestVal.innerText = parseInt(highScore).toLocaleString();
         
         player.isGrazingNow = false;
         document.getElementById('rightHud').classList.remove('gauge-charging');
