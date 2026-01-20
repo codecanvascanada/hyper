@@ -64,7 +64,6 @@
         #comboCount { font-size: 48px; font-weight: 900; color: #fffa65; text-shadow: 0 0 15px rgba(255, 165, 2, 0.8); display: none; transition: transform 0.05s; }
         #comboLabel { font-size: 12px; color: #81ecec; letter-spacing: 3px; font-weight: bold; display:none; text-shadow: 0 0 5px #00cec9; }
 
-        /* [Hyper Gauge & Dynamic Blinking Effect] */
         #rightHud { 
             position: absolute; right: 15px; top: 25%; height: 30%; 
             display: flex; flex-direction: column; align-items: center; gap: 2px; 
@@ -74,17 +73,11 @@
         #hyperContainer { width: 10px; flex: 1; background: rgba(0,0,0,0.6); border: 1px solid #555; display: flex; flex-direction: column-reverse; box-shadow: 0 0 5px rgba(0,0,0,0.5); transition: box-shadow 0.1s; }
         #hyperFill { width: 100%; height: 0%; background: linear-gradient(to top, #6c5ce7, #a29bfe); transition: height 0.1s linear, filter 0.1s; }
         
-        /* Reduced intensity & Variable color */
-        .gauge-charging { transform: scale(1.05); } /* Slightly less pop */
-        .gauge-charging #hyperContainer { 
-            animation: gaugeBlink 0.1s infinite alternate; 
-            border-color: #fff !important; 
-        }
-        
-        /* Uses CSS Variable --skill-color set by JS */
+        .gauge-charging { transform: scale(1.05); }
+        .gauge-charging #hyperContainer { animation: gaugeBlink 0.1s infinite alternate; border-color: #fff !important; }
         @keyframes gaugeBlink { 
             0% { box-shadow: 0 0 2px var(--skill-color, #fffa65); } 
-            100% { box-shadow: 0 0 10px var(--skill-color, #fffa65); } /* Reduced to 10px */
+            100% { box-shadow: 0 0 10px var(--skill-color, #fffa65); } 
         }
 
         #dashZone { position: absolute; right: 30px; bottom: 40px; pointer-events: auto; display: flex; flex-direction: column; align-items: center; }
@@ -133,7 +126,7 @@
         #btnName.edit-mode { background: #555; color: #fff; }
         #btnName:disabled { background: #555; color: #aaa; cursor: not-allowed; }
 
-        /* Leaderboard */
+        /* Leaderboard - No Custom Colors except ME */
         #leaderboardContainer { width: 85%; margin: 5px 0 15px 0; background: rgba(0,0,0,0.5); border: 1px solid #444; padding: 10px; min-height: 100px; max-height: 250px; overflow-y: auto; border-radius: 5px; }
         #leaderboardTable { width: 100%; border-collapse: collapse; font-size: 12px; color: #ddd; }
         #leaderboardTable th { text-align: left; border-bottom: 1px solid #666; padding: 4px; color: #0acde5; position: sticky; top: 0; background: #0f1218; }
@@ -298,7 +291,8 @@
                 data.items.forEach(item => {
                     const tr = document.createElement('tr');
                     let nameDisplay = item.player.name ? item.player.name : `Guest_${item.player.id}`;
-                    if(item.player.id == llPlayerID) nameDisplay += " (ME)";
+                    // [MODIFIED] Orange (ME)
+                    if(item.player.id == llPlayerID) nameDisplay += " <span style='color:#e67e22'>(ME)</span>";
                     
                     tr.innerHTML = `<td>${item.rank}</td><td>${nameDisplay}</td><td style="text-align:right;">${item.score.toLocaleString()}</td>`;
                     tbody.appendChild(tr);
