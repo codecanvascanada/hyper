@@ -420,7 +420,7 @@
         '#2ecc71'  // EMP Green
     ];
 
-    // [배경 원자/분자 효과 클래스 - Refined & 3D]
+    // [배경 원자/분자 효과 클래스]
     class AtomCluster {
         constructor() {
             this.x = Math.random() * CW;
@@ -440,7 +440,8 @@
                 this.nodes.push({
                     r: this.size * (0.5 + Math.random() * 0.5),
                     a: (Math.PI * 2 / count) * i,
-                    color: atomColors[Math.floor(Math.random() * atomColors.length)]
+                    color: atomColors[Math.floor(Math.random() * atomColors.length)],
+                    scale: 0.6 + Math.random() * 0.8 // [원근감] 점 크기 다양화 (0.6 ~ 1.4배)
                 });
             }
         }
@@ -454,7 +455,10 @@
             if (dist < interactionRadius) {
                 const force = (interactionRadius - dist) / interactionRadius;
                 const angle = Math.atan2(dy, dx);
-                const pushStrength = 0.3; 
+                
+                // [미세 조정] 밀어내는 힘을 0.05로 대폭 감소 (살짝 문지르는 느낌)
+                const pushStrength = 0.05; 
+                
                 this.pushVx += Math.cos(angle) * force * pushStrength;
                 this.pushVy += Math.sin(angle) * force * pushStrength;
             }
@@ -480,7 +484,8 @@
                 return {
                     x: this.x + Math.cos(this.angle + n.a) * n.r,
                     y: this.y + Math.sin(this.angle + n.a) * n.r,
-                    color: n.color
+                    color: n.color,
+                    scale: n.scale
                 };
             });
 
@@ -494,14 +499,16 @@
 
             points.forEach(p => {
                 ctx.beginPath();
-                const dotRadius = 4.5; 
+                // [원근감] 기본 크기 4.5에 스케일 적용
+                const dotRadius = 4.5 * p.scale; 
+                
                 const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, dotRadius);
                 gradient.addColorStop(0, 'rgba(255, 255, 255, 0.9)'); 
                 gradient.addColorStop(0.4, p.color); 
                 gradient.addColorStop(1, 'rgba(0,0,0,0)'); 
 
                 ctx.fillStyle = gradient;
-                ctx.globalAlpha = 0.7; 
+                ctx.globalAlpha = 0.8; 
                 ctx.arc(p.x, p.y, dotRadius, 0, Math.PI*2);
                 ctx.fill();
                 ctx.globalAlpha = 1.0; 
@@ -903,8 +910,9 @@
         typeIcon.classList.remove('icon-attach-anim'); void typeIcon.offsetWidth; typeIcon.classList.add('icon-attach-anim');
     }
 
+    // [수정] 그리드 그리기 함수 복구
     function drawGrid() {
-        ctx.fillStyle = '#0f1218'; ctx.fillRect(0, 0, CW, CH);
+        ctx.fillStyle = '#0f1218'; ctx.fillRect(0, 0, CW, CH); // 배경색 채우기
         ctx.strokeStyle = '#1e2328'; ctx.lineWidth = 2; ctx.beginPath();
         const sz = 60; const offX = ((player.wx % sz) + sz) % sz; const offY = ((player.wy % sz) + sz) % sz;
         for(let x = -offX; x < CW; x += sz) { ctx.moveTo(x, 0); ctx.lineTo(x, CH); }
@@ -954,8 +962,8 @@
         const rate = (player.isHyper && player.hyperType===HYPER_RAPID) ? 5 : Math.max(10, 60 - player.level);
         if(frameCount % rate === 0) getObj(enemies, Enemy).spawn(false);
         if(frameCount % 900 === 0 && player.level >= 3) {
-            const activeBosses = enemies.filter(e => e.active && e.isElite).length;
-            if(activeBosses < (player.level>=9?2:1)) getObj(enemies, Enemy).spawn(true);
+            const activeBosses = enemies.filter(e => e.active && e.isElite).length; let maxBosses = 1; if(player.level >= 9) maxBosses = 2; if(player.level >= 18) maxBosses = 3;
+            if(activeBosses < maxBosses) getObj(enemies, Enemy).spawn(true);
         }
 
         bullets.forEach(b => {
@@ -985,24 +993,21 @@
         hyperOrbs.forEach(x => { if(x.active) x.update(); });
     }
 
+    // [수정] draw 함수 구조 변경: 상태에 따라 배경을 다르게 그림
     function draw() {
         ctx.save();
         if(screenShake>0) { const rx = (Math.random() - 0.5) * screenShake; const ry = (Math.random() - 0.5) * screenShake; ctx.translate(rx, ry); }
         
-        // 1. 배경 처리
-        if (gameState === 'PLAY') {
-            // 게임 중: 그리드
-            drawGrid();
-        } else {
-            // 타이틀 / 게임오버 / 레벨업: 어두운 배경 + 원자 애니메이션
+        if (gameState === 'TITLE') {
+            // [타이틀 화면] 원자 애니메이션만 그리기 (배경은 투명)
             ctx.fillStyle = '#0f1218'; 
             ctx.fillRect(0, 0, CW, CH);
             bgAtoms.forEach(a => { a.update(); a.draw(ctx); });
-        }
+        } else {
+            // [플레이, 일시정지(레벨업), 게임오버] 게임 화면 그리기
+            drawGrid(); // 그리드 배경
 
-        // 2. 게임 요소 처리 (PLAY, PAUSE, GAMEOVER 모두 게임 화면은 뒤에 보여야 함)
-        // 단, 타이틀 화면일 때는 게임 요소를 그리지 않음
-        if (gameState !== 'TITLE') {
+            // 게임 오브젝트 그리기
             let hc = (player.hyperType === HYPER_RAPID) ? '#f1c40f' : (player.hyperType === HYPER_EMP ? '#2ecc71' : '#9b59b6');
             ctx.strokeStyle = hc; ctx.globalAlpha = 0.4; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(CW/2, CH/2, player.grazeR, 0, Math.PI*2); ctx.stroke(); ctx.globalAlpha = 1.0;
 
@@ -1039,7 +1044,10 @@
         }
         
         if(screenShake > 20) { ctx.fillStyle=`rgba(255,255,255,${screenShake/100})`; ctx.fillRect(0,0,CW,CH); }
-        ctx.restore(); drawJoystick();
+        ctx.restore(); 
+        
+        // 조이스틱은 플레이 중일 때만
+        if (gameState === 'PLAY') drawJoystick();
     }
 
     function loop() { requestAnimationFrame(loop); if(gameState==='PLAY') { update(); } draw(); }
