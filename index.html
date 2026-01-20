@@ -260,20 +260,22 @@
         } catch(e) { console.error("Connection Error:", e); }
     }
 
+    // [Waitable Submit Score]
     async function submitScoreLL(score) {
         if(!llSessionToken) return;
         try {
             document.getElementById('loadingRank').innerText = "Uploading Score...";
-            const res = await fetch(`https://api.lootlocker.io/game/leaderboards/${LOOTLOCKER_LEADERBOARD_KEY}/submit`, {
+            await fetch(`https://api.lootlocker.io/game/leaderboards/${LOOTLOCKER_LEADERBOARD_KEY}/submit`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "x-session-token": llSessionToken },
                 body: JSON.stringify({ score: score })
             });
-            await res.json(); 
-            fetchLeaderboardLL(); 
+            // After submit, fetch leaderboard
+            await fetchLeaderboardLL(); 
         } catch(e) { console.error("Submit Error:", e); }
     }
 
+    // [Waitable Fetch Leaderboard]
     async function fetchLeaderboardLL() {
         if(!llSessionToken) return;
         try {
@@ -1165,7 +1167,7 @@
         gameOverScreen.style.display = 'flex';
         
         // 1. Calculate Scores
-        const maxComboBonus = player.maxCombo * 50; // Multiplier fixed to 50
+        const maxComboBonus = player.maxCombo * 10; // Multiplier: 10
         const baseScore = player.score; 
         const finalScore = baseScore + maxComboBonus;
         player.score = finalScore; 
@@ -1179,7 +1181,7 @@
         }
         newRecordMsg.style.display = isNew ? 'block' : 'none';
         
-        // 3. UI Setup
+        // 3. UI Setup (All text visible but values empty/0)
         const resultContainer = document.getElementById('resultContainer');
         resultContainer.innerHTML = `
             <div style="color:#aaa; font-size:0.9em;">Base Score: <span id="goBaseScore" style="opacity:0;">0</span></div>
@@ -1190,47 +1192,52 @@
             <div style="font-size:1.2em; font-weight:bold; color:white; border-top:1px solid #444; padding-top:5px;">
                 FINAL: <span id="goFinalScore">0</span>
             </div>
-        `;
+            `;
         
+        // Hide Buttons initially
         const rushTimerBox = document.getElementById('rushTimerBox');
         rushTimerBox.classList.remove('visible'); 
         
+        // Show Leaderboard container immediately
         const lbContainer = document.getElementById('leaderboardContainer');
         document.getElementById('loadingRank').style.display = 'block';
         document.getElementById('leaderboardBody').innerHTML = ""; 
         lbContainer.style.display = 'block'; 
 
         // 4. Submit Score & Wait for Leaderboard (Async)
+        // We race against a timeout so the game doesn't freeze if network is slow
         const fetchPromise = submitScoreLL(player.score);
         const timeoutPromise = new Promise(resolve => setTimeout(resolve, 3000));
         
         await Promise.race([fetchPromise, timeoutPromise]);
 
-        // 5. Start Animation Sequence
+        // 5. Start Animation Sequence AFTER Leaderboard Loads
         const elBase = document.getElementById('goBaseScore');
         const elBonusBox = document.getElementById('goComboBonusBox');
         const elBonus = document.getElementById('goComboBonus');
         const elFinal = document.getElementById('goFinalScore');
 
-        // T=0
+        // T=0: Base Score Appears & Final Score shows Base Score
         elBase.innerText = baseScore.toLocaleString();
         elBase.style.opacity = 1; 
         elBase.classList.add('score-appear');
+        
+        // Final score starts at Base Score before rolling up
         elFinal.innerText = baseScore.toLocaleString();
 
-        // T+500ms
+        // T+500ms: Bonus Bounces in
         setTimeout(() => {
             elBonus.innerText = "+" + maxComboBonus.toLocaleString();
             elBonusBox.style.opacity = 1;
             elBonusBox.classList.add('score-bounce');
         }, 500);
 
-        // T+1000ms
+        // T+1000ms: Final Score Rolls Up to Total
         setTimeout(() => {
             animateValue(elFinal, baseScore, finalScore, 1000);
         }, 1000);
 
-        // T+4500ms (Delayed Button Appearance)
+        // T+4500ms (Delayed Button Appearance as requested: +2s from prev 2.5s)
         setTimeout(() => {
              rushTimerBox.classList.add('visible');
              startRushLogic(); 
@@ -1284,14 +1291,17 @@
         enemies=[]; bullets=[]; gems=[]; texts=[]; effects=[]; hyperOrbs=[];
         player.wx=0; player.wy=0; joystick.active=false;
 
+        // [FIX] Reset score to 0 on ANY restart
         player.score = 0; 
         
         if(canRush) { 
+            // Rush: Keep stats, Reset level
             player.level=1; player.exp=0; player.nextExp=10; 
             player.hp=player.maxHp; 
             hasRushed=true; 
         }
         else {
+            // Hard Reset
             player.hp=100; player.maxHp=100; player.level=1; player.exp=0; player.nextExp=10;
             player.damage=15; player.fireRate=25; player.baseFireRate=25; 
             player.bulletCount=1; player.critChance=0.15; player.magnet=20;
@@ -1299,6 +1309,7 @@
             hasRushed=false;
         }
         
+        // Reset per-run stats
         player.lastShot=-100; player.dashReady=true; player.dashCool=0; 
         player.combo=0; player.maxCombo=0; 
         player.killCount=0; player.killTimer=0; 
@@ -1310,6 +1321,7 @@
         gameOverScreen.style.display='none'; 
         gameState='PLAY'; 
         
+        // [FIX] Update UI immediately to show 0 score & Latest High Score
         scoreVal.innerText = "0"; 
         bestVal.innerText = parseInt(highScore).toLocaleString();
         
