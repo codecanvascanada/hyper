@@ -78,8 +78,8 @@
         /* [모달 공통] */
         .modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); display: none; flex-direction: column; justify-content: center; align-items: center; pointer-events: auto; z-index: 100; }
 
-        /* [타이틀 화면] */
-        #titleScreen { display: flex; background: #0f1218; z-index: 200; } /* 초기 화면 */
+        /* [타이틀 화면 - 수정: 배경을 반투명하게 변경하여 캔버스 그리드가 보이게 함] */
+        #titleScreen { display: flex; background: rgba(15, 18, 24, 0.85); z-index: 200; } /* 초기 화면 */
         #gameTitle { color: #00f3ff; font-size: 40px; font-weight: 900; margin-bottom: 40px; letter-spacing: 4px; font-style: italic; text-shadow: 0 0 15px rgba(0,243,255,0.7); animation: neonPulse 1.5s infinite alternate; }
         @keyframes neonPulse { from { text-shadow: 0 0 10px rgba(0,243,255,0.6); transform: scale(1); } to { text-shadow: 0 0 25px rgba(0,243,255,0.9); transform: scale(1.03); } }
 
@@ -98,9 +98,12 @@
         
         /* 이름 입력창 (타이틀 화면용) */
         #nameInputBox { margin: 10px 0; display: flex; gap: 5px; justify-content: center; z-index: 101; }
-        #inputName { background: #1e2328; border: 1px solid #0acde5; color: #fff; padding: 8px; border-radius: 4px; outline: none; font-weight: bold; text-align: center; width: 140px; font-family: 'Segoe UI', sans-serif; }
+        #inputName { background: #1e2328; border: 1px solid #0acde5; color: #fff; padding: 8px; border-radius: 4px; outline: none; font-weight: bold; text-align: center; width: 140px; font-family: 'Segoe UI', sans-serif; transition: all 0.2s; }
         #inputName:focus { box-shadow: 0 0 8px #0acde5; background: #2d3436; }
-        #inputName:disabled { background: #333; border-color: #555; color: #aaa; cursor: not-allowed; }
+        
+        /* [수정] readonly 상태일 때 스타일 (클릭 가능하게 커서 변경) */
+        #inputName[readonly] { background: #333; border-color: #555; color: #aaa; cursor: pointer; }
+        
         #btnName { background: #0acde5; color: #000; border: none; padding: 0 15px; font-weight: bold; cursor: pointer; border-radius: 4px; font-family: 'Segoe UI', sans-serif; transition: transform 0.1s; }
         #btnName:active { transform: scale(0.95); }
         #btnName.edit-mode { background: #555; color: #fff; }
@@ -294,25 +297,33 @@
         }
     }
 
+    // [수정] disabled 대신 readOnly 사용 및 클릭 이벤트 추가
     function lockNameInput(locked) {
         isNameLocked = locked;
         const input = document.getElementById('inputName');
         const btn = document.getElementById('btnName');
         
         if(locked) {
-            input.disabled = true;
-            btn.innerText = "START"; // 타이틀 화면에서는 START
-            btn.classList.add('edit-mode'); // 스타일 재사용 (회색 버튼)
-            btn.disabled = false; // 잠겨있어도 START 버튼은 활성화
+            input.readOnly = true; // 수정 불가, 클릭은 가능
+            btn.innerText = "START"; 
+            btn.classList.add('edit-mode');
+            btn.disabled = false; 
         } else {
-            input.disabled = false;
+            input.readOnly = false; // 수정 가능
             btn.innerText = "START";
             btn.classList.remove('edit-mode');
             input.focus();
-            // 이름이 없으면 START 버튼 비활성화
             btn.disabled = input.value.trim() === "";
         }
     }
+
+    // [추가] 읽기 전용 상태일 때 입력창 클릭 시 잠금 해제
+    document.getElementById('inputName').addEventListener('click', function() {
+        if (this.readOnly && gameState === 'TITLE') {
+            lockNameInput(false);
+            this.select(); // 전체 선택하여 바로 수정하기 편하게
+        }
+    });
 
     // 입력창에 내용이 바뀔 때마다 버튼 활성화 상태 업데이트
     document.getElementById('inputName').addEventListener('input', function() {
@@ -376,7 +387,6 @@
 
     window.onload = function() {
         initLootLocker();
-        // loadSavedName()는 initLootLocker 완료 후 호출됨
     };
 
     // ==========================================
@@ -848,6 +858,7 @@
         ctx.save();
         if(screenShake>0) ctx.translate((Math.random()-0.5)*screenShake, (Math.random()-0.5)*screenShake);
         
+        // [수정] 배경과 그리드는 항상 그립니다.
         ctx.fillStyle = '#0f1218'; ctx.fillRect(0, 0, CW, CH);
         ctx.strokeStyle = '#1e2328'; ctx.lineWidth = 2; ctx.beginPath();
         const sz=60, offX=((player.wx%sz)+sz)%sz, offY=((player.wy%sz)+sz)%sz;
@@ -855,49 +866,58 @@
         for(let y=-offY; y<CH; y+=sz) { ctx.moveTo(0,y); ctx.lineTo(CW,y); }
         ctx.stroke();
 
-        let hc = (player.hyperType === HYPER_RAPID) ? '#f1c40f' : (player.hyperType === HYPER_EMP ? '#2ecc71' : '#9b59b6');
-        ctx.strokeStyle = hc; ctx.globalAlpha = 0.4; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(CW/2, CH/2, player.grazeR, 0, Math.PI*2); ctx.stroke(); ctx.globalAlpha = 1.0;
+        // [수정] 게임 오브젝트들은 PLAY 상태일 때만 그립니다.
+        if (gameState === 'PLAY') {
+            let hc = (player.hyperType === HYPER_RAPID) ? '#f1c40f' : (player.hyperType === HYPER_EMP ? '#2ecc71' : '#9b59b6');
+            ctx.strokeStyle = hc; ctx.globalAlpha = 0.4; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(CW/2, CH/2, player.grazeR, 0, Math.PI*2); ctx.stroke(); ctx.globalAlpha = 1.0;
 
-        gems.forEach(x => { if(x.active) x.draw(); });
-        effects.forEach(x => { if(x.active) x.draw(); });
-        bullets.forEach(x => { if(x.active) x.draw(); });
-        enemies.forEach(x => { if(x.active) x.draw(); });
-        texts.forEach(x => { if(x.active) x.draw(); });
-        hyperOrbs.forEach(x => { if(x.active) x.draw(); });
+            gems.forEach(x => { if(x.active) x.draw(); });
+            effects.forEach(x => { if(x.active) x.draw(); });
+            bullets.forEach(x => { if(x.active) x.draw(); });
+            enemies.forEach(x => { if(x.active) x.draw(); });
+            texts.forEach(x => { if(x.active) x.draw(); });
+            hyperOrbs.forEach(x => { if(x.active) x.draw(); });
 
-        if(player.isHyper && player.hyperType === HYPER_SHIELD) {
-            ctx.strokeStyle='rgba(162,155,254,0.8)'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(CW/2,CH/2,player.r+25+Math.sin(player.shieldPulse)*3,0,Math.PI*2); ctx.stroke();
-        }
-        ctx.fillStyle = (player.isHyper && player.hyperType===HYPER_RAPID) ? '#fffa65' : player.color;
-        if(player.isDashing) { ctx.shadowColor='#f1c40f'; ctx.shadowBlur=20; ctx.fillStyle='#fff'; }
-        ctx.beginPath(); ctx.arc(CW/2, CH/2, player.r, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur=0;
-        
-        let lx = joystick.vx, ly = joystick.vy; if(lx===0&&ly===0) ly=-1;
-        const mag = Math.hypot(lx,ly); if(mag>0) { lx/=mag; ly/=mag; }
-        ctx.fillStyle='white'; ctx.beginPath(); ctx.arc(CW/2+lx*5, CH/2+ly*5, 2, 0, Math.PI*2); ctx.fill();
-
-        enemies.forEach(e => {
-            if(e.active) {
-                const d = Math.hypot(e.wx-player.wx, e.wy-player.wy);
-                if(d < player.grazeR+e.r && d > player.hitR+e.r) { drawLightning(CW/2, CH/2, e.wx-player.wx+CW/2, e.wy-player.wy+CH/2, hc); player.isGrazingNow = true; }
+            if(player.isHyper && player.hyperType === HYPER_SHIELD) {
+                ctx.strokeStyle='rgba(162,155,254,0.8)'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(CW/2,CH/2,player.r+25+Math.sin(player.shieldPulse)*3,0,Math.PI*2); ctx.stroke();
             }
-        });
+            ctx.fillStyle = (player.isHyper && player.hyperType===HYPER_RAPID) ? '#fffa65' : player.color;
+            if(player.isDashing) { ctx.shadowColor='#f1c40f'; ctx.shadowBlur=20; ctx.fillStyle='#fff'; }
+            ctx.beginPath(); ctx.arc(CW/2, CH/2, player.r, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur=0;
+            
+            let lx = joystick.vx, ly = joystick.vy; if(lx===0&&ly===0) ly=-1;
+            const mag = Math.hypot(lx,ly); if(mag>0) { lx/=mag; ly/=mag; }
+            ctx.fillStyle='white'; ctx.beginPath(); ctx.arc(CW/2+lx*5, CH/2+ly*5, 2, 0, Math.PI*2); ctx.fill();
 
-        if(player.showHpTimer > 0) {
-             const hpPct = Math.max(0, player.hp / player.maxHp);
-             ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(CW/2-15, CH/2-25, 30, 4);
-             ctx.fillStyle = '#ff7675'; ctx.fillRect(CW/2-15, CH/2-25, 30*hpPct, 4);
+            enemies.forEach(e => {
+                if(e.active) {
+                    const d = Math.hypot(e.wx-player.wx, e.wy-player.wy);
+                    if(d < player.grazeR+e.r && d > player.hitR+e.r) { drawLightning(CW/2, CH/2, e.wx-player.wx+CW/2, e.wy-player.wy+CH/2, hc); player.isGrazingNow = true; }
+                }
+            });
+
+            if(player.showHpTimer > 0) {
+                 const hpPct = Math.max(0, player.hp / player.maxHp);
+                 ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(CW/2-15, CH/2-25, 30, 4);
+                 ctx.fillStyle = '#ff7675'; ctx.fillRect(CW/2-15, CH/2-25, 30*hpPct, 4);
+            }
         }
+        
         if(screenShake > 20) { ctx.fillStyle=`rgba(255,255,255,${screenShake/100})`; ctx.fillRect(0,0,CW,CH); }
         ctx.restore();
 
-        if(joystick.active) {
+        if(joystick.active && gameState === 'PLAY') {
             ctx.beginPath(); ctx.arc(joystick.baseX, joystick.baseY, joystick.maxRadius, 0, Math.PI*2); ctx.strokeStyle='rgba(255,255,255,0.05)'; ctx.lineWidth=4; ctx.stroke();
             ctx.beginPath(); ctx.arc(joystick.stickX, joystick.stickY, 20, 0, Math.PI*2); ctx.fillStyle='rgba(10,205,229,0.1)'; ctx.fill();
         }
     }
 
-    function loop() { requestAnimationFrame(loop); if(gameState==='PLAY') { update(); draw(); } }
+    // [수정] 게임 루프에서 draw()는 항상 호출하여 배경을 그립니다.
+    function loop() { 
+        requestAnimationFrame(loop); 
+        if(gameState==='PLAY') update(); 
+        draw(); 
+    }
 
     function levelUp() {
         gameState='PAUSE'; joystick.active=false; joystick.vx=0; joystick.vy=0;
