@@ -74,7 +74,13 @@
         #pcGuide { position: absolute; bottom: 20px; width: 100%; text-align: center; color: #666; font-size: 11px; pointer-events: none; font-weight: bold; }
         @media (hover: none) and (pointer: coarse) { #pcGuide { display: none; } }
 
-        .modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); display: none; flex-direction: column; justify-content: center; align-items: center; pointer-events: auto; z-index: 100; }
+        /* [모달 공통 - 수정: 블러 제거] */
+        .modal { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.85); /* 기본 반투명 배경 */
+            /* backdrop-filter: blur(5px);  <- 블러 제거 */
+            display: none; flex-direction: column; justify-content: center; align-items: center; pointer-events: auto; z-index: 100; 
+        }
 
         /* [타이틀 화면 - 배경 투명하게 수정] */
         #titleScreen { 
@@ -85,6 +91,11 @@
         }
         #gameTitle { color: #00f3ff; font-size: 40px; font-weight: 900; margin-bottom: 40px; letter-spacing: 4px; font-style: italic; text-shadow: 0 0 15px rgba(0,243,255,0.7); animation: neonPulse 1.5s infinite alternate; }
         @keyframes neonPulse { from { text-shadow: 0 0 10px rgba(0,243,255,0.6); transform: scale(1); } to { text-shadow: 0 0 25px rgba(0,243,255,0.9); transform: scale(1.03); } }
+
+        /* [게임오버 화면 - 수정: 배경을 반투명하게] */
+        #gameOverScreen {
+            background: rgba(15, 18, 24, 0.85); /* 타이틀과 비슷한 반투명 배경 */
+        }
 
         .card { background: #0f1218; color: #c8aa6e; width: 240px; margin: 8px auto; padding: 12px 15px; border: 1px solid #c8aa6e; box-shadow: 0 0 10px rgba(200, 170, 110, 0.2); transition: transform 0.1s; cursor: pointer; opacity: 0; transform: translateY(20px) scale(0.9); animation: cardEntry 0.3s forwards; display: flex; flex-direction: row; align-items: center; text-align: left; }
         @keyframes cardEntry { to { opacity: 1; transform: translateY(0) scale(1); } }
@@ -917,13 +928,8 @@
         ctx.save();
         if(screenShake>0) ctx.translate((Math.random()-0.5)*screenShake, (Math.random()-0.5)*screenShake);
         
+        // [수정] 배경색만 칠하고 그리드 그리기 코드는 삭제함
         ctx.fillStyle = '#0f1218'; ctx.fillRect(0, 0, CW, CH);
-        // [수정] 그리드를 조금 더 밝게(#333) 변경
-        ctx.strokeStyle = '#333'; ctx.lineWidth = 2; ctx.beginPath();
-        const sz=60, offX=((player.wx%sz)+sz)%sz, offY=((player.wy%sz)+sz)%sz;
-        for(let x=-offX; x<CW; x+=sz) { ctx.moveTo(x,0); ctx.lineTo(x,CH); }
-        for(let y=-offY; y<CH; y+=sz) { ctx.moveTo(0,y); ctx.lineTo(CW,y); }
-        ctx.stroke();
 
         // 배경 애니메이션 (항상 그리기)
         bgAtoms.forEach(a => { a.update(); a.draw(ctx); });
