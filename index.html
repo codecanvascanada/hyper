@@ -21,7 +21,7 @@
         /* [게임 화면] */
         #gameContainer { 
             position: relative; 
-            background: #0f1218; /* 아주 짙은 남색 배경 */
+            background: #0f1218; 
             overflow: hidden; 
             box-shadow: 0 0 30px rgba(0,210,211,0.2);
             aspect-ratio: 9 / 16;
@@ -74,28 +74,21 @@
         #pcGuide { position: absolute; bottom: 20px; width: 100%; text-align: center; color: #666; font-size: 11px; pointer-events: none; font-weight: bold; }
         @media (hover: none) and (pointer: coarse) { #pcGuide { display: none; } }
 
-        /* [모달 공통 - 수정: 블러 제거] */
         .modal { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.85); /* 기본 반투명 배경 */
-            /* backdrop-filter: blur(5px);  <- 블러 제거 */
+            background: rgba(0,0,0,0.85); 
             display: none; flex-direction: column; justify-content: center; align-items: center; pointer-events: auto; z-index: 100; 
         }
 
-        /* [타이틀 화면 - 배경 투명하게 수정] */
         #titleScreen { 
             display: flex; 
-            /* 뒤의 캔버스(원자 애니메이션)가 보이도록 투명도 조정 */
-            background: rgba(15, 18, 24, 0.3); 
+            background: rgba(15, 18, 24, 0.3); /* 배경 투명하게 */
             z-index: 200; 
         }
         #gameTitle { color: #00f3ff; font-size: 40px; font-weight: 900; margin-bottom: 40px; letter-spacing: 4px; font-style: italic; text-shadow: 0 0 15px rgba(0,243,255,0.7); animation: neonPulse 1.5s infinite alternate; }
         @keyframes neonPulse { from { text-shadow: 0 0 10px rgba(0,243,255,0.6); transform: scale(1); } to { text-shadow: 0 0 25px rgba(0,243,255,0.9); transform: scale(1.03); } }
 
-        /* [게임오버 화면 - 수정: 배경을 반투명하게] */
-        #gameOverScreen {
-            background: rgba(15, 18, 24, 0.85); /* 타이틀과 비슷한 반투명 배경 */
-        }
+        #gameOverScreen { background: rgba(15, 18, 24, 0.85); }
 
         .card { background: #0f1218; color: #c8aa6e; width: 240px; margin: 8px auto; padding: 12px 15px; border: 1px solid #c8aa6e; box-shadow: 0 0 10px rgba(200, 170, 110, 0.2); transition: transform 0.1s; cursor: pointer; opacity: 0; transform: translateY(20px) scale(0.9); animation: cardEntry 0.3s forwards; display: flex; flex-direction: row; align-items: center; text-align: left; }
         @keyframes cardEntry { to { opacity: 1; transform: translateY(0) scale(1); } }
@@ -397,34 +390,74 @@
     const CW = 360, CH = 640;
     canvas.width = CW; canvas.height = CH;
 
+    // [Mouse Interaction Setup]
+    let mouse = { x: -1000, y: -1000 };
+    
+    function updateMousePos(e) {
+        const rect = canvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        mouse.x = (clientX - rect.left) * (CW / rect.width);
+        mouse.y = (clientY - rect.top) * (CH / rect.height);
+    }
+
+    window.addEventListener('mousemove', updateMousePos);
+    window.addEventListener('touchmove', updateMousePos, {passive: true});
+    window.addEventListener('touchstart', updateMousePos, {passive: true});
+
+
     // [배경 원자/분자 효과 클래스]
     class AtomCluster {
         constructor() {
             this.x = Math.random() * CW;
             this.y = Math.random() * CH;
-            this.vx = (Math.random() - 0.5) * 0.5; // 천천히 이동
-            this.vy = (Math.random() - 0.5) * 0.5;
+            // Base Drift Velocity (기본 이동 속도)
+            this.baseVx = (Math.random() - 0.5) * 0.5;
+            this.baseVy = (Math.random() - 0.5) * 0.5;
+            // Interaction Velocity (밀려나는 속도)
+            this.pushVx = 0;
+            this.pushVy = 0;
+            
             this.angle = Math.random() * Math.PI * 2;
-            this.spinSpeed = (Math.random() - 0.5) * 0.02; // 천천히 회전
-            this.size = 30 + Math.random() * 40;
+            this.spinSpeed = (Math.random() - 0.5) * 0.02;
+            this.size = 30 + Math.random() * 40; // repulsion radius
+            
             this.nodes = [];
-            // 중앙을 중심으로 도는 작은 점들 생성
-            let count = 3 + Math.floor(Math.random() * 3); // 3~5개
+            let count = 3 + Math.floor(Math.random() * 3);
             for(let i=0; i<count; i++) {
                 this.nodes.push({
-                    r: this.size * (0.5 + Math.random() * 0.5), // 거리
-                    a: (Math.PI * 2 / count) * i // 각도
+                    r: this.size * (0.5 + Math.random() * 0.5),
+                    a: (Math.PI * 2 / count) * i
                 });
             }
-            // 색상: 은은한 청록색 (투명도 다양하게)
             this.color = `rgba(10, 205, 229, ${0.1 + Math.random() * 0.15})`; 
         }
         update() {
-            this.x += this.vx;
-            this.y += this.vy;
+            // [Interactive Repulsion Logic]
+            const dx = this.x - mouse.x;
+            const dy = this.y - mouse.y;
+            const dist = Math.hypot(dx, dy);
+            const interactionRadius = 150; // 마우스 감지 범위
+
+            if (dist < interactionRadius) {
+                const force = (interactionRadius - dist) / interactionRadius;
+                const angle = Math.atan2(dy, dx);
+                const pushStrength = 2.0; // 미는 힘 강도
+                
+                this.pushVx += Math.cos(angle) * force * pushStrength;
+                this.pushVy += Math.sin(angle) * force * pushStrength;
+            }
+
+            // Apply friction to push velocity (서서히 감속)
+            this.pushVx *= 0.95;
+            this.pushVy *= 0.95;
+
+            // Apply positions
+            this.x += this.baseVx + this.pushVx;
+            this.y += this.baseVy + this.pushVy;
             this.angle += this.spinSpeed;
 
-            // 화면 밖으로 나가면 반대편에서 등장
+            // Wrap around screen
             if (this.x < -100) this.x = CW + 100;
             if (this.x > CW + 100) this.x = -100;
             if (this.y < -100) this.y = CH + 100;
@@ -435,7 +468,6 @@
             ctx.lineWidth = 1.5;
             ctx.beginPath();
             
-            // 회전된 좌표 계산
             let points = this.nodes.map(n => {
                 return {
                     x: this.x + Math.cos(this.angle + n.a) * n.r,
@@ -443,7 +475,6 @@
                 };
             });
 
-            // 점끼리 선 잇기 (분자 구조처럼)
             for (let i = 0; i < points.length; i++) {
                 for (let j = i + 1; j < points.length; j++) {
                     ctx.moveTo(points[i].x, points[i].y);
@@ -452,7 +483,6 @@
             }
             ctx.stroke();
 
-            // 점 그리기
             ctx.fillStyle = this.color;
             points.forEach(p => {
                 ctx.beginPath();
@@ -462,11 +492,8 @@
         }
     }
 
-    // 배경용 객체 배열
     let bgAtoms = [];
-    for(let i=0; i<8; i++) { // 8개의 클러스터 생성
-        bgAtoms.push(new AtomCluster());
-    }
+    for(let i=0; i<8; i++) bgAtoms.push(new AtomCluster());
 
     const bgm = new Audio('hyper.mp3');
     bgm.loop = true; bgm.volume = 0.5;
@@ -979,6 +1006,7 @@
         }
     }
 
+    // [수정] 게임 루프에서 draw()는 항상 호출하여 배경을 그립니다.
     function loop() { 
         requestAnimationFrame(loop); 
         if(gameState==='PLAY') update(); 
