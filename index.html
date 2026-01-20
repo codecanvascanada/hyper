@@ -1164,7 +1164,7 @@
         gameOverScreen.style.display = 'flex';
         
         // 1. Calculate Scores
-        const maxComboBonus = player.maxCombo * 10; // Multiplier: 10
+        const maxComboBonus = player.maxCombo * 10; // Multiplier: 10 (Reduced from 50)
         const baseScore = player.score; 
         const finalScore = baseScore + maxComboBonus;
         player.score = finalScore; 
@@ -1187,7 +1187,7 @@
                 <span style="font-size:0.8em;">(Max Combo: ${player.maxCombo})</span>
             </div>
             <div style="font-size:1.2em; font-weight:bold; color:white; border-top:1px solid #444; padding-top:5px;">
-                FINAL: <span id="goFinalScore">0</span>
+                TOTAL: <span id="goFinalScore">0</span>
             </div>
         `;
         
