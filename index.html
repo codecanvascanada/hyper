@@ -21,7 +21,7 @@
         /* [게임 화면] */
         #gameContainer { 
             position: relative; 
-            background: #0f1218; /* 짙은 남색 배경 */
+            background: #0f1218; 
             overflow: hidden; 
             box-shadow: 0 0 30px rgba(0,210,211,0.2);
             aspect-ratio: 9 / 16;
@@ -80,7 +80,7 @@
             display: none; flex-direction: column; justify-content: center; align-items: center; pointer-events: auto; z-index: 100; 
         }
 
-        /* [타이틀 화면 - 배경 완전 투명, 원자가 보이게] */
+        /* [타이틀 화면] - 원자가 잘 보이도록 완전 투명 */
         #titleScreen { 
             display: flex; 
             background: transparent;
@@ -89,9 +89,10 @@
         #gameTitle { color: #00f3ff; font-size: 40px; font-weight: 900; margin-bottom: 40px; letter-spacing: 4px; font-style: italic; text-shadow: 0 0 15px rgba(0,243,255,0.7); animation: neonPulse 1.5s infinite alternate; }
         @keyframes neonPulse { from { text-shadow: 0 0 10px rgba(0,243,255,0.6); transform: scale(1); } to { text-shadow: 0 0 25px rgba(0,243,255,0.9); transform: scale(1.03); } }
 
-        /* [게임오버 화면 - 텍스트 가독성을 위해 약간만 어둡게] */
-        #gameOverScreen { 
-            background: rgba(0, 0, 0, 0.7);
+        /* [게임오버 & 레벨업 화면] - 뒤의 게임화면이 흐릿하게 비치도록 블러 처리 */
+        #gameOverScreen, #levelUpScreen { 
+            background: rgba(0, 0, 0, 0.6); /* 반투명 검정 */
+            backdrop-filter: blur(5px); /* 블러 효과 */
         }
 
         .card { background: #0f1218; color: #c8aa6e; width: 240px; margin: 8px auto; padding: 12px 15px; border: 1px solid #c8aa6e; box-shadow: 0 0 10px rgba(200, 170, 110, 0.2); transition: transform 0.1s; cursor: pointer; opacity: 0; transform: translateY(20px) scale(0.9); animation: cardEntry 0.3s forwards; display: flex; flex-direction: row; align-items: center; text-align: left; }
@@ -409,8 +410,17 @@
     window.addEventListener('touchmove', updateMousePos, {passive: true});
     window.addEventListener('touchstart', updateMousePos, {passive: true});
 
+    // [배경 원자 색상 팔레트]
+    const atomColors = [
+        '#0acde5', // Hero / Gem Cyan
+        '#fffa65', // Rapid Bullet Yellow
+        '#ff4757', // Crit Bullet Red
+        '#e17055', // Enemy Orange
+        '#9b59b6', // Shield Purple
+        '#2ecc71'  // EMP Green
+    ];
 
-    // [배경 원자/분자 효과 클래스 - High Visibility]
+    // [배경 원자/분자 효과 클래스 - Refined & 3D]
     class AtomCluster {
         constructor() {
             this.x = Math.random() * CW;
@@ -429,11 +439,10 @@
             for(let i=0; i<count; i++) {
                 this.nodes.push({
                     r: this.size * (0.5 + Math.random() * 0.5),
-                    a: (Math.PI * 2 / count) * i
+                    a: (Math.PI * 2 / count) * i,
+                    color: atomColors[Math.floor(Math.random() * atomColors.length)]
                 });
             }
-            // 밝기(Opacity) 0.6 ~ 1.0 (매우 선명함)
-            this.color = `rgba(10, 205, 229, ${0.6 + Math.random() * 0.4})`; 
         }
         update() {
             const dx = this.x - mouse.x;
@@ -445,10 +454,7 @@
             if (dist < interactionRadius) {
                 const force = (interactionRadius - dist) / interactionRadius;
                 const angle = Math.atan2(dy, dx);
-                
-                // Soft push
                 const pushStrength = 0.3; 
-                
                 this.pushVx += Math.cos(angle) * force * pushStrength;
                 this.pushVy += Math.sin(angle) * force * pushStrength;
             }
@@ -466,15 +472,15 @@
             if (this.y > CH + 100) this.y = -100;
         }
         draw(ctx) {
-            ctx.strokeStyle = this.color;
-            // 선 두께 2.5 (잘 보임)
-            ctx.lineWidth = 2.5;
             ctx.beginPath();
+            ctx.strokeStyle = 'rgba(220, 220, 220, 0.25)'; 
+            ctx.lineWidth = 0.8; 
             
             let points = this.nodes.map(n => {
                 return {
                     x: this.x + Math.cos(this.angle + n.a) * n.r,
-                    y: this.y + Math.sin(this.angle + n.a) * n.r
+                    y: this.y + Math.sin(this.angle + n.a) * n.r,
+                    color: n.color
                 };
             });
 
@@ -486,11 +492,19 @@
             }
             ctx.stroke();
 
-            ctx.fillStyle = this.color;
             points.forEach(p => {
                 ctx.beginPath();
-                ctx.arc(p.x, p.y, 4, 0, Math.PI*2); // 점 크기 4 (잘 보임)
+                const dotRadius = 4.5; 
+                const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, dotRadius);
+                gradient.addColorStop(0, 'rgba(255, 255, 255, 0.9)'); 
+                gradient.addColorStop(0.4, p.color); 
+                gradient.addColorStop(1, 'rgba(0,0,0,0)'); 
+
+                ctx.fillStyle = gradient;
+                ctx.globalAlpha = 0.7; 
+                ctx.arc(p.x, p.y, dotRadius, 0, Math.PI*2);
                 ctx.fill();
+                ctx.globalAlpha = 1.0; 
             });
         }
     }
@@ -889,9 +903,8 @@
         typeIcon.classList.remove('icon-attach-anim'); void typeIcon.offsetWidth; typeIcon.classList.add('icon-attach-anim');
     }
 
-    // [수정] 그리드 그리기 함수 복구
     function drawGrid() {
-        ctx.fillStyle = '#0f1218'; ctx.fillRect(0, 0, CW, CH); // 배경색 채우기
+        ctx.fillStyle = '#0f1218'; ctx.fillRect(0, 0, CW, CH);
         ctx.strokeStyle = '#1e2328'; ctx.lineWidth = 2; ctx.beginPath();
         const sz = 60; const offX = ((player.wx % sz) + sz) % sz; const offY = ((player.wy % sz) + sz) % sz;
         for(let x = -offX; x < CW; x += sz) { ctx.moveTo(x, 0); ctx.lineTo(x, CH); }
@@ -941,8 +954,8 @@
         const rate = (player.isHyper && player.hyperType===HYPER_RAPID) ? 5 : Math.max(10, 60 - player.level);
         if(frameCount % rate === 0) getObj(enemies, Enemy).spawn(false);
         if(frameCount % 900 === 0 && player.level >= 3) {
-            const activeBosses = enemies.filter(e => e.active && e.isElite).length; let maxBosses = 1; if(player.level >= 9) maxBosses = 2; if(player.level >= 18) maxBosses = 3;
-            if(activeBosses < maxBosses) getObj(enemies, Enemy).spawn(true);
+            const activeBosses = enemies.filter(e => e.active && e.isElite).length;
+            if(activeBosses < (player.level>=9?2:1)) getObj(enemies, Enemy).spawn(true);
         }
 
         bullets.forEach(b => {
@@ -972,22 +985,24 @@
         hyperOrbs.forEach(x => { if(x.active) x.update(); });
     }
 
-    // [수정] draw 함수 구조 변경: 상태에 따라 배경을 다르게 그림
     function draw() {
         ctx.save();
         if(screenShake>0) { const rx = (Math.random() - 0.5) * screenShake; const ry = (Math.random() - 0.5) * screenShake; ctx.translate(rx, ry); }
         
+        // 1. 배경 처리
         if (gameState === 'PLAY') {
-            // 1. 게임 중: 그리드 배경 그리기
-            drawGrid(); 
+            // 게임 중: 그리드
+            drawGrid();
         } else {
-            // 2. 타이틀/게임오버: 단색 배경 + 원자 애니메이션 그리기
-            ctx.fillStyle = '#0f1218'; ctx.fillRect(0, 0, CW, CH);
+            // 타이틀 / 게임오버 / 레벨업: 어두운 배경 + 원자 애니메이션
+            ctx.fillStyle = '#0f1218'; 
+            ctx.fillRect(0, 0, CW, CH);
             bgAtoms.forEach(a => { a.update(); a.draw(ctx); });
         }
 
-        if (gameState === 'PLAY') {
-            // 게임 오브젝트 그리기 (플레이어, 적, 총알 등)
+        // 2. 게임 요소 처리 (PLAY, PAUSE, GAMEOVER 모두 게임 화면은 뒤에 보여야 함)
+        // 단, 타이틀 화면일 때는 게임 요소를 그리지 않음
+        if (gameState !== 'TITLE') {
             let hc = (player.hyperType === HYPER_RAPID) ? '#f1c40f' : (player.hyperType === HYPER_EMP ? '#2ecc71' : '#9b59b6');
             ctx.strokeStyle = hc; ctx.globalAlpha = 0.4; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(CW/2, CH/2, player.grazeR, 0, Math.PI*2); ctx.stroke(); ctx.globalAlpha = 1.0;
 
@@ -1015,19 +1030,19 @@
                     if(d < player.grazeR+e.r && d > player.hitR+e.r) { drawLightning(CW/2, CH/2, e.wx-player.wx+CW/2, e.wy-player.wy+CH/2, hc); player.isGrazingNow = true; }
                 }
             });
-        }
 
-        if(player.showHpTimer > 0 && gameState === 'PLAY') {
-             const hpPct = Math.max(0, player.hp / player.maxHp);
-             ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(CW/2-15, CH/2-25, 30, 4);
-             ctx.fillStyle = '#ff7675'; ctx.fillRect(CW/2-15, CH/2-25, 30*hpPct, 4);
+            if(player.showHpTimer > 0) {
+                 const hpPct = Math.max(0, player.hp / player.maxHp);
+                 ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(CW/2-15, CH/2-25, 30, 4);
+                 ctx.fillStyle = '#ff7675'; ctx.fillRect(CW/2-15, CH/2-25, 30*hpPct, 4);
+            }
         }
         
         if(screenShake > 20) { ctx.fillStyle=`rgba(255,255,255,${screenShake/100})`; ctx.fillRect(0,0,CW,CH); }
         ctx.restore(); drawJoystick();
     }
 
-    function loop() { requestAnimationFrame(loop); if(gameState==='PLAY') { update(); } draw(); } // draw는 항상 호출
+    function loop() { requestAnimationFrame(loop); if(gameState==='PLAY') { update(); } draw(); }
 
     function levelUp() {
         gameState='PAUSE'; joystick.active=false; joystick.vx=0; joystick.vy=0;
