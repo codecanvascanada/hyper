@@ -29,7 +29,6 @@
             max-width: 100%; max-height: 100dvh;
         }
         
-        /* 화면 비율에 따른 꽉 채우기 처리 */
         @media (min-aspect-ratio: 9/16) { #gameContainer { height: 100dvh; width: auto; } }
         @media (max-aspect-ratio: 9/16) { #gameContainer { width: 100%; height: auto; } }
 
@@ -92,8 +91,15 @@
         #nameInputBox { margin: 10px 0; display: flex; gap: 5px; justify-content: center; z-index: 101; }
         #inputName { background: #1e2328; border: 1px solid #0acde5; color: #fff; padding: 8px; border-radius: 4px; outline: none; font-weight: bold; text-align: center; width: 140px; font-family: 'Segoe UI', sans-serif; }
         #inputName:focus { box-shadow: 0 0 8px #0acde5; background: #2d3436; }
+        
+        /* [수정] 입력창 비활성화(읽기 전용) 스타일 */
+        #inputName:disabled { background: #333; border-color: #555; color: #aaa; cursor: not-allowed; }
+
         #btnName { background: #0acde5; color: #000; border: none; padding: 0 15px; font-weight: bold; cursor: pointer; border-radius: 4px; font-family: 'Segoe UI', sans-serif; transition: transform 0.1s; }
         #btnName:active { transform: scale(0.95); }
+        
+        /* [수정] 버튼 스타일: EDIT 모드일 때 */
+        #btnName.edit-mode { background: #555; color: #fff; }
 
         /* 리더보드 */
         #leaderboardContainer { width: 85%; margin: 5px 0 15px 0; background: rgba(0,0,0,0.5); border: 1px solid #444; padding: 10px; min-height: 100px; max-height: 250px; overflow-y: auto; border-radius: 5px; }
@@ -159,7 +165,7 @@
 
         <div id="nameInputBox">
             <input type="text" id="inputName" placeholder="NAME (Max 8)" maxlength="8">
-            <button id="btnName" onclick="saveName()">CHANGE</button>
+            <button id="btnName" onclick="handleNameBtn()">CHANGE</button>
         </div>
 
         <div id="leaderboardContainer">
@@ -258,6 +264,50 @@
         }
     }
 
+    // [이름 관리 로직]
+    let isNameLocked = false;
+
+    // 1. 저장된 이름 불러오기
+    function loadSavedName() {
+        const savedName = localStorage.getItem('sparcrush_name');
+        if(savedName) {
+            document.getElementById('inputName').value = savedName;
+            lockNameInput(true); // 저장된 이름이 있으면 잠금
+        } else {
+            lockNameInput(false); // 없으면 풀림
+        }
+    }
+
+    // 2. 버튼 클릭 핸들러 (CHANGE <-> EDIT)
+    function handleNameBtn() {
+        if(isNameLocked) {
+            // [EDIT 모드] -> 잠금 해제
+            lockNameInput(false);
+        } else {
+            // [CHANGE 모드] -> 이름 저장 시도
+            saveName();
+        }
+    }
+
+    // 3. 입력창 잠금/해제 UI 처리
+    function lockNameInput(locked) {
+        isNameLocked = locked;
+        const input = document.getElementById('inputName');
+        const btn = document.getElementById('btnName');
+        
+        if(locked) {
+            input.disabled = true;
+            btn.innerText = "EDIT";
+            btn.classList.add('edit-mode');
+        } else {
+            input.disabled = false;
+            btn.innerText = "CHANGE";
+            btn.classList.remove('edit-mode');
+            input.focus();
+        }
+    }
+
+    // 4. 실제 이름 변경 요청
     async function saveName() {
         const nameInput = document.getElementById('inputName');
         const newName = nameInput.value.trim();
@@ -280,9 +330,12 @@
             
             if(data.name) {
                 console.log("Name Updated:", data.name);
+                
+                // [저장 성공] 로컬 스토리지에 저장 및 UI 잠금
+                localStorage.setItem('sparcrush_name', data.name);
+                lockNameInput(true);
+                
                 fetchLeaderboardLL(); 
-                btn.innerText = "DONE";
-                setTimeout(() => btn.innerText = originText, 2000);
             } else {
                 alert("Error: " + (data.message || "Failed to update"));
                 btn.innerText = originText;
@@ -296,6 +349,7 @@
 
     window.onload = function() {
         initLootLocker();
+        loadSavedName(); // 저장된 이름 로드
     };
 
     // ==========================================
@@ -851,7 +905,6 @@
         }
     }
 
-    // [수정] 게임오버 로직: Rush 기회 있을 땐 랭킹 UI 숨김
     function gameOver() {
         gameState = 'GAMEOVER'; screenShake = 0;
         gameOverScreen.style.display = 'flex';
