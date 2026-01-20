@@ -21,7 +21,7 @@
         /* [게임 화면] */
         #gameContainer { 
             position: relative; 
-            background: #0f1218; /* 짙은 남색 배경 */
+            background: #0f1218; /* 짙은 남색 배경 (캔버스 배경색과 일치) */
             overflow: hidden; 
             box-shadow: 0 0 30px rgba(0,210,211,0.2);
             aspect-ratio: 9 / 16;
@@ -74,21 +74,26 @@
         #pcGuide { position: absolute; bottom: 20px; width: 100%; text-align: center; color: #666; font-size: 11px; pointer-events: none; font-weight: bold; }
         @media (hover: none) and (pointer: coarse) { #pcGuide { display: none; } }
 
+        /* [모달 공통] - 기본 배경은 투명하거나 반투명 */
         .modal { 
             position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-            background: rgba(0,0,0,0.85); 
+            /* 기본적으로 숨김 */
             display: none; flex-direction: column; justify-content: center; align-items: center; pointer-events: auto; z-index: 100; 
         }
 
+        /* [타이틀 화면 - 배경 완전 투명] */
         #titleScreen { 
             display: flex; 
-            background: rgba(15, 18, 24, 0.3); /* 배경 투명하게 */
+            background: transparent; /* 배경을 완전히 없애서 캔버스 그대로 노출 */
             z-index: 200; 
         }
         #gameTitle { color: #00f3ff; font-size: 40px; font-weight: 900; margin-bottom: 40px; letter-spacing: 4px; font-style: italic; text-shadow: 0 0 15px rgba(0,243,255,0.7); animation: neonPulse 1.5s infinite alternate; }
         @keyframes neonPulse { from { text-shadow: 0 0 10px rgba(0,243,255,0.6); transform: scale(1); } to { text-shadow: 0 0 25px rgba(0,243,255,0.9); transform: scale(1.03); } }
 
-        #gameOverScreen { background: rgba(15, 18, 24, 0.85); }
+        /* [게임오버 화면 - 텍스트 가독성을 위해 약간만 어둡게] */
+        #gameOverScreen { 
+            background: rgba(0, 0, 0, 0.7); /* 70% 불투명 검정 -> 뒤의 원자가 은은하게 보임 */
+        }
 
         .card { background: #0f1218; color: #c8aa6e; width: 240px; margin: 8px auto; padding: 12px 15px; border: 1px solid #c8aa6e; box-shadow: 0 0 10px rgba(200, 170, 110, 0.2); transition: transform 0.1s; cursor: pointer; opacity: 0; transform: translateY(20px) scale(0.9); animation: cardEntry 0.3s forwards; display: flex; flex-direction: row; align-items: center; text-align: left; }
         @keyframes cardEntry { to { opacity: 1; transform: translateY(0) scale(1); } }
@@ -406,7 +411,7 @@
     window.addEventListener('touchstart', updateMousePos, {passive: true});
 
 
-    // [배경 원자/분자 효과 클래스 - High Visibility & Soft Repulsion]
+    // [배경 원자/분자 효과 클래스 - High Visibility]
     class AtomCluster {
         constructor() {
             this.x = Math.random() * CW;
@@ -415,9 +420,11 @@
             this.baseVy = (Math.random() - 0.5) * 0.5;
             this.pushVx = 0;
             this.pushVy = 0;
+            
             this.angle = Math.random() * Math.PI * 2;
             this.spinSpeed = (Math.random() - 0.5) * 0.02;
             this.size = 30 + Math.random() * 40; 
+            
             this.nodes = [];
             let count = 3 + Math.floor(Math.random() * 3);
             for(let i=0; i<count; i++) {
@@ -426,8 +433,8 @@
                     a: (Math.PI * 2 / count) * i
                 });
             }
-            // [수정] 투명도를 0.4 ~ 0.8로 대폭 상향하여 매우 잘 보이게 함
-            this.color = `rgba(10, 205, 229, ${0.4 + Math.random() * 0.4})`; 
+            // [수정] 밝기(Opacity) 0.6 ~ 1.0 (매우 선명함)
+            this.color = `rgba(10, 205, 229, ${0.6 + Math.random() * 0.4})`; 
         }
         update() {
             const dx = this.x - mouse.x;
@@ -440,7 +447,7 @@
                 const force = (interactionRadius - dist) / interactionRadius;
                 const angle = Math.atan2(dy, dx);
                 
-                // Push Strength = 0.3 (Soft push)
+                // Soft push
                 const pushStrength = 0.3; 
                 
                 this.pushVx += Math.cos(angle) * force * pushStrength;
@@ -461,8 +468,8 @@
         }
         draw(ctx) {
             ctx.strokeStyle = this.color;
-            // [수정] 선 두께를 2.0으로 증가
-            ctx.lineWidth = 2.0;
+            // [수정] 선 두께 2.5 (잘 보임)
+            ctx.lineWidth = 2.5;
             ctx.beginPath();
             
             let points = this.nodes.map(n => {
@@ -483,7 +490,7 @@
             ctx.fillStyle = this.color;
             points.forEach(p => {
                 ctx.beginPath();
-                ctx.arc(p.x, p.y, 3, 0, Math.PI*2); // 점 크기도 살짝 증가 (2->3)
+                ctx.arc(p.x, p.y, 4, 0, Math.PI*2); // 점 크기 4 (잘 보임)
                 ctx.fill();
             });
         }
@@ -629,85 +636,31 @@
             this.active = true;
             this.progress = 0;
             this.startX = wx; this.startY = wy;
-            
-            // 목표: 화면 우측 게이지 부근
             this.targetRelX = CW/2 - 20; 
             this.targetRelY = -CH/2 + 250;
-
-            // 제어점
-            this.cpOffsetX = 100;
-            this.cpOffsetY = -200;
-            
-            this.currentSpeed = 0.005; // 시작 속도
-
-            this.colorCycle = 0; // 0: 흰색, 1: 빨간색
-            this.colorChangeInterval = 4; // 0.07초 (60fps 기준)
-            this.colorChangeCounter = 0;
-            
-            this.angle = 0; // 회전 각도
+            this.currentSpeed = 0.005;
+            this.colorCycle = 0; 
+            this.angle = 0;
         }
         update() {
-            // 가속 -> 감속 -> 급가속 로직
-            if (this.progress < 0.3) {
-                this.currentSpeed += 0.0005; 
-            } else if (this.progress < 0.6) {
-                this.currentSpeed *= 0.95; 
-                if(this.currentSpeed < 0.003) this.currentSpeed = 0.003; 
-            } else {
-                this.currentSpeed *= 1.1; 
-            }
-
+            if (this.progress < 0.3) { this.currentSpeed += 0.0005; } 
+            else if (this.progress < 0.6) { this.currentSpeed = Math.max(0.003, this.currentSpeed * 0.95); } 
+            else { this.currentSpeed *= 1.1; }
             this.progress += this.currentSpeed;
-
-            this.colorChangeCounter++;
-            if (this.colorChangeCounter >= this.colorChangeInterval) {
-                this.colorCycle = 1 - this.colorCycle; // 색상 토글
-                this.colorChangeCounter = 0;
-            }
-            
-            this.angle += 0.15; // 회전
-
-            if (this.progress >= 1) {
-                this.active = false;
-                addHyper(20); 
-                showMessage("SHUTDOWN", "#fdcb6e");
-                return;
-            }
-
-            const t = this.progress;
-            const u = 1 - t;
-            
-            const targetX = player.wx + this.targetRelX;
-            const targetY = player.wy + this.targetRelY;
-            const cpX = this.startX + this.cpOffsetX;
-            const cpY = this.startY + this.cpOffsetY;
-
+            this.angle += 0.15;
+            if (this.progress >= 1) { this.active = false; addHyper(20); showMessage("SHUTDOWN", "#fdcb6e"); return; }
+            const t = this.progress; const u = 1 - t;
+            const targetX = player.wx + this.targetRelX; const targetY = player.wy + this.targetRelY;
+            const cpX = this.startX + 100; const cpY = this.startY - 200;
             this.wx = (u * u * this.startX) + (2 * u * t * cpX) + (t * t * targetX);
             this.wy = (u * u * this.startY) + (2 * u * t * cpY) + (t * t * targetY);
         }
         draw() {
-            const sx = this.wx - player.wx + CW/2; 
-            const sy = this.wy - player.wy + CH/2;
-            
-            // 색상 결정 (흰색 <-> 빨간색)
-            const curColor = this.colorCycle === 0 ? "#ffffff" : "#ff0000";
-
-            ctx.save();
-            ctx.translate(sx, sy);
-            ctx.rotate(this.angle);
-            
-            ctx.shadowColor = curColor;
-            ctx.shadowBlur = 15;
-            ctx.fillStyle = curColor;
-            
-            // 삼각형 그리기 (크기 100% 증가)
-            ctx.beginPath();
-            ctx.moveTo(0, -7.2); 
-            ctx.lineTo(6, 4.8); 
-            ctx.lineTo(-6, 4.8); 
-            ctx.closePath();
-            ctx.fill();
-            
+            const sx = this.wx - player.wx + CW/2; const sy = this.wy - player.wy + CH/2;
+            const curColor = (Math.floor(frameCount/4)%2 === 0) ? "#ffffff" : "#ff0000";
+            ctx.save(); ctx.translate(sx, sy); ctx.rotate(this.angle);
+            ctx.shadowColor = curColor; ctx.shadowBlur = 15; ctx.fillStyle = curColor;
+            ctx.beginPath(); ctx.moveTo(0, -7); ctx.lineTo(6, 5); ctx.lineTo(-6, 5); ctx.closePath(); ctx.fill();
             ctx.restore();
         }
     }
@@ -718,53 +671,24 @@
             const angle = Math.random() * Math.PI * 2; const dist = 480;
             this.wx = player.wx + Math.cos(angle)*dist; this.wy = player.wy + Math.sin(angle)*dist;
             this.isElite = isElite; this.active = true; this.grazeCool = 0;
-            this.isSuicide = false; this.suicideTimer = 0; // 자폭 관련 초기화
-
-            let speedBonus = 0; let hpBonus = 0;
+            this.isSuicide = false; this.suicideTimer = 0; 
+            let speedBonus = 0;
             if(player.level > 5) speedBonus += (player.level * 0.05);
-            // ... (중략) ...
             if(isElite) {
-                // 엘리트 HP: 다항식 스케일링 적용 (기하급수적 증가)
                 this.hp = 150 + (player.level * 40) + Math.pow(player.level, 2.5);
                 this.maxHp = this.hp; 
                 this.speed = Math.min(5.0, (player.baseSpeed * 0.40) + (speedBonus * 0.5)); 
                 this.r = 30; this.color = '#e17055'; this.xp = 200; this.scoreVal = 1000;
-                
-                // 패턴 레벨 스케일링 개선: 특정 패턴 고정이 아닌 'AI 성향' 부여
-                let roll = Math.random();
-                if (player.level < 5) {
-                    this.aiType = 0; 
-                } else if (player.level < 15) {
-                    this.aiType = roll < 0.7 ? 1 : 0; 
-                } else if (player.level < 25) {
-                    this.aiType = roll < 0.6 ? 2 : (roll < 0.9 ? 1 : 0); 
-                } else {
-                    this.aiType = 3; 
-                }
-
-                this.shootTimer = 60; 
-                this.patternAngle = 0;
-                this.rapidCount = 0; 
+                this.shootTimer = 60; this.patternAngle = 0; this.rapidCount = 0; 
             } else {
-                // 일반 적 HP: 다항식 스케일링 적용
                 let baseHp = 20 + (player.level * 8) + Math.pow(player.level, 2.2);
                 let baseSpeed = Math.min(6.5, (1.2 + Math.random() * 0.5) + speedBonus);
-                
-                // 10% 확률로 자폭병 생성
                 if (Math.random() < 0.1) {
-                    this.isSuicide = true;
-                    this.hp = baseHp * 1.5; // 맷집 1.5배
-                    this.speed = baseSpeed * 1.5; // 속도 1.5배 (기본보다 0.5배 빠름)
-                    this.color = '#555'; // 검은 회색
+                    this.isSuicide = true; this.hp = baseHp * 1.5; this.speed = baseSpeed * 1.5; this.color = '#555'; 
                 } else {
-                    this.hp = baseHp;
-                    this.speed = baseSpeed;
-                    this.r = 10; this.color = '#ff6b81'; 
+                    this.hp = baseHp; this.speed = baseSpeed; this.color = '#ff6b81'; 
                 }
-                
-                this.maxHp = this.hp;
-                this.r = 10; 
-                this.xp = 5; this.scoreVal = 10;
+                this.maxHp = this.hp; this.r = 10; this.xp = 5; this.scoreVal = 10;
             }
         }
         update() {
@@ -779,109 +703,39 @@
                 } else if(player.isHyper && player.hyperType === HYPER_SHIELD) {
                     spawnText("BLOCK", player.wx, player.wy, '#a29bfe'); this.wx -= Math.cos(angleToPlayer)*15; this.wy -= Math.sin(angleToPlayer)*15;
                 } else {
-                    // [수정] 자폭병이 플레이어와 충돌하면 즉시 폭발
-                    if (this.isSuicide) {
-                        triggerSuicideExplosion(this);
-                    } else {
+                    if (this.isSuicide) { triggerSuicideExplosion(this); } else {
                         const dmg = this.isElite?20:10; player.hp -= dmg; player.showHpTimer = 60; spawnText(`-${dmg}`, player.wx, player.wy, 'red');
-                        player.combo = 0; comboEl.style.display='none'; comboLabel.style.display='none'; // 피격 시 콤보 초기화
+                        player.combo = 0; comboEl.style.display='none'; comboLabel.style.display='none'; 
                         if(!this.isElite) this.active=false; updateUI(); if(player.hp<=0) gameOver();
                     }
                 }
-            } else if(dist < player.grazeR + this.r && this.grazeCool<=0) { 
-                addHyper(this.isElite?5:1); 
-                this.grazeCool=20; 
-            }
+            } else if(dist < player.grazeR + this.r && this.grazeCool<=0) { addHyper(this.isElite?5:1); this.grazeCool=20; }
             if(this.isElite) {
                 this.shootTimer--;
                 if(this.shootTimer <= 0) {
-                    let execPattern = 0;
-                    
-                    // 연사 중이면 무조건 연사 유지
-                    if(this.rapidCount > 0) {
-                        execPattern = 2;
-                    } else {
-                        // AI 성향에 따른 확률적 패턴 선택
-                        let r = Math.random();
-                        if (this.aiType === 0) { // Fan 위주
-                            execPattern = r < 0.8 ? 0 : 2; 
-                        } else if (this.aiType === 1) { // Spiral 위주
-                            execPattern = r < 0.6 ? 1 : (r < 0.9 ? 0 : 2);
-                        } else if (this.aiType === 2) { // Stream 위주
-                            execPattern = r < 0.6 ? 2 : (r < 0.9 ? 1 : 0);
-                        } else { // Chaos
-                            execPattern = Math.floor(Math.random() * 3);
-                        }
-                    }
-
-                    // 탄속 증가: 레벨당 2% 빨라짐 (최대 2배)
-                    const speedMult = 1 + Math.min(1.0, player.level * 0.02);
-
-                    if(execPattern === 0) { // Fan (부채꼴)
-                        const count = 5 + Math.floor(player.level / 8); 
-                        const spread = 0.4; 
-                        const startA = angleToPlayer - (spread * (count-1))/2;
-                        for(let i=0; i<count; i++) spawnBullet(this.wx, this.wy, startA + spread*i, true, speedMult); 
-                        this.shootTimer = Math.max(50, 90 - player.level); 
-                    } 
-                    else if(execPattern === 1) { // Spiral (나선/원형)
-                        const count = 8 + Math.floor(player.level / 10);
-                        for(let i=0; i<count; i++) {
-                            const a = (Math.PI*2 / count) * i + this.patternAngle;
-                            spawnBullet(this.wx, this.wy, a, true, speedMult);
-                        }
-                        this.patternAngle += 0.3; 
-                        this.shootTimer = 20; 
-                    }
-                    else if(execPattern === 2) { // Stream (조준 연사)
-                        if(this.rapidCount <= 0) this.rapidCount = (5 + Math.floor(player.level / 15)) * 2; // 발사 수 2배
-                        
-                        spawnBullet(this.wx, this.wy, angleToPlayer, true, speedMult * 4); // 탄속 기존 대비 2배 (총 4배속)
-                        this.rapidCount--;
-                        
-                        if(this.rapidCount > 0) this.shootTimer = 16; // 간격 2배 (8 -> 16)
-                        else this.shootTimer = 100; 
-                    }
+                    let spdMult = 1 + Math.min(1.0, player.level * 0.02);
+                    spawnBullet(this.wx, this.wy, angleToPlayer, true, spdMult);
+                    this.shootTimer = 90; 
                 }
             }
+            if(this.isSuicide && this.suicideTimer > 0) {
+                this.suicideTimer++; if(this.suicideTimer >= 240) { triggerSuicideExplosion(this); }
+            } else if (this.isSuicide && this.hp < this.maxHp && this.suicideTimer === 0) { this.suicideTimer = 1; }
             if(dist > 1000) this.active=false;
-
-            // 자폭 로직
-            if(this.isSuicide && this.hp < this.maxHp) {
-                if(this.suicideTimer === 0) this.suicideTimer = 1; // 카운트다운 시작
-            }
-            if(this.suicideTimer > 0) {
-                this.suicideTimer++;
-                if(this.suicideTimer >= 240) { // 4초 (60fps * 4)
-                    // 타이머 종료 시 폭발
-                    triggerSuicideExplosion(this);
-                    // 타이머 폭발은 킬 카운트/점수 처리 안함 (자폭했으므로)
-                }
-            }
         }
         draw() {
             const sx = this.wx - player.wx + CW/2; const sy = this.wy - player.wy + CH/2;
             if(sx<-60||sx>CW+60||sy<-60||sy>CH+60) return;
-            
-            // 자폭병 그리기
             ctx.beginPath(); ctx.arc(sx, sy, this.r, 0, Math.PI*2); ctx.fillStyle = this.color; ctx.fill();
-            
-            // 카운트다운 텍스트
             if(this.suicideTimer > 0) {
-                const remainingSec = 4 - Math.floor(this.suicideTimer / 60);
-                ctx.fillStyle = "white";
-                ctx.font = "bold 12px Arial"; // 자폭 숫자를 키움 (8px -> 12px)
-                ctx.textAlign = "center";
-                ctx.textBaseline = "middle";
-                ctx.fillText(remainingSec, sx, sy);
+                ctx.fillStyle = "white"; ctx.font = "bold 12px Arial"; ctx.textAlign="center"; 
+                ctx.fillText(4 - Math.floor(this.suicideTimer/60), sx, sy+4);
             }
-
             const hpPct = Math.max(0, this.hp / this.maxHp);
             let barW = this.isElite ? 40 : 18; let barH = this.isElite ? 6 : 3; let barY = this.isElite ? 40 : 20;
             if(this.isElite) { ctx.lineWidth=3; ctx.strokeStyle='#fff'; ctx.stroke(); }
             ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(sx - barW/2, sy - barY, barW, barH);
-            ctx.fillStyle = this.isElite || this.isSuicide ? '#ff7675' : '#ff7675'; // 자폭병도 빨간 게이지
-            ctx.fillRect(sx - barW/2, sy - barY, barW * hpPct, barH);
+            ctx.fillStyle = '#ff7675'; ctx.fillRect(sx - barW/2, sy - barY, barW * hpPct, barH);
         }
     }
 
@@ -890,13 +744,12 @@
         spawn(wx, wy, a, isEnemyBullet=false, speedMult=1.0) {
             this.wx=wx; this.wy=wy; this.isEnemyBullet = isEnemyBullet;
             if(isEnemyBullet) { 
-                this.vx = Math.cos(a)*4*speedMult; this.vy = Math.sin(a)*4*speedMult; this.life = 300; this.r = 6; this.color = '#ff9f43'; this.isCrit=false;
+                this.vx = Math.cos(a)*4*speedMult; this.vy = Math.sin(a)*4*speedMult; this.life = 300; this.r = 6; this.color = '#ff9f43';
             } else { 
                 this.vx = Math.cos(a)*8; this.vy = Math.sin(a)*8; this.life = 50;
                 this.isCrit = Math.random() < player.critChance;
                 this.r = (player.isHyper && player.hyperType===HYPER_RAPID) ? 8 : 4;
-                if(this.isCrit) { this.color = '#ff4757'; } 
-                else { this.color = (player.isHyper && player.hyperType===HYPER_RAPID) ? '#fffa65' : '#0acde5'; }
+                this.color = this.isCrit ? '#ff4757' : (player.isHyper && player.hyperType===HYPER_RAPID ? '#fffa65' : '#0acde5');
                 this.hitList = [];
             }
             this.active=true;
@@ -915,37 +768,32 @@
         spawn(wx, wy, v, isRare) { this.wx=wx; this.wy=wy; this.val=v; this.isRare = isRare; this.active=true; }
         update() {
             const dist = Math.hypot(player.wx-this.wx, player.wy-this.wy);
-            let range = player.magnet; let spd = 7;
-            if(dist < range) {
+            if(dist < player.magnet) {
                 const a = Math.atan2(player.wy-this.wy, player.wx-this.wx);
-                this.wx += Math.cos(a)*spd; this.wy += Math.sin(a)*spd; if(dist < 20) { addExp(this.val); this.active=false; }
+                this.wx += Math.cos(a)*7; this.wy += Math.sin(a)*7; 
+                if(dist < 20) { addExp(this.val); this.active=false; }
             }
             if(dist > 1200) this.active=false;
         }
         draw() {
             const sx = this.wx - player.wx + CW/2; const sy = this.wy - player.wy + CH/2;
             if(sx<-20||sx>CW+20||sy<-20||sy>CH+20) return;
-            ctx.beginPath(); 
-            ctx.fillStyle='#0acde5'; 
-            if(this.isRare) ctx.arc(sx, sy, 10, 0, Math.PI*2); 
-            else ctx.arc(sx, sy, 6, 0, Math.PI*2); 
-            ctx.fill();
+            ctx.beginPath(); ctx.fillStyle='#0acde5'; ctx.arc(sx, sy, this.isRare?10:6, 0, Math.PI*2); ctx.fill();
         }
     }
 
     class Effect {
         constructor() { this.active = false; }
         spawnEMP(wx, wy) { this.wx = wx; this.wy = wy; this.r = 0; this.maxR = 200; this.active = true; this.type = 'EMP'; }
-        spawnExplosion(wx, wy) { this.wx = wx; this.wy = wy; this.r = 0; this.maxR = 60; this.active = true; this.type = 'EXPLOSION'; } // 자폭 이펙트
+        spawnExplosion(wx, wy) { this.wx = wx; this.wy = wy; this.r = 0; this.maxR = 60; this.active = true; this.type = 'EXPLOSION'; }
         update() { this.r += this.type === 'EXPLOSION' ? 5 : 40; if(this.r > this.maxR) this.active = false; }
         draw() {
             const sx = this.wx - player.wx + CW/2; const sy = this.wy - player.wy + CH/2;
             if (this.type === 'EMP') {
-                const alpha = Math.max(0, 1 - (this.r / this.maxR)); // 확장될수록 투명해짐
-                ctx.strokeStyle = `rgba(46, 204, 113, ${alpha})`; // '#2ecc71' (녹색)
+                ctx.strokeStyle = `rgba(46, 204, 113, ${Math.max(0, 1 - (this.r/this.maxR))})`;
                 ctx.lineWidth = 10; ctx.beginPath(); ctx.arc(sx, sy, this.r, 0, Math.PI*2); ctx.stroke();
-            } else if (this.type === 'EXPLOSION') {
-                ctx.fillStyle = `rgba(255, 69, 0, ${1 - this.r/this.maxR})`; // 오렌지색, 퍼질수록 투명
+            } else {
+                ctx.fillStyle = `rgba(255, 69, 0, ${1 - this.r/this.maxR})`;
                 ctx.beginPath(); ctx.arc(sx, sy, this.r, 0, Math.PI*2); ctx.fill();
             }
         }
@@ -959,29 +807,18 @@
     }
 
     function spawnText(t, wx, wy, c, s) { getObj(texts, FloatText).spawn(t, wx, wy, c, s); }
-    function spawnBullet(wx, wy, a, isEnemy=false) { getObj(bullets, Bullet).spawn(wx, wy, a, isEnemy); }
+    function spawnBullet(wx, wy, a, isEnemy=false, spd=1) { getObj(bullets, Bullet).spawn(wx, wy, a, isEnemy, spd); }
     function spawnEffect() { return getObj(effects, Effect); }
 
     function drawLightning(x1, y1, x2, y2, color) {
-        ctx.save();
-        ctx.strokeStyle = color; 
-        ctx.lineWidth = 2;
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = color;
-        ctx.beginPath();
-        ctx.moveTo(x1, y1);
-        const dist = Math.hypot(x2 - x1, y2 - y1);
-        const steps = Math.floor(dist / 10); 
+        ctx.save(); ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.shadowBlur = 10; ctx.shadowColor = color;
+        ctx.beginPath(); ctx.moveTo(x1, y1);
+        const dist = Math.hypot(x2 - x1, y2 - y1); const steps = Math.floor(dist / 10);
         for (let i = 1; i < steps; i++) {
-            const t = i / steps;
-            const tx = x1 + (x2 - x1) * t;
-            const ty = y1 + (y2 - y1) * t;
-            const jitter = (Math.random() - 0.5) * 20; 
-            ctx.lineTo(tx + jitter, ty + jitter);
+            const t = i / steps; const tx = x1 + (x2 - x1) * t + (Math.random()-0.5)*20; const ty = y1 + (y2 - y1) * t + (Math.random()-0.5)*20;
+            ctx.lineTo(tx, ty);
         }
-        ctx.lineTo(x2, y2);
-        ctx.stroke();
-        ctx.restore();
+        ctx.lineTo(x2, y2); ctx.stroke(); ctx.restore();
     }
 
     function addCombo(n) {
@@ -997,76 +834,39 @@
     }
 
     function triggerSuicideExplosion(e) {
-        e.active = false;
-        e.hp = 0;
-        
-        // 폭발 이펙트
-        spawnEffect().spawnExplosion(e.wx, e.wy);
-
-        // 폭발 시 원형 탄막 발사 (12발) - 총알 크기 절반(3)으로 축소
-        for(let i=0; i<12; i++) {
-            const angle = (Math.PI * 2 / 12) * i;
-            // spawnBullet에 radius 인자 추가하거나 spawn 후 수정
-            let b = getObj(bullets, Bullet);
-            b.spawn(e.wx, e.wy, angle, true);
-            b.r = 6; // 자폭 탄막 크기 (엘리트와 동일하게 6)
-        }
-
-        // 플레이어 피격 체크 (반경 4배)
-        const distToPlayer = Math.hypot(player.wx - e.wx, player.wy - e.wy);
-        if(distToPlayer < e.r * 4 + player.hitR) {
+        e.active = false; e.hp = 0; spawnEffect().spawnExplosion(e.wx, e.wy);
+        for(let i=0; i<12; i++) spawnBullet(e.wx, e.wy, (Math.PI*2/12)*i, true);
+        if(Math.hypot(player.wx - e.wx, player.wy - e.wy) < e.r * 4 + player.hitR) {
             if(!player.isDashing && !(player.isHyper && player.hyperType === HYPER_SHIELD)) {
-                player.hp -= 20; 
-                player.showHpTimer = 60; 
-                spawnText("-20", player.wx, player.wy, 'red'); 
-                player.combo = 0; comboEl.style.display='none'; comboLabel.style.display='none';
-                updateUI(); 
-                if(player.hp<=0) gameOver();
-            } else {
-                spawnText("BLOCK", player.wx, player.wy, "#a29bfe");
-            }
+                player.hp -= 20; player.showHpTimer = 60; spawnText("-20", player.wx, player.wy, 'red'); player.combo = 0;
+                updateUI(); if(player.hp<=0) gameOver();
+            } else spawnText("BLOCK", player.wx, player.wy, "#a29bfe");
         }
     }
 
-    function killEnemy(e, isEmp=false) {
-        if (e.isSuicide) {
-            // 자폭병은 죽을 때도 폭발 (단, EMP로 죽을 땐 폭발 안함? 일단 요청대로 죽으면 자폭)
-            // EMP로 죽을 때도 폭발해야 하나? "데미지를 입어 죽는 경우"라고 했으므로 포함
-            triggerSuicideExplosion(e);
-            
-            // 점수/보상은 줌
-            addScore(e.scoreVal); 
-            getObj(gems, Gem).spawn(e.wx, e.wy, e.xp, e.isElite);
-            player.killCount++; player.killTimer = 180; updateKillStreak();
-            addCombo(1);
-            return;
-        }
-
+    function killEnemy(e) {
+        if(e.isSuicide) { triggerSuicideExplosion(e); addScore(e.scoreVal); player.killCount++; updateKillStreak(); return; }
         e.hp = 0; e.active = false; addScore(e.scoreVal); getObj(gems, Gem).spawn(e.wx, e.wy, e.xp, e.isElite);
-        addCombo(1); // 킬 콤보 추가
-        // [수정] 하이퍼 상태가 아닐 때만 엘리트 처치 시 게이지 충전
-        // 즉시 충전하지 않고 HyperOrb 생성
-        if(e.isElite && !player.isHyper) { 
-             getObj(hyperOrbs, HyperOrb).spawn(e.wx, e.wy, e.color);
-        }
+        addCombo(1);
+        if(e.isElite && !player.isHyper) getObj(hyperOrbs, HyperOrb).spawn(e.wx, e.wy, e.color);
         player.killCount++; player.killTimer = 180; updateKillStreak();
     }
 
     function updateKillStreak() {
-        let msg = ""; let col = "#fff";
-        if(player.killCount === 2) { msg = "DOUBLE KILL"; col="#ff7675"; }
-        else if(player.killCount === 3) { msg = "TRIPLE KILL"; col="#fd79a8"; }
-        else if(player.killCount === 4) { msg = "QUADRA KILL"; col="#fab1a0"; }
-        else if(player.killCount >= 5) { msg = "PENTA KILL"; col="#ff0000"; }
+        let msg="", col="#fff";
+        if(player.killCount===2) { msg="DOUBLE KILL"; col="#ff7675"; }
+        else if(player.killCount===3) { msg="TRIPLE KILL"; col="#fd79a8"; }
+        else if(player.killCount===4) { msg="QUADRA KILL"; col="#fab1a0"; }
+        else if(player.killCount>=5) { msg="PENTA KILL"; col="#ff0000"; }
         if(msg) showMessage(msg, col);
     }
 
     function addExp(n) {
         player.exp += n;
         if(player.exp >= player.nextExp) {
-            player.level++; player.exp=0; player.nextExp = Math.floor(player.nextExp*1.4);
-            if(player.hyperGauge >= 90 && !player.isHyper) { player.pendingLevelUps++; showMessage("LEVEL PENDING!", "#fff"); } 
-            else { levelUp(); }
+            player.level++; player.exp = 0; player.nextExp = Math.floor(player.nextExp*1.4);
+            if(player.hyperGauge >= 90 && !player.isHyper) { player.pendingLevelUps++; showMessage("LEVEL PENDING!", "#fff"); }
+            else levelUp();
         }
         updateUI();
     }
@@ -1075,79 +875,35 @@
     
     function updateUI() { 
         expBar.style.width = (player.exp/player.nextExp)*100 + "%"; 
-        lvText.innerText = "LV. " + player.level; 
-        hpText.innerText = "HP: " + Math.floor(player.hp); 
+        lvText.innerText = "LV. " + player.level; hpText.innerText = "HP: " + Math.floor(player.hp); 
         hyperFill.style.height = player.hyperGauge + "%"; 
-        if(player.isGrazingNow) { rightHud.classList.add('gauge-charging'); } else { rightHud.classList.remove('gauge-charging'); }
+        if(player.isGrazingNow) rightHud.classList.add('gauge-charging'); else rightHud.classList.remove('gauge-charging');
     }
-    
-    function updateDashUI() { if(player.dashReady) { dashIcon.classList.remove('cooldown'); dashIcon.classList.add('ready'); dashIcon.innerText = "DASH"; } else { dashIcon.classList.remove('ready'); dashIcon.classList.add('cooldown'); dashIcon.innerText = Math.ceil(player.dashCool/60); } }
+    function updateDashUI() { if(player.dashReady) { dashIcon.className='ready'; dashIcon.innerText="DASH"; } else { dashIcon.className='cooldown'; dashIcon.innerText=Math.ceil(player.dashCool/60); } }
     
     function updateTypeIcon() {
-        let newSrc;
-        let newBackground;
-
-        if(player.hyperType === HYPER_RAPID) {
-            newSrc = "rapid.png";
-            newBackground = 'linear-gradient(to top, #f1c40f, #fffa65)';
-        } else if(player.hyperType === HYPER_EMP) {
-            newSrc = "emp.png";
-            newBackground = 'linear-gradient(to top, #f1c40f, #2ecc71)';
-        } else {
-            newSrc = "shield.png";
-            newBackground = 'linear-gradient(to top, #54a0ff, #5f27cd)';
-        }
-
-        // 아이콘이 실제로 변경될 때만 애니메이션을 트리거
-        if (typeIcon.src.indexOf(newSrc) === -1 || typeIcon.classList.contains('icon-attach-anim')) { // 현재 src가 newSrc를 포함하지 않거나, 애니메이션이 아직 진행 중일 때
-            typeIcon.classList.remove('icon-attach-anim'); // 기존 애니메이션 클래스 제거 (혹시 남아있을 경우)
-            // 브라우저가 DOM 변경을 인식하고 애니메이션을 리셋하도록 강제하는 트릭
-            void typeIcon.offsetWidth; 
-            typeIcon.src = newSrc;
-            typeIcon.classList.add('icon-attach-anim'); // 애니메이션 클래스 추가
-
-            typeIcon.onanimationend = () => {
-                typeIcon.classList.remove('icon-attach-anim');
-                typeIcon.onanimationend = null; // 이벤트 리스너 제거
-            };
-        } else { // 아이콘 변경이 없을 때
-            typeIcon.src = newSrc;
-        }
-        hyperFill.style.background = newBackground;
-    }
-
-    function drawGrid() {
-        ctx.fillStyle = '#0f1218'; ctx.fillRect(0, 0, CW, CH);
-        ctx.strokeStyle = '#1e2328'; ctx.lineWidth = 2; ctx.beginPath();
-        const sz = 60; const offX = ((player.wx % sz) + sz) % sz; const offY = ((player.wy % sz) + sz) % sz;
-        for(let x = -offX; x < CW; x += sz) { ctx.moveTo(x, 0); ctx.lineTo(x, CH); }
-        for(let y = -offY; y < CH; y += sz) { ctx.moveTo(0, y); ctx.lineTo(CW, y); }
-        ctx.stroke();
-    }
-
-    function drawJoystick() {
-        if(!joystick.active) { if('ontouchstart' in window) { ctx.beginPath(); ctx.arc(CW*0.2, CH*0.8, 30, 0, Math.PI*2); ctx.strokeStyle = 'rgba(255, 255, 255, 0.02)'; ctx.lineWidth = 2; ctx.stroke(); } return; }
-        ctx.beginPath(); ctx.arc(joystick.baseX, joystick.baseY, joystick.maxRadius, 0, Math.PI*2); ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)'; ctx.lineWidth = 4; ctx.stroke();
-        ctx.beginPath(); ctx.arc(joystick.stickX, joystick.stickY, 20, 0, Math.PI*2); ctx.fillStyle = 'rgba(10, 205, 229, 0.1)'; ctx.fill();
+        let src="rapid.png", bg='linear-gradient(to top, #f1c40f, #fffa65)';
+        if(player.hyperType === HYPER_EMP) { src="emp.png"; bg='linear-gradient(to top, #f1c40f, #2ecc71)'; }
+        else if(player.hyperType === HYPER_SHIELD) { src="shield.png"; bg='linear-gradient(to top, #54a0ff, #5f27cd)'; }
+        typeIcon.src = src; hyperFill.style.background = bg;
+        typeIcon.classList.remove('icon-attach-anim'); void typeIcon.offsetWidth; typeIcon.classList.add('icon-attach-anim');
     }
 
     function update() {
         if(gameState!=='PLAY') return;
-        frameCount++;
-        player.isGrazingNow = false;
-
-        if(screenShake > 0) screenShake *= 0.9; if(screenShake < 0.5) screenShake = 0;
-        if(player.killTimer > 0) { player.killTimer--; if(player.killTimer <= 0) { player.killCount = 0; } }
-        if(!player.dashReady) { player.dashCool--; if(player.dashCool <= 0) { player.dashReady = true; updateDashUI(); } else if (frameCount % 60 === 0) updateDashUI(); }
+        frameCount++; player.isGrazingNow = false;
+        if(screenShake > 0) screenShake *= 0.9;
+        if(player.killTimer > 0) player.killTimer--;
+        if(!player.dashReady) { player.dashCool--; if(player.dashCool<=0) { player.dashReady=true; updateDashUI(); } else if(frameCount%60===0) updateDashUI(); }
 
         if(player.isDashing) {
-            player.wx += player.dashVx * 15; player.wy += player.dashVy * 15; player.dashTime--; if(player.dashTime <= 0) player.isDashing = false;
+            player.wx += player.dashVx * 15; player.wy += player.dashVy * 15;
+            player.dashTime--; if(player.dashTime <= 0) player.isDashing = false;
         } else {
-            const isMoving = joystick.active && (joystick.vx !== 0 || joystick.vy !== 0);
             const spd = (player.isHyper && player.hyperType===HYPER_RAPID) ? player.baseSpeed*1.5 : player.baseSpeed;
             player.wx += joystick.vx * spd; player.wy += joystick.vy * spd;
             const fr = (player.isHyper && player.hyperType===HYPER_RAPID) ? 4 : player.baseFireRate;
-            if(isMoving && frameCount - player.lastShot > fr) {
+            if((joystick.vx!==0||joystick.vy!==0) && frameCount - player.lastShot > fr) {
                 let t=null, min=Infinity;
                 enemies.forEach(e=>{ if(!e.active) return; const d = Math.hypot(player.wx-e.wx, player.wy-e.wy); if(d<min) { min=d; t=e; } });
                 if(t && min<450) {
@@ -1159,164 +915,102 @@
         }
 
         if(player.isHyper) {
-            player.hyperTime--; player.hyperGauge = (player.hyperTime/300)*100;
-            if(player.hyperType === HYPER_SHIELD) {
-                player.hyperGauge = (player.hyperTime/600)*100;
-                player.shieldAngle += 0.05; player.shieldPulse += 0.1;
-
-                // 쉴드 하이퍼 동안 HP 재생 (1초마다 1HP)
-                if (frameCount % 60 === 0) {
-                    player.hp = Math.min(player.maxHp, player.hp + 1);
-                    updateUI(); // HP 업데이트 반영
-                }
-            }
-            if(player.hyperTime<=0) {
-                player.isHyper=false; player.hyperGauge=0; document.body.classList.remove('hyper-active');
-                if(player.pendingLevelUps > 0) { player.pendingLevelUps--; levelUp(); }
-            }
+            player.hyperTime--; player.hyperGauge = (player.hyperTime/(player.hyperType===HYPER_SHIELD?600:300))*100;
+            if(player.hyperType===HYPER_SHIELD) { player.shieldAngle+=0.05; player.shieldPulse+=0.1; if(frameCount%60===0) player.hp=Math.min(player.maxHp, player.hp+1); }
+            if(player.hyperTime<=0) { player.isHyper=false; player.hyperGauge=0; document.body.classList.remove('hyper-active'); if(player.pendingLevelUps>0) { player.pendingLevelUps--; levelUp(); } }
             updateUI();
         }
         if(player.combo>0) { player.comboTimer--; if(player.comboTimer<=0) { player.combo=0; comboEl.style.display='none'; comboLabel.style.display='none'; } }
 
-        // 스폰 주기: 레벨이 오를수록 기하급수적으로 빨라짐 (최소 10프레임 = 초당 6마리)
-        const rate = (player.isHyper && player.hyperType===HYPER_RAPID) ? 5 : Math.max(10, 60 - player.level - Math.floor(Math.pow(player.level, 1.5) * 0.1));
+        const rate = (player.isHyper && player.hyperType===HYPER_RAPID) ? 5 : Math.max(10, 60 - player.level);
         if(frameCount % rate === 0) getObj(enemies, Enemy).spawn(false);
         if(frameCount % 900 === 0 && player.level >= 3) {
-            const activeBosses = enemies.filter(e => e.active && e.isElite).length; let maxBosses = 1; if(player.level >= 9) maxBosses = 2; if(player.level >= 18) maxBosses = 3;
-            if(activeBosses < maxBosses) getObj(enemies, Enemy).spawn(true);
+            const activeBosses = enemies.filter(e => e.active && e.isElite).length;
+            if(activeBosses < (player.level>=9?2:1)) getObj(enemies, Enemy).spawn(true);
         }
 
-        bullets.forEach(b=>{
+        bullets.forEach(b => {
             if(b.active) {
                 b.update();
                 if(b.isEnemyBullet) {
-                    const d = Math.hypot(b.wx-player.wx, b.wy-player.wy);
-                    if(d < player.hitR + b.r) {
-                        if((player.isHyper && player.hyperType === HYPER_SHIELD) || player.isDashing) { spawnText("BLOCK", player.wx, player.wy, "#a29bfe"); b.active = false; } 
-                        else { 
-                            player.hp -= 10; player.showHpTimer = 60; spawnText("-10", player.wx, player.wy, 'red'); 
-                            player.combo = 0; comboEl.style.display='none'; comboLabel.style.display='none'; // 피격 시 콤보 초기화
-                            updateUI(); b.active=false; if(player.hp<=0) gameOver(); 
-                        }
+                    if(Math.hypot(b.wx-player.wx, b.wy-player.wy) < player.hitR+b.r) {
+                        if((player.isHyper && player.hyperType === HYPER_SHIELD) || player.isDashing) { spawnText("BLOCK", player.wx, player.wy, "#a29bfe"); b.active=false; }
+                        else { player.hp-=10; player.showHpTimer=60; spawnText("-10", player.wx, player.wy, 'red'); player.combo=0; updateUI(); b.active=false; if(player.hp<=0) gameOver(); }
                     }
                 } else {
-                    enemies.forEach(e=>{
-                        if(e.active) {
-                            const d = Math.hypot(b.wx-e.wx, b.wy-e.wy);
-                            if(d < b.r + e.r) {
-                                if (!b.hitList.includes(e)) {
-                                    let finalDmg = player.damage * ((player.isHyper && player.hyperType===HYPER_RAPID)?2:1);
-                                    if(b.isCrit) finalDmg *= player.critDamage;
-                                    e.hp -= finalDmg; 
-                                    let color = b.isCrit ? '#ff4757' : 'white'; let size = b.isCrit ? 20 : 12; let txt = Math.floor(finalDmg); 
-                                    spawnText(txt, e.wx, e.wy, color, size);
-                                    const kbPower = e.isElite ? 0.3 : 4.0; e.wx += b.vx * 0.5 * kbPower; e.wy += b.vy * 0.5 * kbPower; 
-                                    if(e.hp<=0) killEnemy(e);
-                                    if (b.isCrit) { b.hitList.push(e); } else { b.active = false; }
-                                }
-                            }
+                    enemies.forEach(e => {
+                        if(e.active && Math.hypot(b.wx-e.wx, b.wy-e.wy) < b.r+e.r && !b.hitList.includes(e)) {
+                            let dmg = player.damage * ((player.isHyper && player.hyperType===HYPER_RAPID)?2:1); if(b.isCrit) dmg*=player.critDamage;
+                            e.hp -= dmg; spawnText(Math.floor(dmg), e.wx, e.wy, b.isCrit?'#ff4757':'white', b.isCrit?20:12);
+                            if(e.hp<=0) killEnemy(e);
+                            if(b.isCrit) b.hitList.push(e); else b.active=false;
                         }
-                    })
+                    });
                 }
             }
         });
-        enemies.forEach(e=>{ if(e.active) e.update(); }); gems.forEach(e=>{ if(e.active) e.update(); }); texts.forEach(e=>{ if(e.active) e.update(); }); effects.forEach(e=>{ if(e.active) e.update(); }); hyperOrbs.forEach(e=>{ if(e.active) e.update(); });
+        enemies.forEach(x => { if(x.active) x.update(); });
+        gems.forEach(x => { if(x.active) x.update(); });
+        texts.forEach(x => { if(x.active) x.update(); });
+        effects.forEach(x => { if(x.active) x.update(); });
+        hyperOrbs.forEach(x => { if(x.active) x.update(); });
     }
 
     function draw() {
         ctx.save();
-        if(screenShake > 0) { const rx = (Math.random() - 0.5) * screenShake; const ry = (Math.random() - 0.5) * screenShake; ctx.translate(rx, ry); }
-        drawGrid();
+        if(screenShake>0) ctx.translate((Math.random()-0.5)*screenShake, (Math.random()-0.5)*screenShake);
         
-        // [수정] Graze 서클 및 전기 색상 동적 결정 (Rapid: Yellow)
-        let hyperColor;
-        if(player.hyperType === HYPER_RAPID) hyperColor = '#f1c40f'; // Yellow
-        else if(player.hyperType === HYPER_EMP) hyperColor = '#2ecc71'; // Green
-        else hyperColor = '#9b59b6'; // Purple
-        
-        ctx.strokeStyle = hyperColor; 
-        ctx.globalAlpha = 0.4; // 원 투명도
-        ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(CW/2, CH/2, player.grazeR, 0, Math.PI*2); ctx.stroke();
-        ctx.globalAlpha = 1.0; // 투명도 복구
+        // [수정] 배경색만 칠하고 그리드 그리기 코드는 삭제함
+        ctx.fillStyle = '#0f1218'; ctx.fillRect(0, 0, CW, CH);
 
-        gems.forEach(e=>{ if(e.active) e.draw(); }); effects.forEach(e=>{ if(e.active) e.draw(); }); bullets.forEach(e=>{ if(e.active) e.draw(); }); enemies.forEach(e=>{ if(e.active) e.draw(); }); texts.forEach(e=>{ if(e.active) e.draw(); }); hyperOrbs.forEach(e=>{ if(e.active) e.draw(); });
+        // 배경 애니메이션 (항상 그리기)
+        bgAtoms.forEach(a => { a.update(); a.draw(ctx); });
 
-        if(player.isHyper && player.hyperType === HYPER_SHIELD) {
-            const pulseOffset = Math.sin(player.shieldPulse) * 3;
-            const baseRadius = player.r + 25;
-            ctx.strokeStyle = 'rgba(162, 155, 254, 0.8)'; ctx.lineWidth = 2;
-            ctx.beginPath(); ctx.arc(CW/2, CH/2, baseRadius + pulseOffset, 0, Math.PI*2); ctx.stroke();
-            ctx.save(); ctx.translate(CW/2, CH/2); ctx.rotate(player.shieldAngle);
-            ctx.strokeStyle = `rgba(108, 92, 231, ${0.3 + Math.random()*0.3})`; ctx.lineWidth = 4;
-            for(let i=0; i<3; i++) { ctx.beginPath(); ctx.arc(0, 0, baseRadius - 2, (Math.PI*2/3)*i, (Math.PI*2/3)*i + 1.5); ctx.stroke(); }
-            ctx.restore();
-            ctx.fillStyle = 'rgba(162, 155, 254, 0.1)'; ctx.beginPath(); ctx.arc(CW/2, CH/2, baseRadius + pulseOffset, 0, Math.PI*2); ctx.fill();
-        }
-        
-        ctx.fillStyle = (player.isHyper && player.hyperType===HYPER_RAPID) ? '#fffa65' : player.color;
-        if(player.isDashing) { ctx.shadowColor = '#f1c40f'; ctx.shadowBlur = 20; ctx.fillStyle = '#fff'; } else if(player.isHyper) { ctx.shadowColor=ctx.fillStyle; ctx.shadowBlur=15; }
-        ctx.beginPath(); ctx.arc(CW/2, CH/2, player.r, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur=0;
+        if (gameState === 'PLAY') {
+            let hc = (player.hyperType === HYPER_RAPID) ? '#f1c40f' : (player.hyperType === HYPER_EMP ? '#2ecc71' : '#9b59b6');
+            ctx.strokeStyle = hc; ctx.globalAlpha = 0.4; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(CW/2, CH/2, player.grazeR, 0, Math.PI*2); ctx.stroke(); ctx.globalAlpha = 1.0;
 
-        // 흰 점 그리기
-        let lookX = joystick.vx;
-        let lookY = joystick.vy;
+            gems.forEach(x => { if(x.active) x.draw(); });
+            effects.forEach(x => { if(x.active) x.draw(); });
+            bullets.forEach(x => { if(x.active) x.draw(); });
+            enemies.forEach(x => { if(x.active) x.draw(); });
+            texts.forEach(x => { if(x.active) x.draw(); });
+            hyperOrbs.forEach(x => { if(x.active) x.draw(); });
 
-        // 조이스틱 입력이 없으면 기본적으로 위쪽을 바라보도록
-        if (lookX === 0 && lookY === 0) {
-            lookY = -1; // 위쪽
-        }
-
-        const indicatorRadius = player.r - 5; // 주인공 반지름보다 살짝 안쪽
-        const indicatorSize = 2; // 흰 점의 반지름
-
-        // 방향 벡터 정규화
-        const magnitude = Math.hypot(lookX, lookY);
-        if (magnitude > 0) {
-            lookX /= magnitude;
-            lookY /= magnitude;
-        }
-
-        const dotX = CW/2 + lookX * indicatorRadius;
-        const dotY = CH/2 + lookY * indicatorRadius;
-
-        ctx.fillStyle = 'white';
-        ctx.beginPath();
-        ctx.arc(dotX, dotY, indicatorSize, 0, Math.PI*2);
-        ctx.fill();
-
-        enemies.forEach(e => {
-            if (e.active) {
-                const dist = Math.hypot(e.wx - player.wx, e.wy - player.wy);
-                if (dist < player.grazeR + e.r && dist > player.hitR + e.r) {
-                    const sx = e.wx - player.wx + CW/2;
-                    const sy = e.wy - player.wy + CH/2;
-                    // [수정] 전기 색상 파라미터 전달
-                    drawLightning(CW/2, CH/2, sx, sy, hyperColor); 
-                    player.isGrazingNow = true; 
-                }
+            if(player.isHyper && player.hyperType === HYPER_SHIELD) {
+                ctx.strokeStyle='rgba(162,155,254,0.8)'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(CW/2,CH/2,player.r+25+Math.sin(player.shieldPulse)*3,0,Math.PI*2); ctx.stroke();
             }
-        });
-        updateUI();
+            ctx.fillStyle = (player.isHyper && player.hyperType===HYPER_RAPID) ? '#fffa65' : player.color;
+            if(player.isDashing) { ctx.shadowColor='#f1c40f'; ctx.shadowBlur=20; ctx.fillStyle='#fff'; }
+            ctx.beginPath(); ctx.arc(CW/2, CH/2, player.r, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur=0;
+            
+            let lx = joystick.vx, ly = joystick.vy; if(lx===0&&ly===0) ly=-1;
+            const mag = Math.hypot(lx,ly); if(mag>0) { lx/=mag; ly/=mag; }
+            ctx.fillStyle='white'; ctx.beginPath(); ctx.arc(CW/2+lx*5, CH/2+ly*5, 2, 0, Math.PI*2); ctx.fill();
 
-        if(player.showHpTimer > 0) {
-            player.showHpTimer--; const hpPct = Math.max(0, player.hp / player.maxHp); const bx = CW/2, by = CH/2 - 25; const bw = 30, bh = 4;
-            ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(bx - bw/2, by, bw, bh); ctx.fillStyle = '#ff7675'; ctx.fillRect(bx - bw/2, by, bw * hpPct, bh);
+            enemies.forEach(e => {
+                if(e.active) {
+                    const d = Math.hypot(e.wx-player.wx, e.wy-player.wy);
+                    if(d < player.grazeR+e.r && d > player.hitR+e.r) { drawLightning(CW/2, CH/2, e.wx-player.wx+CW/2, e.wy-player.wy+CH/2, hc); player.isGrazingNow = true; }
+                }
+            });
+
+            if(player.showHpTimer > 0) {
+                 const hpPct = Math.max(0, player.hp / player.maxHp);
+                 ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(CW/2-15, CH/2-25, 30, 4);
+                 ctx.fillStyle = '#ff7675'; ctx.fillRect(CW/2-15, CH/2-25, 30*hpPct, 4);
+            }
         }
-        if(screenShake > 20) { ctx.fillStyle = `rgba(255,255,255, ${screenShake/100})`; ctx.fillRect(0,0,CW,CH); }
+        
+        if(screenShake > 20) { ctx.fillStyle=`rgba(255,255,255,${screenShake/100})`; ctx.fillRect(0,0,CW,CH); }
         ctx.restore(); drawJoystick();
     }
 
     function loop() { requestAnimationFrame(loop); if(gameState==='PLAY') { update(); draw(); } }
 
-    // [수정] 통합된 레벨업 시스템 (하이퍼 스킬 랜덤 출현)
     function levelUp() {
-        gameState='PAUSE'; 
-        joystick.active=false; joystick.vx=0; joystick.vy=0; 
-        levelUpScreen.style.display='flex'; 
-        cardsBox.innerHTML='';
-        levelUpTitle.innerText = "LEVEL UP!"; // 타이틀 통일
-
-        // 1. 일반 스탯 옵션
+        gameState='PAUSE'; joystick.active=false; joystick.vx=0; joystick.vy=0;
+        levelUpScreen.style.display='flex'; cardsBox.innerHTML='';
         const statOpts = [
             {t:"공격력 UP", d:"데미지 +5", img: "atk.png", f:()=>{player.damage+=5;}}, 
             {t:"연사속도 UP", d:"공격속도 +10%", img: "speed.png", f:()=>{player.baseFireRate*=0.9;}},
@@ -1326,159 +1020,90 @@
             {t:"체력회복", d:"HP +30", img: "hp.png", f:()=>{player.hp=Math.min(player.maxHp, player.hp+30);}},
             {t:"자석 강화", d:"흡수 범위 +15", img: "mag.png", f:()=>{player.magnet += 15;}} 
         ];
-
-        // 2. 하이퍼 스킬 옵션
         const hyperOpts = [
-            {t:"고속연사 스킬장착", d:"5초 동안 고속연사", c:'hyper-card', img:'rapid.png', f:()=>{player.hyperType=HYPER_RAPID; updateTypeIcon();}},
-            {t:"EMP 스킬장착", d:"EMP 광역 데미지", c:'hyper-card', img:'emp.png', f:()=>{player.hyperType=HYPER_EMP; updateTypeIcon();}},
-            {t:"완전방어 스킬장착", d:"10초 무적 + HP 회복", c:'hyper-card', img:'shield.png', f:()=>{player.hyperType=HYPER_SHIELD; updateTypeIcon();}},
+            {t:"고속연사 스킬", d:"5초 동안 고속연사", c:'hyper-card', img:'rapid.png', f:()=>{player.hyperType=HYPER_RAPID; updateTypeIcon();}},
+            {t:"EMP 스킬", d:"EMP 광역 데미지", c:'hyper-card', img:'emp.png', f:()=>{player.hyperType=HYPER_EMP; updateTypeIcon();}},
+            {t:"완전방어 스킬", d:"10초 무적 + HP 회복", c:'hyper-card', img:'shield.png', f:()=>{player.hyperType=HYPER_SHIELD; updateTypeIcon();}},
         ];
-
-        // 3. 풀 합치기 (확률 조정 가능, 여기선 단순 병합)
         let pool = [...statOpts, ...hyperOpts];
-
-        // 4. 랜덤 3개 선택 (중복 방지 로직 포함)
         for(let i=0; i<3; i++) {
-            if(pool.length === 0) break;
-            const r = Math.floor(Math.random()*pool.length);
-            const item = pool.splice(r, 1)[0]; 
-
-            const div = document.createElement('div'); 
-            div.className = item.c ? `card ${item.c}` : 'card'; // 하이퍼 카드는 별도 클래스 유지
-            
-            let imgHTML = item.img ? `<img src="${item.img}" class="card-icon">` : '';
-            div.innerHTML = `
-                ${imgHTML}
-                <div class="card-text-group">
-                    <h3>${item.t}</h3>
-                    <p>${item.d}</p>
-                </div>
-            `;
-            
-                        div.style.animationDelay = `${i * 0.1}s`;
-                        div.onclick=()=>{
-                            item.f();
-                            // 기존 if(item.c) showMessage(...) 부분을 통합
-                            let msgColor = item.c ? "#a29bfe" : "#c8aa6e"; // 하이퍼 카드면 보라색, 아니면 레벨업 카드 색상
-                            let msgText = item.t;
-                            if (item.c) msgText += " 장착됨"; // 하이퍼 카드면 "장착됨" 추가
-                            else msgText += "!"; // 일반 스킬은 "!" 추가
-            
-                            showMessage(msgText, msgColor, item.img); // 이미지 경로 전달
-            
-                            levelUpScreen.style.display='none';
-                            gameState='PLAY';
-                        };
-                        cardsBox.appendChild(div);        }
+            if(pool.length===0) break;
+            const item = pool.splice(Math.floor(Math.random()*pool.length), 1)[0];
+            const div = document.createElement('div'); div.className = item.c ? `card ${item.c}` : 'card';
+            div.innerHTML = `${item.img?`<img src="${item.img}" class="card-icon">`:''}<div class="card-text-group"><h3>${item.t}</h3><p>${item.d}</p></div>`;
+            div.style.animationDelay = `${i * 0.1}s`;
+            div.onclick=()=>{
+                item.f(); showMessage(item.t + (item.c?" 장착됨":"!"), item.c?"#a29bfe":"#c8aa6e", item.img);
+                levelUpScreen.style.display='none'; gameState='PLAY';
+            };
+            cardsBox.appendChild(div);
+        }
     }
 
-    // --- [Logic Update] 1-Time Rush Mode ---
     function gameOver() {
-        gameState='GAMEOVER';
-        screenShake = 0; // 게임오버 시 화면 흔들림 즉시 정지
-
-        gameOverScreen.style.display='flex';
-
-        let isNewRecord = false;
-        if(player.score > highScore) { 
-            highScore = player.score; 
-            localStorage.setItem('survival_highscore', highScore);
-            isNewRecord = true;
-        }
-        newRecordMsg.style.display = isNewRecord ? 'block' : 'none';
+        gameState = 'GAMEOVER'; screenShake = 0;
+        gameOverScreen.style.display = 'flex';
         
-        resultContainer.innerHTML = `
-            <div style="font-size:20px; font-weight:normal; color:#ddd; margin-bottom:5px;">SCORE: ${player.score.toLocaleString()}</div>
-            <div style="font-size:20px; font-weight:bold; color:#fffa65;">BEST: ${parseInt(highScore).toLocaleString()}</div>
-        `;
-        
-        // 1회 한정 Rush 체크
+        let isNew = false;
+        if(player.score > highScore) { highScore = player.score; localStorage.setItem('survival_highscore', highScore); isNew = true; }
+        newRecordMsg.style.display = isNew ? 'block' : 'none';
+        resultContainer.innerHTML = `<div>SCORE: ${player.score.toLocaleString()}</div><div>BEST: ${parseInt(highScore).toLocaleString()}</div>`;
+
+        const lbContainer = document.getElementById('leaderboardContainer');
+        document.getElementById('leaderboardBody').innerHTML = "";
+
         if (!hasRushed) {
-            let timeLeft = 5;
-            
-            rushBtn.className = "btn-enhanced timed-rush"; 
-            rushSubText.innerText = "단 한번! 현재 스킬을 유지한 채 재시작.";
-            rushLabel.style.display = "none"; 
-            
-            // 게이지 애니메이션
-            rushBtnGauge.style.transition = 'none'; // Reset transition
-            rushBtnGauge.style.width = '100%';
-            
-            setTimeout(() => {
-                rushBtnGauge.style.transition = 'width 5s linear';
-                rushBtnGauge.style.width = '0%';
-            }, 50);
+            lbContainer.style.display = 'none'; // 첫 번째 죽음: 리더보드 숨김
 
-            const updateButtonText = () => {
-                rushBtnText.innerHTML = `<span style="font-size: 1.5em; vertical-align: middle;">${timeLeft}</span> &nbsp; 강화된 재도전`;
-            };
-            updateButtonText();
+            let timeLeft = 5;
+            rushBtn.className = "btn-enhanced timed-rush"; rushSubText.innerText = "단 한번! 스탯 유지 재시작";
+            rushBtnGauge.style.transition='none'; rushBtnGauge.style.width='100%';
+            setTimeout(()=>{ rushBtnGauge.style.transition='width 5s linear'; rushBtnGauge.style.width='0%'; }, 50);
             
+            rushBtnText.innerHTML = `<span style="font-size:1.5em; vertical-align:middle;">${timeLeft}</span> &nbsp; 강화 재도전`;
             if(rushTimerInterval) clearInterval(rushTimerInterval);
             rushTimerInterval = setInterval(() => {
                 timeLeft--;
                 if (timeLeft > 0) {
-                    updateButtonText();
+                    rushBtnText.innerHTML = `<span style="font-size:1.5em; vertical-align:middle;">${timeLeft}</span> &nbsp; 강화 재도전`;
                 } else {
                     clearInterval(rushTimerInterval);
-                    rushBtn.className = "btn-reset";
-                    rushBtnText.innerText = "↻ 처음부터";
-                    rushSubText.innerText = "";
+                    rushBtn.className = "btn-reset"; rushBtnText.innerText = "↻ 처음부터"; rushSubText.innerText = "";
+                    
+                    lbContainer.style.display = 'block'; // 타이머 종료: 리더보드 표시
+                    submitScoreLL(player.score); 
                 }
             }, 1000);
-
         } else {
-            // 이미 Rush를 씀 -> 바로 리셋 버튼
-            rushLabel.style.display = "none";
-            rushBtn.className = "btn-reset";
-            rushBtnText.innerText = "↻ 처음부터";
-            rushSubText.innerText = "";
-            if(rushTimerInterval) clearInterval(rushTimerInterval);
-            rushBtnGauge.style.width = '0%';
+            rushBtn.className = "btn-reset"; rushBtnText.innerText = "↻ 처음부터"; rushSubText.innerText = "";
+            rushBtnGauge.style.width='0%'; if(rushTimerInterval) clearInterval(rushTimerInterval);
+            
+            lbContainer.style.display = 'block'; // 두 번째 죽음: 리더보드 표시
+            submitScoreLL(player.score); 
         }
     }
 
     function rushStart() {
         if(rushTimerInterval) clearInterval(rushTimerInterval);
-        // 클래스 유무로 강화된 재도전 상태인지 확인
         const canRush = rushBtn.classList.contains('btn-enhanced');
+        enemies=[]; bullets=[]; gems=[]; texts=[]; effects=[]; hyperOrbs=[];
+        player.wx=0; player.wy=0; joystick.active=false;
         
-        enemies.length = 0; bullets.length = 0; gems.length = 0; texts.length = 0; effects.length = 0; hyperOrbs.length = 0;
-        player.wx = 0; player.wy = 0; joystick.active = false;
-        
-        if(canRush) {
-            // New Game+ (Stats Keep)
-            player.level = 1; player.exp = 0; player.nextExp = 10; player.score = 0;
-            player.hp = player.maxHp; 
-            hasRushed = true; // 플래그 설정 (다음엔 못씀)
-        } else {
-            // Hard Reset
-            player.hp = 100; player.maxHp = 100; player.level = 1; player.exp = 0; player.nextExp = 10;
-            player.score = 0; player.damage = 15; player.fireRate = 25; player.baseFireRate = 25;
-            player.bulletCount = 1; player.critChance = 0.15; player.magnet = 20;
-            player.hyperGauge = 0; player.isHyper = false; player.hyperType = HYPER_RAPID;
-            player.dashMaxCool = 600;
-            hasRushed = false; // 플래그 리셋 (새 게임이니 다시 기회 줌)
+        if(canRush) { player.level=1; player.exp=0; player.nextExp=10; player.score=0; player.hp=player.maxHp; hasRushed=true; }
+        else {
+            player.hp=100; player.maxHp=100; player.level=1; player.exp=0; player.nextExp=10;
+            player.score=0; player.damage=15; player.fireRate=25; player.baseFireRate=25; player.bulletCount=1; player.critChance=0.15; player.magnet=20;
+            player.hyperGauge=0; player.isHyper=false; player.hyperType=HYPER_RAPID; player.dashMaxCool=600;
+            hasRushed=false;
         }
+        player.lastShot=-100; player.dashReady=true; player.dashCool=0; player.combo=0; player.killCount=0; frameCount=0;
+        screenShake=0; ctx.setTransform(1,0,0,1,0,0);
+        comboEl.style.display='none'; comboLabel.style.display='none'; infoMsg.style.opacity=0;
+        gameOverScreen.style.display='none'; 
+        gameState='PLAY'; // 게임 시작/재시작 시 PLAY 상태로 변경
         
-        player.lastShot = -100; 
-        player.dashReady = true; player.dashCool = 0;
-        player.combo = 0; player.comboTimer = 0;
-        player.killCount = 0; player.killTimer = 0;
-        frameCount = 0; 
-        
-        // 화면 진동 초기화
-        screenShake = 0;
-        ctx.setTransform(1, 0, 0, 1, 0, 0); // 캔버스 변환 초기화
-
-        comboEl.style.display = 'none';
-        comboLabel.style.display = 'none';
-        infoMsg.style.opacity = 0;
-
-        gameOverScreen.style.display = 'none';
-        gameState = 'PLAY';
-        
-        bestVal.innerText = parseInt(highScore).toLocaleString();
+        player.isGrazingNow = false;
+        document.getElementById('rightHud').classList.remove('gauge-charging');
         
         updateUI(); updateTypeIcon(); updateDashUI();
     }
