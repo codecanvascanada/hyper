@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>SPARCRUSH</title>
     <style>
-        /* [기본 설정 - 화면 비율 고정 포함] */
+        /* [기본 설정] */
         * { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; box-sizing: border-box; }
         
         html, body {
@@ -40,8 +40,7 @@
             display: flex; flex-direction: column; 
             padding-top: max(15px, env(safe-area-inset-top));
             padding-bottom: max(15px, env(safe-area-inset-bottom));
-            /* 타이틀 화면일 때는 숨김 */
-            display: none; 
+            display: none; /* 타이틀일 때 숨김 */
         }
 
         .header-ui { width: 100%; display: flex; flex-direction: column; gap: 5px; }
@@ -78,8 +77,13 @@
         /* [모달 공통] */
         .modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); display: none; flex-direction: column; justify-content: center; align-items: center; pointer-events: auto; z-index: 100; }
 
-        /* [타이틀 화면 - 수정: 배경을 반투명하게 변경하여 캔버스 그리드가 보이게 함] */
-        #titleScreen { display: flex; background: rgba(15, 18, 24, 0.85); z-index: 200; } /* 초기 화면 */
+        /* [타이틀 화면 - 배경 투명도 조절로 그리드 보이게 함] */
+        #titleScreen { 
+            display: flex; 
+            /* [수정] 투명도를 0.85 -> 0.6 으로 낮춰서 뒤가 더 잘 보이게 함 */
+            background: rgba(15, 18, 24, 0.6); 
+            z-index: 200; 
+        }
         #gameTitle { color: #00f3ff; font-size: 40px; font-weight: 900; margin-bottom: 40px; letter-spacing: 4px; font-style: italic; text-shadow: 0 0 15px rgba(0,243,255,0.7); animation: neonPulse 1.5s infinite alternate; }
         @keyframes neonPulse { from { text-shadow: 0 0 10px rgba(0,243,255,0.6); transform: scale(1); } to { text-shadow: 0 0 25px rgba(0,243,255,0.9); transform: scale(1.03); } }
 
@@ -96,20 +100,20 @@
         #newRecordMsg { color: #fffa65; font-size: 18px; font-weight: bold; margin-bottom: 5px; display: none; animation: blink 0.5s infinite alternate; }
         @keyframes blink { from { opacity: 1; } to { opacity: 0.5; } }
         
-        /* 이름 입력창 (타이틀 화면용) */
+        /* 이름 입력창 */
         #nameInputBox { margin: 10px 0; display: flex; gap: 5px; justify-content: center; z-index: 101; }
         #inputName { background: #1e2328; border: 1px solid #0acde5; color: #fff; padding: 8px; border-radius: 4px; outline: none; font-weight: bold; text-align: center; width: 140px; font-family: 'Segoe UI', sans-serif; transition: all 0.2s; }
         #inputName:focus { box-shadow: 0 0 8px #0acde5; background: #2d3436; }
         
-        /* [수정] readonly 상태일 때 스타일 (클릭 가능하게 커서 변경) */
-        #inputName[readonly] { background: #333; border-color: #555; color: #aaa; cursor: pointer; }
+        /* [수정] readonly 상태일 때 클릭 유도 스타일 */
+        #inputName[readonly] { background: #2c3e50; border-color: #555; color: #ecf0f1; cursor: pointer; opacity: 0.8; }
         
         #btnName { background: #0acde5; color: #000; border: none; padding: 0 15px; font-weight: bold; cursor: pointer; border-radius: 4px; font-family: 'Segoe UI', sans-serif; transition: transform 0.1s; }
         #btnName:active { transform: scale(0.95); }
         #btnName.edit-mode { background: #555; color: #fff; }
-        #btnName:disabled { background: #555; color: #aaa; cursor: not-allowed; } /* 비활성화 스타일 */
+        #btnName:disabled { background: #555; color: #aaa; cursor: not-allowed; }
 
-        /* 리더보드 (결과창용) */
+        /* 리더보드 */
         #leaderboardContainer { width: 85%; margin: 5px 0 15px 0; background: rgba(0,0,0,0.5); border: 1px solid #444; padding: 10px; min-height: 100px; max-height: 250px; overflow-y: auto; border-radius: 5px; }
         #leaderboardTable { width: 100%; border-collapse: collapse; font-size: 12px; color: #ddd; }
         #leaderboardTable th { text-align: left; border-bottom: 1px solid #666; padding: 4px; color: #0acde5; position: sticky; top: 0; background: #0f1218; }
@@ -119,7 +123,7 @@
         #leaderboardTable tr:nth-child(3) td { color: #d35400; font-weight: bold; }
         #loadingRank { font-size: 12px; color: #aaa; text-align: center; margin: 10px 0; }
 
-        /* 재시작 버튼 (결과창용) */
+        /* 재시작 버튼 */
         #rushTimerBox { text-align: center; margin-top: 5px; }
         #rushBtn { position: relative; overflow: hidden; cursor: pointer; transition: transform 0.1s; -webkit-tap-highlight-color: transparent; }
         #rushBtn:active { transform: scale(0.95); }
@@ -200,9 +204,6 @@
 </div>
 
 <script>
-    // ==========================================
-    // [LootLocker Configuration]
-    // ==========================================
     const LOOTLOCKER_GAME_KEY = "dev_45f9a56c611c47e1be2fcd6e5edecdda"; 
     const LOOTLOCKER_LEADERBOARD_KEY = "32752"; 
     const GAME_VERSION = "0.1.0.0";
@@ -222,7 +223,7 @@
                 llSessionToken = data.session_token;
                 llPlayerID = data.player_id;
                 console.log("✅ LootLocker Connected. Player ID:", llPlayerID);
-                loadSavedName(); // 연결 성공 후 저장된 이름 로드
+                loadSavedName(); 
             } else {
                 console.error("❌ LootLocker Login Failed:", data);
                 document.getElementById('loadingRank').innerText = "Login Failed: " + (data.message || "Error");
@@ -291,25 +292,25 @@
 
     function handleNameBtn() {
         if(isNameLocked) {
-            lockNameInput(false);
+            // 이미 START 상태(이름 확정)라면 게임 시작
+            startGameFromTitle();
         } else {
             saveName();
         }
     }
 
-    // [수정] disabled 대신 readOnly 사용 및 클릭 이벤트 추가
     function lockNameInput(locked) {
         isNameLocked = locked;
         const input = document.getElementById('inputName');
         const btn = document.getElementById('btnName');
         
         if(locked) {
-            input.readOnly = true; // 수정 불가, 클릭은 가능
+            input.readOnly = true; 
             btn.innerText = "START"; 
             btn.classList.add('edit-mode');
             btn.disabled = false; 
         } else {
-            input.readOnly = false; // 수정 가능
+            input.readOnly = false; 
             btn.innerText = "START";
             btn.classList.remove('edit-mode');
             input.focus();
@@ -317,21 +318,19 @@
         }
     }
 
-    // [추가] 읽기 전용 상태일 때 입력창 클릭 시 잠금 해제
+    // [수정] 입력창 클릭 시 수정 가능하게 잠금 해제
     document.getElementById('inputName').addEventListener('click', function() {
         if (this.readOnly && gameState === 'TITLE') {
             lockNameInput(false);
-            this.select(); // 전체 선택하여 바로 수정하기 편하게
+            this.select();
         }
     });
 
-    // 입력창에 내용이 바뀔 때마다 버튼 활성화 상태 업데이트
     document.getElementById('inputName').addEventListener('input', function() {
         if (!isNameLocked) {
             document.getElementById('btnName').disabled = this.value.trim() === "";
         }
     });
-
 
     async function saveName() {
         const nameInput = document.getElementById('inputName');
@@ -358,7 +357,6 @@
                 console.log("Name Updated:", data.name);
                 localStorage.setItem('sparcrush_name', data.name);
                 lockNameInput(true);
-                // 타이틀 화면에서 저장이 완료되면 게임 시작
                 if (gameState === 'TITLE') {
                     startGameFromTitle();
                 }
@@ -377,21 +375,17 @@
 
     function startGameFromTitle() {
         const nameInput = document.getElementById('inputName');
-        if (nameInput.value.trim() === "") return; // 이름 없으면 시작 안 함
+        if (nameInput.value.trim() === "") return; 
 
         document.getElementById('titleScreen').style.display = 'none';
-        document.getElementById('uiLayer').style.display = 'flex'; // UI 표시
-        rushStart(); // 게임 시작
+        document.getElementById('uiLayer').style.display = 'flex'; 
+        rushStart(); 
     }
-
 
     window.onload = function() {
         initLootLocker();
     };
 
-    // ==========================================
-    // [Game Logic Starts Here]
-    // ==========================================
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     
@@ -441,7 +435,7 @@
     let highScore = localStorage.getItem('survival_highscore') || 0;
     bestVal.innerText = parseInt(highScore).toLocaleString();
 
-    let gameState = 'TITLE'; // 초기 상태를 타이틀로 설정
+    let gameState = 'TITLE'; 
     let frameCount = 0;
     let screenShake = 0;
     let rushTimerInterval = null;
@@ -860,7 +854,8 @@
         
         // [수정] 배경과 그리드는 항상 그립니다.
         ctx.fillStyle = '#0f1218'; ctx.fillRect(0, 0, CW, CH);
-        ctx.strokeStyle = '#1e2328'; ctx.lineWidth = 2; ctx.beginPath();
+        // [수정] 그리드 선 색상을 조금 더 밝게(#333) 변경하여 투명 배경 뒤에서도 잘 보이게 함
+        ctx.strokeStyle = '#333'; ctx.lineWidth = 2; ctx.beginPath();
         const sz=60, offX=((player.wx%sz)+sz)%sz, offY=((player.wy%sz)+sz)%sz;
         for(let x=-offX; x<CW; x+=sz) { ctx.moveTo(x,0); ctx.lineTo(x,CH); }
         for(let y=-offY; y<CH; y+=sz) { ctx.moveTo(0,y); ctx.lineTo(CW,y); }
