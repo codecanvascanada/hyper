@@ -126,14 +126,11 @@
         #btnName.edit-mode { background: #555; color: #fff; }
         #btnName:disabled { background: #555; color: #aaa; cursor: not-allowed; }
 
-        /* Leaderboard */
+        /* Leaderboard - No Custom Colors */
         #leaderboardContainer { width: 85%; margin: 5px 0 15px 0; background: rgba(0,0,0,0.5); border: 1px solid #444; padding: 10px; min-height: 100px; max-height: 250px; overflow-y: auto; border-radius: 5px; }
         #leaderboardTable { width: 100%; border-collapse: collapse; font-size: 12px; color: #ddd; }
         #leaderboardTable th { text-align: left; border-bottom: 1px solid #666; padding: 4px; color: #0acde5; position: sticky; top: 0; background: #0f1218; }
         #leaderboardTable td { border-bottom: 1px solid #333; padding: 4px; }
-        #leaderboardTable tr:nth-child(1) td { color: #f1c40f; font-weight: bold; } 
-        #leaderboardTable tr:nth-child(2) td { color: #bdc3c7; font-weight: bold; }
-        #leaderboardTable tr:nth-child(3) td { color: #d35400; font-weight: bold; }
         #loadingRank { font-size: 12px; color: #aaa; text-align: center; margin: 10px 0; }
 
         /* Restart Button */
@@ -1288,14 +1285,17 @@
         enemies=[]; bullets=[]; gems=[]; texts=[]; effects=[]; hyperOrbs=[];
         player.wx=0; player.wy=0; joystick.active=false;
 
+        // [FIX] Reset score to 0 on ANY restart
         player.score = 0; 
         
         if(canRush) { 
+            // Rush: Keep stats, Reset level
             player.level=1; player.exp=0; player.nextExp=10; 
             player.hp=player.maxHp; 
             hasRushed=true; 
         }
         else {
+            // Hard Reset
             player.hp=100; player.maxHp=100; player.level=1; player.exp=0; player.nextExp=10;
             player.damage=15; player.fireRate=25; player.baseFireRate=25; 
             player.bulletCount=1; player.critChance=0.15; player.magnet=20;
@@ -1303,6 +1303,7 @@
             hasRushed=false;
         }
         
+        // Reset per-run stats
         player.lastShot=-100; player.dashReady=true; player.dashCool=0; 
         player.combo=0; player.maxCombo=0; 
         player.killCount=0; player.killTimer=0; 
@@ -1314,6 +1315,7 @@
         gameOverScreen.style.display='none'; 
         gameState='PLAY'; 
         
+        // [FIX] Update UI immediately to show 0 score & Latest High Score
         scoreVal.innerText = "0"; 
         bestVal.innerText = parseInt(highScore).toLocaleString();
         
