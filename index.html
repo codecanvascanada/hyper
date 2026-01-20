@@ -260,22 +260,20 @@
         } catch(e) { console.error("Connection Error:", e); }
     }
 
-    // [Waitable Submit Score]
     async function submitScoreLL(score) {
         if(!llSessionToken) return;
         try {
             document.getElementById('loadingRank').innerText = "Uploading Score...";
-            await fetch(`https://api.lootlocker.io/game/leaderboards/${LOOTLOCKER_LEADERBOARD_KEY}/submit`, {
+            const res = await fetch(`https://api.lootlocker.io/game/leaderboards/${LOOTLOCKER_LEADERBOARD_KEY}/submit`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "x-session-token": llSessionToken },
                 body: JSON.stringify({ score: score })
             });
-            // After submit, fetch leaderboard
-            await fetchLeaderboardLL(); 
+            await res.json(); 
+            fetchLeaderboardLL(); 
         } catch(e) { console.error("Submit Error:", e); }
     }
 
-    // [Waitable Fetch Leaderboard]
     async function fetchLeaderboardLL() {
         if(!llSessionToken) return;
         try {
@@ -1067,7 +1065,6 @@
         if (gameState === 'TITLE') {
             ctx.fillStyle = '#0f1218'; 
             ctx.fillRect(0, 0, CW, CH);
-            // [Modified] Sort by Z for fake 3D depth order
             bgAtoms.sort((a,b) => a.z - b.z).forEach(a => { a.update(); a.draw(ctx); });
         } else {
             drawGrid();
@@ -1168,7 +1165,7 @@
         gameOverScreen.style.display = 'flex';
         
         // 1. Calculate Scores
-        const maxComboBonus = player.maxCombo * 500;
+        const maxComboBonus = player.maxCombo * 50; // Multiplier fixed to 50
         const baseScore = player.score; 
         const finalScore = baseScore + maxComboBonus;
         player.score = finalScore; 
@@ -1182,7 +1179,7 @@
         }
         newRecordMsg.style.display = isNew ? 'block' : 'none';
         
-        // 3. UI Setup (Text Visible, Values Empty or 0)
+        // 3. UI Setup
         const resultContainer = document.getElementById('resultContainer');
         resultContainer.innerHTML = `
             <div style="color:#aaa; font-size:0.9em;">Base Score: <span id="goBaseScore" style="opacity:0;">0</span></div>
@@ -1193,18 +1190,17 @@
             <div style="font-size:1.2em; font-weight:bold; color:white; border-top:1px solid #444; padding-top:5px;">
                 FINAL: <span id="goFinalScore">0</span>
             </div>
-            <div style="font-size:0.9em; color:#888; margin-top:5px;">BEST: ${parseInt(highScore).toLocaleString()}</div>
         `;
         
-        // Hide Buttons & Show Leaderboard immediately
         const rushTimerBox = document.getElementById('rushTimerBox');
         rushTimerBox.classList.remove('visible'); 
+        
         const lbContainer = document.getElementById('leaderboardContainer');
         document.getElementById('loadingRank').style.display = 'block';
         document.getElementById('leaderboardBody').innerHTML = ""; 
         lbContainer.style.display = 'block'; 
 
-        // 4. Submit Score & Wait (Async)
+        // 4. Submit Score & Wait for Leaderboard (Async)
         const fetchPromise = submitScoreLL(player.score);
         const timeoutPromise = new Promise(resolve => setTimeout(resolve, 3000));
         
@@ -1216,30 +1212,29 @@
         const elBonus = document.getElementById('goComboBonus');
         const elFinal = document.getElementById('goFinalScore');
 
-        // T=0: Base Score Appears & Final Score shows Base Score
+        // T=0
         elBase.innerText = baseScore.toLocaleString();
         elBase.style.opacity = 1; 
         elBase.classList.add('score-appear');
-        
         elFinal.innerText = baseScore.toLocaleString();
 
-        // T+500ms: Bonus Bounces in
+        // T+500ms
         setTimeout(() => {
             elBonus.innerText = "+" + maxComboBonus.toLocaleString();
             elBonusBox.style.opacity = 1;
             elBonusBox.classList.add('score-bounce');
         }, 500);
 
-        // T+1000ms: Final Score Rolls Up
+        // T+1000ms
         setTimeout(() => {
             animateValue(elFinal, baseScore, finalScore, 1000);
         }, 1000);
 
-        // T+2500ms: Buttons Appear
+        // T+4500ms (Delayed Button Appearance)
         setTimeout(() => {
              rushTimerBox.classList.add('visible');
              startRushLogic(); 
-        }, 2500);
+        }, 4500);
     }
 
     function startRushLogic() {
