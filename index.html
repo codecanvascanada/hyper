@@ -80,7 +80,7 @@
             display: none; flex-direction: column; justify-content: center; align-items: center; pointer-events: auto; z-index: 100; 
         }
 
-        /* [타이틀 화면] - 원자가 잘 보이도록 완전 투명 */
+        /* [타이틀 화면] */
         #titleScreen { 
             display: flex; 
             background: transparent;
@@ -89,10 +89,10 @@
         #gameTitle { color: #00f3ff; font-size: 40px; font-weight: 900; margin-bottom: 40px; letter-spacing: 4px; font-style: italic; text-shadow: 0 0 15px rgba(0,243,255,0.7); animation: neonPulse 1.5s infinite alternate; }
         @keyframes neonPulse { from { text-shadow: 0 0 10px rgba(0,243,255,0.6); transform: scale(1); } to { text-shadow: 0 0 25px rgba(0,243,255,0.9); transform: scale(1.03); } }
 
-        /* [게임오버 & 레벨업 화면] - 뒤의 게임화면이 흐릿하게 비치도록 블러 처리 */
+        /* [게임오버 & 레벨업 화면] */
         #gameOverScreen, #levelUpScreen { 
-            background: rgba(0, 0, 0, 0.6); /* 반투명 검정 */
-            backdrop-filter: blur(5px); /* 블러 효과 */
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
         }
 
         .card { background: #0f1218; color: #c8aa6e; width: 240px; margin: 8px auto; padding: 12px 15px; border: 1px solid #c8aa6e; box-shadow: 0 0 10px rgba(200, 170, 110, 0.2); transition: transform 0.1s; cursor: pointer; opacity: 0; transform: translateY(20px) scale(0.9); animation: cardEntry 0.3s forwards; display: flex; flex-direction: row; align-items: center; text-align: left; }
@@ -411,28 +411,24 @@
     window.addEventListener('touchstart', updateMousePos, {passive: true});
 
     // [배경 원자 색상 팔레트]
-    const atomColors = [
-        '#0acde5', // Hero / Gem Cyan
-        '#fffa65', // Rapid Bullet Yellow
-        '#ff4757', // Crit Bullet Red
-        '#e17055', // Enemy Orange
-        '#9b59b6', // Shield Purple
-        '#2ecc71'  // EMP Green
-    ];
+    const atomColors = ['#0acde5', '#fffa65', '#ff4757', '#e17055', '#9b59b6', '#2ecc71'];
 
-    // [배경 원자/분자 효과 클래스]
+    // [배경 원자/분자 효과 클래스 - 3D Depth & Bounding Box]
     class AtomCluster {
         constructor() {
             this.x = Math.random() * CW;
             this.y = Math.random() * CH;
-            this.baseVx = (Math.random() - 0.5) * 0.5;
-            this.baseVy = (Math.random() - 0.5) * 0.5;
+            this.z = Math.random(); // 0.0 (멀리) ~ 1.0 (가까이) 깊이 값 추가
+            this.baseVx = (Math.random() - 0.5) * 0.3; // 기본 속도 약간 늦춤
+            this.baseVy = (Math.random() - 0.5) * 0.3;
             this.pushVx = 0;
             this.pushVy = 0;
             
             this.angle = Math.random() * Math.PI * 2;
-            this.spinSpeed = (Math.random() - 0.5) * 0.02;
-            this.size = 30 + Math.random() * 40; 
+            this.spinSpeed = (Math.random() - 0.5) * 0.01;
+            // 원근감: 가까울수록(z가 클수록) 전체 크기가 커짐
+            this.baseSize = 40 + Math.random() * 40;
+            this.size = this.baseSize * (0.5 + this.z * 0.5); 
             
             this.nodes = [];
             let count = 3 + Math.floor(Math.random() * 3);
@@ -441,7 +437,8 @@
                     r: this.size * (0.5 + Math.random() * 0.5),
                     a: (Math.PI * 2 / count) * i,
                     color: atomColors[Math.floor(Math.random() * atomColors.length)],
-                    scale: 0.6 + Math.random() * 0.8 // [원근감] 점 크기 다양화 (0.6 ~ 1.4배)
+                    // 원근감: 각 노드마다 스케일을 다르게 하여 입체감 부여
+                    scale: (0.7 + Math.random() * 0.6) * (0.6 + this.z * 0.4) 
                 });
             }
         }
@@ -450,35 +447,41 @@
             const dy = this.y - mouse.y;
             const dist = Math.hypot(dx, dy);
             
-            const interactionRadius = 120; 
+            const interactionRadius = 150 * (0.6 + this.z * 0.4); // 가까운 것이 마우스 반응 범위도 큼
 
             if (dist < interactionRadius) {
                 const force = (interactionRadius - dist) / interactionRadius;
                 const angle = Math.atan2(dy, dx);
-                
-                // [미세 조정] 밀어내는 힘을 0.05로 대폭 감소 (살짝 문지르는 느낌)
-                const pushStrength = 0.05; 
+                // [미세 조정] 밀어내는 힘을 아주 약하게 (부드러운 반응)
+                const pushStrength = 0.05 * (0.5 + this.z * 0.5); // 가까운 것이 더 반응함
                 
                 this.pushVx += Math.cos(angle) * force * pushStrength;
                 this.pushVy += Math.sin(angle) * force * pushStrength;
             }
 
-            this.pushVx *= 0.95;
-            this.pushVy *= 0.95;
+            this.pushVx *= 0.96;
+            this.pushVy *= 0.96;
 
-            this.x += this.baseVx + this.pushVx;
-            this.y += this.baseVy + this.pushVy;
+            // 원근감: 가까울수록(z가 클수록) 더 빠르게 움직임 (Parallax Effect)
+            const depthSpeedFactor = 0.5 + this.z * 1.0;
+            this.x += (this.baseVx + this.pushVx) * depthSpeedFactor;
+            this.y += (this.baseVy + this.pushVy) * depthSpeedFactor;
             this.angle += this.spinSpeed;
 
-            if (this.x < -100) this.x = CW + 100;
-            if (this.x > CW + 100) this.x = -100;
-            if (this.y < -100) this.y = CH + 100;
-            if (this.y > CH + 100) this.y = -100;
+            // [경계 처리] 화면 밖으로 나가지 않게 튕겨내기
+            const margin = this.size + 20;
+            if (this.x < margin) { this.x = margin; this.baseVx *= -1; this.pushVx *= -0.5; }
+            else if (this.x > CW - margin) { this.x = CW - margin; this.baseVx *= -1; this.pushVx *= -0.5; }
+            if (this.y < margin) { this.y = margin; this.baseVy *= -1; this.pushVy *= -0.5; }
+            else if (this.y > CH - margin) { this.y = CH - margin; this.baseVy *= -1; this.pushVy *= -0.5; }
         }
         draw(ctx) {
+            // 원근감: 멀리 있는 것(z가 작은 것)은 약간 투명하게
+            const depthAlpha = 0.4 + this.z * 0.6;
+            
             ctx.beginPath();
-            ctx.strokeStyle = 'rgba(220, 220, 220, 0.25)'; 
-            ctx.lineWidth = 0.8; 
+            ctx.strokeStyle = `rgba(220, 220, 220, ${0.2 * depthAlpha})`; 
+            ctx.lineWidth = 0.8 * (0.5 + this.z * 0.5); // 가까울수록 선이 두꺼움
             
             let points = this.nodes.map(n => {
                 return {
@@ -499,16 +502,14 @@
 
             points.forEach(p => {
                 ctx.beginPath();
-                // [원근감] 기본 크기 4.5에 스케일 적용
-                const dotRadius = 4.5 * p.scale; 
-                
+                const dotRadius = 5.0 * p.scale; 
                 const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, dotRadius);
                 gradient.addColorStop(0, 'rgba(255, 255, 255, 0.9)'); 
                 gradient.addColorStop(0.4, p.color); 
                 gradient.addColorStop(1, 'rgba(0,0,0,0)'); 
 
                 ctx.fillStyle = gradient;
-                ctx.globalAlpha = 0.8; 
+                ctx.globalAlpha = 0.8 * depthAlpha; 
                 ctx.arc(p.x, p.y, dotRadius, 0, Math.PI*2);
                 ctx.fill();
                 ctx.globalAlpha = 1.0; 
@@ -517,7 +518,7 @@
     }
 
     let bgAtoms = [];
-    for(let i=0; i<8; i++) bgAtoms.push(new AtomCluster());
+    for(let i=0; i<12; i++) bgAtoms.push(new AtomCluster()); // 개수 약간 증가
 
     const bgm = new Audio('hyper.mp3');
     bgm.loop = true; bgm.volume = 0.5;
@@ -910,9 +911,8 @@
         typeIcon.classList.remove('icon-attach-anim'); void typeIcon.offsetWidth; typeIcon.classList.add('icon-attach-anim');
     }
 
-    // [수정] 그리드 그리기 함수 복구
     function drawGrid() {
-        ctx.fillStyle = '#0f1218'; ctx.fillRect(0, 0, CW, CH); // 배경색 채우기
+        ctx.fillStyle = '#0f1218'; ctx.fillRect(0, 0, CW, CH);
         ctx.strokeStyle = '#1e2328'; ctx.lineWidth = 2; ctx.beginPath();
         const sz = 60; const offX = ((player.wx % sz) + sz) % sz; const offY = ((player.wy % sz) + sz) % sz;
         for(let x = -offX; x < CW; x += sz) { ctx.moveTo(x, 0); ctx.lineTo(x, CH); }
@@ -993,21 +993,17 @@
         hyperOrbs.forEach(x => { if(x.active) x.update(); });
     }
 
-    // [수정] draw 함수 구조 변경: 상태에 따라 배경을 다르게 그림
     function draw() {
         ctx.save();
         if(screenShake>0) { const rx = (Math.random() - 0.5) * screenShake; const ry = (Math.random() - 0.5) * screenShake; ctx.translate(rx, ry); }
         
         if (gameState === 'TITLE') {
-            // [타이틀 화면] 원자 애니메이션만 그리기 (배경은 투명)
             ctx.fillStyle = '#0f1218'; 
             ctx.fillRect(0, 0, CW, CH);
-            bgAtoms.forEach(a => { a.update(); a.draw(ctx); });
+            // [수정] 먼 원자(z가 작은 것)부터 그려서 덮어쓰게 함 (깊이감 표현)
+            bgAtoms.sort((a,b) => a.z - b.z).forEach(a => { a.update(); a.draw(ctx); });
         } else {
-            // [플레이, 일시정지(레벨업), 게임오버] 게임 화면 그리기
-            drawGrid(); // 그리드 배경
-
-            // 게임 오브젝트 그리기
+            drawGrid();
             let hc = (player.hyperType === HYPER_RAPID) ? '#f1c40f' : (player.hyperType === HYPER_EMP ? '#2ecc71' : '#9b59b6');
             ctx.strokeStyle = hc; ctx.globalAlpha = 0.4; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(CW/2, CH/2, player.grazeR, 0, Math.PI*2); ctx.stroke(); ctx.globalAlpha = 1.0;
 
@@ -1045,8 +1041,6 @@
         
         if(screenShake > 20) { ctx.fillStyle=`rgba(255,255,255,${screenShake/100})`; ctx.fillRect(0,0,CW,CH); }
         ctx.restore(); 
-        
-        // 조이스틱은 플레이 중일 때만
         if (gameState === 'PLAY') drawJoystick();
     }
 
