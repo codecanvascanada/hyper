@@ -23,7 +23,7 @@
             position: relative; 
             background: #0f1218; /* Dark Navy Background */
             overflow: hidden; 
-            box-shadow: 0 0 30px rgba(0,210,211,0.2);
+            /* No green blur border as requested */
             aspect-ratio: 9 / 16;
             width: auto; height: auto;
             max-width: 100%; max-height: 100dvh;
@@ -220,16 +220,27 @@
 
     async function initLootLocker() {
         try {
+            // Check for existing player identifier to maintain session
+            let storedPlayerId = localStorage.getItem('ll_player_identifier');
+            const payload = { game_key: LOOTLOCKER_GAME_KEY, game_version: GAME_VERSION };
+            if (storedPlayerId) payload.player_identifier = storedPlayerId;
+
             const res = await fetch("https://api.lootlocker.io/game/v2/session/guest", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ game_key: LOOTLOCKER_GAME_KEY, game_version: GAME_VERSION })
+                body: JSON.stringify(payload)
             });
             const data = await res.json();
             if(data.session_token) {
                 llSessionToken = data.session_token;
                 llPlayerID = data.player_id;
-                console.log("✅ LootLocker Connected.");
+                
+                // Save player identifier for future sessions
+                if (data.player_identifier) {
+                    localStorage.setItem('ll_player_identifier', data.player_identifier);
+                }
+
+                console.log("✅ LootLocker Connected. Player ID:", llPlayerID);
                 loadSavedName(); 
             } else {
                 console.error("❌ LootLocker Login Failed:", data);
@@ -289,10 +300,22 @@
         const savedName = localStorage.getItem('sparcrush_name');
         if(savedName) {
             document.getElementById('inputName').value = savedName;
-            lockNameInput(true); 
+            lockNameInput(true);
+            // Sync name with server silently if session exists
+            if(llSessionToken) updateNameSilently(savedName);
         } else {
             lockNameInput(false); 
         }
+    }
+
+    async function updateNameSilently(name) {
+        try {
+            await fetch("https://api.lootlocker.io/game/player/name", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json", "x-session-token": llSessionToken },
+                body: JSON.stringify({ name: name })
+            });
+        } catch(e) { console.error("Auto-Sync Error:", e); }
     }
 
     function handleNameBtn() {
@@ -413,7 +436,7 @@
     window.addEventListener('touchmove', updateMousePos, {passive: true});
     window.addEventListener('touchstart', updateMousePos, {passive: true});
 
-    // [Atom Colors Palette]
+    // [Background Atom Colors]
     const atomColors = ['#0acde5', '#fffa65', '#ff4757', '#e17055', '#9b59b6', '#2ecc71'];
 
     // [Atom/Molecule Effect Class]
