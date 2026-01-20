@@ -18,10 +18,10 @@
             display: flex; justify-content: center; align-items: center;
         }
 
-        /* [게임 화면 비율 9:16 고정] */
+        /* [게임 화면] */
         #gameContainer { 
             position: relative; 
-            background: #0f1218; 
+            background: #0f1218; /* 아주 짙은 남색 배경 */
             overflow: hidden; 
             box-shadow: 0 0 30px rgba(0,210,211,0.2);
             aspect-ratio: 9 / 16;
@@ -40,7 +40,7 @@
             display: flex; flex-direction: column; 
             padding-top: max(15px, env(safe-area-inset-top));
             padding-bottom: max(15px, env(safe-area-inset-bottom));
-            display: none; /* 타이틀일 때 숨김 */
+            display: none; 
         }
 
         .header-ui { width: 100%; display: flex; flex-direction: column; gap: 5px; }
@@ -74,20 +74,18 @@
         #pcGuide { position: absolute; bottom: 20px; width: 100%; text-align: center; color: #666; font-size: 11px; pointer-events: none; font-weight: bold; }
         @media (hover: none) and (pointer: coarse) { #pcGuide { display: none; } }
 
-        /* [모달 공통] */
         .modal { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); display: none; flex-direction: column; justify-content: center; align-items: center; pointer-events: auto; z-index: 100; }
 
-        /* [타이틀 화면 - 배경 투명도 조절로 그리드 보이게 함] */
+        /* [타이틀 화면 - 배경 투명하게 수정] */
         #titleScreen { 
             display: flex; 
-            /* [수정] 투명도를 0.85 -> 0.6 으로 낮춰서 뒤가 더 잘 보이게 함 */
-            background: rgba(15, 18, 24, 0.6); 
+            /* 뒤의 캔버스(원자 애니메이션)가 보이도록 투명도 조정 */
+            background: rgba(15, 18, 24, 0.3); 
             z-index: 200; 
         }
         #gameTitle { color: #00f3ff; font-size: 40px; font-weight: 900; margin-bottom: 40px; letter-spacing: 4px; font-style: italic; text-shadow: 0 0 15px rgba(0,243,255,0.7); animation: neonPulse 1.5s infinite alternate; }
         @keyframes neonPulse { from { text-shadow: 0 0 10px rgba(0,243,255,0.6); transform: scale(1); } to { text-shadow: 0 0 25px rgba(0,243,255,0.9); transform: scale(1.03); } }
 
-        /* [레벨업 카드] */
         .card { background: #0f1218; color: #c8aa6e; width: 240px; margin: 8px auto; padding: 12px 15px; border: 1px solid #c8aa6e; box-shadow: 0 0 10px rgba(200, 170, 110, 0.2); transition: transform 0.1s; cursor: pointer; opacity: 0; transform: translateY(20px) scale(0.9); animation: cardEntry 0.3s forwards; display: flex; flex-direction: row; align-items: center; text-align: left; }
         @keyframes cardEntry { to { opacity: 1; transform: translateY(0) scale(1); } }
         .card:active { transform: scale(0.98); background: #1e2328; }
@@ -96,16 +94,12 @@
         .card-text-group h3 { margin: 0 0 4px 0; font-size: 16px; }
         .card-text-group p { margin: 0; font-size: 12px; color: #ccc; }
 
-        /* [게임오버 화면] */
         #newRecordMsg { color: #fffa65; font-size: 18px; font-weight: bold; margin-bottom: 5px; display: none; animation: blink 0.5s infinite alternate; }
         @keyframes blink { from { opacity: 1; } to { opacity: 0.5; } }
         
-        /* 이름 입력창 */
         #nameInputBox { margin: 10px 0; display: flex; gap: 5px; justify-content: center; z-index: 101; }
         #inputName { background: #1e2328; border: 1px solid #0acde5; color: #fff; padding: 8px; border-radius: 4px; outline: none; font-weight: bold; text-align: center; width: 140px; font-family: 'Segoe UI', sans-serif; transition: all 0.2s; }
         #inputName:focus { box-shadow: 0 0 8px #0acde5; background: #2d3436; }
-        
-        /* [수정] readonly 상태일 때 클릭 유도 스타일 */
         #inputName[readonly] { background: #2c3e50; border-color: #555; color: #ecf0f1; cursor: pointer; opacity: 0.8; }
         
         #btnName { background: #0acde5; color: #000; border: none; padding: 0 15px; font-weight: bold; cursor: pointer; border-radius: 4px; font-family: 'Segoe UI', sans-serif; transition: transform 0.1s; }
@@ -113,7 +107,6 @@
         #btnName.edit-mode { background: #555; color: #fff; }
         #btnName:disabled { background: #555; color: #aaa; cursor: not-allowed; }
 
-        /* 리더보드 */
         #leaderboardContainer { width: 85%; margin: 5px 0 15px 0; background: rgba(0,0,0,0.5); border: 1px solid #444; padding: 10px; min-height: 100px; max-height: 250px; overflow-y: auto; border-radius: 5px; }
         #leaderboardTable { width: 100%; border-collapse: collapse; font-size: 12px; color: #ddd; }
         #leaderboardTable th { text-align: left; border-bottom: 1px solid #666; padding: 4px; color: #0acde5; position: sticky; top: 0; background: #0f1218; }
@@ -123,7 +116,6 @@
         #leaderboardTable tr:nth-child(3) td { color: #d35400; font-weight: bold; }
         #loadingRank { font-size: 12px; color: #aaa; text-align: center; margin: 10px 0; }
 
-        /* 재시작 버튼 */
         #rushTimerBox { text-align: center; margin-top: 5px; }
         #rushBtn { position: relative; overflow: hidden; cursor: pointer; transition: transform 0.1s; -webkit-tap-highlight-color: transparent; }
         #rushBtn:active { transform: scale(0.95); }
@@ -204,6 +196,9 @@
 </div>
 
 <script>
+    // ==========================================
+    // [LootLocker Config]
+    // ==========================================
     const LOOTLOCKER_GAME_KEY = "dev_45f9a56c611c47e1be2fcd6e5edecdda"; 
     const LOOTLOCKER_LEADERBOARD_KEY = "32752"; 
     const GAME_VERSION = "0.1.0.0";
@@ -222,11 +217,10 @@
             if(data.session_token) {
                 llSessionToken = data.session_token;
                 llPlayerID = data.player_id;
-                console.log("✅ LootLocker Connected. Player ID:", llPlayerID);
+                console.log("✅ LootLocker Connected.");
                 loadSavedName(); 
             } else {
                 console.error("❌ LootLocker Login Failed:", data);
-                document.getElementById('loadingRank').innerText = "Login Failed: " + (data.message || "Error");
             }
         } catch(e) { console.error("Connection Error:", e); }
     }
@@ -277,7 +271,6 @@
         }
     }
 
-    // [이름 관리 로직]
     let isNameLocked = false;
 
     function loadSavedName() {
@@ -292,7 +285,6 @@
 
     function handleNameBtn() {
         if(isNameLocked) {
-            // 이미 START 상태(이름 확정)라면 게임 시작
             startGameFromTitle();
         } else {
             saveName();
@@ -318,7 +310,6 @@
         }
     }
 
-    // [수정] 입력창 클릭 시 수정 가능하게 잠금 해제
     document.getElementById('inputName').addEventListener('click', function() {
         if (this.readOnly && gameState === 'TITLE') {
             lockNameInput(false);
@@ -386,11 +377,85 @@
         initLootLocker();
     };
 
+    // ==========================================
+    // [Game Logic & Background Effects]
+    // ==========================================
     const canvas = document.getElementById('gameCanvas');
     const ctx = canvas.getContext('2d');
     
     const CW = 360, CH = 640;
     canvas.width = CW; canvas.height = CH;
+
+    // [배경 원자/분자 효과 클래스]
+    class AtomCluster {
+        constructor() {
+            this.x = Math.random() * CW;
+            this.y = Math.random() * CH;
+            this.vx = (Math.random() - 0.5) * 0.5; // 천천히 이동
+            this.vy = (Math.random() - 0.5) * 0.5;
+            this.angle = Math.random() * Math.PI * 2;
+            this.spinSpeed = (Math.random() - 0.5) * 0.02; // 천천히 회전
+            this.size = 30 + Math.random() * 40;
+            this.nodes = [];
+            // 중앙을 중심으로 도는 작은 점들 생성
+            let count = 3 + Math.floor(Math.random() * 3); // 3~5개
+            for(let i=0; i<count; i++) {
+                this.nodes.push({
+                    r: this.size * (0.5 + Math.random() * 0.5), // 거리
+                    a: (Math.PI * 2 / count) * i // 각도
+                });
+            }
+            // 색상: 은은한 청록색 (투명도 다양하게)
+            this.color = `rgba(10, 205, 229, ${0.1 + Math.random() * 0.15})`; 
+        }
+        update() {
+            this.x += this.vx;
+            this.y += this.vy;
+            this.angle += this.spinSpeed;
+
+            // 화면 밖으로 나가면 반대편에서 등장
+            if (this.x < -100) this.x = CW + 100;
+            if (this.x > CW + 100) this.x = -100;
+            if (this.y < -100) this.y = CH + 100;
+            if (this.y > CH + 100) this.y = -100;
+        }
+        draw(ctx) {
+            ctx.strokeStyle = this.color;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            
+            // 회전된 좌표 계산
+            let points = this.nodes.map(n => {
+                return {
+                    x: this.x + Math.cos(this.angle + n.a) * n.r,
+                    y: this.y + Math.sin(this.angle + n.a) * n.r
+                };
+            });
+
+            // 점끼리 선 잇기 (분자 구조처럼)
+            for (let i = 0; i < points.length; i++) {
+                for (let j = i + 1; j < points.length; j++) {
+                    ctx.moveTo(points[i].x, points[i].y);
+                    ctx.lineTo(points[j].x, points[j].y);
+                }
+            }
+            ctx.stroke();
+
+            // 점 그리기
+            ctx.fillStyle = this.color;
+            points.forEach(p => {
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 2, 0, Math.PI*2);
+                ctx.fill();
+            });
+        }
+    }
+
+    // 배경용 객체 배열
+    let bgAtoms = [];
+    for(let i=0; i<8; i++) { // 8개의 클러스터 생성
+        bgAtoms.push(new AtomCluster());
+    }
 
     const bgm = new Audio('hyper.mp3');
     bgm.loop = true; bgm.volume = 0.5;
@@ -852,16 +917,17 @@
         ctx.save();
         if(screenShake>0) ctx.translate((Math.random()-0.5)*screenShake, (Math.random()-0.5)*screenShake);
         
-        // [수정] 배경과 그리드는 항상 그립니다.
         ctx.fillStyle = '#0f1218'; ctx.fillRect(0, 0, CW, CH);
-        // [수정] 그리드 선 색상을 조금 더 밝게(#333) 변경하여 투명 배경 뒤에서도 잘 보이게 함
+        // [수정] 그리드를 조금 더 밝게(#333) 변경
         ctx.strokeStyle = '#333'; ctx.lineWidth = 2; ctx.beginPath();
         const sz=60, offX=((player.wx%sz)+sz)%sz, offY=((player.wy%sz)+sz)%sz;
         for(let x=-offX; x<CW; x+=sz) { ctx.moveTo(x,0); ctx.lineTo(x,CH); }
         for(let y=-offY; y<CH; y+=sz) { ctx.moveTo(0,y); ctx.lineTo(CW,y); }
         ctx.stroke();
 
-        // [수정] 게임 오브젝트들은 PLAY 상태일 때만 그립니다.
+        // 배경 애니메이션 (항상 그리기)
+        bgAtoms.forEach(a => { a.update(); a.draw(ctx); });
+
         if (gameState === 'PLAY') {
             let hc = (player.hyperType === HYPER_RAPID) ? '#f1c40f' : (player.hyperType === HYPER_EMP ? '#2ecc71' : '#9b59b6');
             ctx.strokeStyle = hc; ctx.globalAlpha = 0.4; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(CW/2, CH/2, player.grazeR, 0, Math.PI*2); ctx.stroke(); ctx.globalAlpha = 1.0;
@@ -907,7 +973,6 @@
         }
     }
 
-    // [수정] 게임 루프에서 draw()는 항상 호출하여 배경을 그립니다.
     function loop() { 
         requestAnimationFrame(loop); 
         if(gameState==='PLAY') update(); 
