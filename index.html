@@ -729,7 +729,14 @@
         }
         draw(ctx) {
             const sx = this.x - player.wx + CW/2; const sy = this.y - player.wy + CH/2;
-            const alpha = this.life / this.maxLife;
+            
+            // [MODIFIED] Late Fade Out
+            let alpha = 1;
+            const fadeStart = this.maxLife * 0.3; // Start fading when 30% life remains
+            if (this.life < fadeStart) {
+                alpha = this.life / fadeStart;
+            }
+
             // Diverse Blink
             const blinkFrame = frameCount + this.blinkOffset;
             const curColor = (blinkFrame % 10 < 5) ? this.baseColor : '#ffffff';
@@ -1082,24 +1089,37 @@
     function checkGameOver() {
         if (!player.isDead) {
             player.isDead = true;
-            player.deadTimer = 180; // 3 seconds delay
+            player.deadTimer = 180; 
             screenShake = 50; 
             spawnEffect().spawnExplosion(player.wx, player.wy);
             
-            // [NEW] Clear visual clutter
             hyperOrbs = [];
             
-            // [NEW] Spawn Fragments
-            const count = Math.floor(Math.random() * 5) + 6; // 6~10
+            // [IMPROVED FRAGMENTS LOGIC]
+            const count = Math.floor(Math.random() * 5) + 6; // 6~10 fragments
+            
+            // 1. Generate random weights
+            let weights = [];
+            let totalWeight = 0;
             for(let i=0; i<count; i++) {
+                let w = 0.5 + Math.random(); // Weight 0.5 ~ 1.5
+                weights.push(w);
+                totalWeight += w;
+            }
+
+            // 2. Spawn fragments based on weights
+            for(let i=0; i<count; i++) {
+                const ratio = weights[i] / totalWeight;
+                // Distribute player size (r=10). We boost it for visibility.
+                // If sum of ratio is 1, sum of r will be player.r * 1.5
+                const size = Math.max(1.5, (player.r * 1.5) * ratio * count * 0.5); 
+                
                 const baseAngle = (Math.PI * 2) / count * i;
                 
-                // Pass baseSize (relative to player size)
-                // Since player radius is 10, we can use that.
                 fragments.push(new PlayerFragment(
                     player.wx, 
                     player.wy, 
-                    player.r * 2.5, // Base Size Reference
+                    size,
                     player.color,
                     baseAngle
                 ));
