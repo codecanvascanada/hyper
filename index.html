@@ -264,7 +264,6 @@
         } catch(e) { console.error("Connection Error:", e); }
     }
 
-    // [Waitable Submit Score]
     async function submitScoreLL(score) {
         if(!llSessionToken) return;
         try {
@@ -274,17 +273,14 @@
                 headers: { "Content-Type": "application/json", "x-session-token": llSessionToken },
                 body: JSON.stringify({ score: score })
             });
-            // After submit, fetch leaderboard
             await fetchLeaderboardLL(); 
         } catch(e) { console.error("Submit Error:", e); }
     }
 
-    // [Waitable Fetch Leaderboard]
     async function fetchLeaderboardLL() {
         if(!llSessionToken) return;
         try {
             document.getElementById('loadingRank').innerText = "Loading Leaderboard...";
-            // [MODIFIED] count=8
             const res = await fetch(`https://api.lootlocker.io/game/leaderboards/${LOOTLOCKER_LEADERBOARD_KEY}/list?count=8`, {
                 method: "GET",
                 headers: { "x-session-token": llSessionToken }
@@ -694,7 +690,39 @@
         msgTimer = setTimeout(() => { infoMsg.style.opacity = 0; }, 600);
     }
 
+    // [New] Player Fragments Class
+    class PlayerFragment {
+        constructor(x, y, r, color) {
+            this.x = x; this.y = y; this.r = r;
+            this.baseColor = color;
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 2 + Math.random() * 3;
+            this.vx = Math.cos(angle) * speed;
+            this.vy = Math.sin(angle) * speed;
+            this.life = 100 + Math.random() * 50;
+            this.maxLife = this.life;
+        }
+        update() {
+            this.x += this.vx; this.y += this.vy;
+            this.vx *= 0.95; this.vy *= 0.95;
+            this.life--;
+        }
+        draw(ctx) {
+            const sx = this.x - player.wx + CW/2; const sy = this.y - player.wy + CH/2;
+            const alpha = this.life / this.maxLife;
+            // Blink Color: Base <-> White
+            const curColor = (frameCount % 10 < 5) ? this.baseColor : '#ffffff';
+            
+            ctx.globalAlpha = alpha;
+            ctx.fillStyle = curColor;
+            ctx.beginPath(); ctx.arc(sx, sy, this.r, 0, Math.PI*2); ctx.fill();
+            ctx.globalAlpha = 1.0;
+        }
+    }
+    
     let enemies = []; let bullets = []; let gems = []; let texts = []; let effects = []; let hyperOrbs = [];
+    let fragments = []; // Player Death Fragments
+
     function getObj(arr, Class) { let o = arr.find(x=>!x.active); if(!o) { o=new Class(); arr.push(o); } return o; }
 
     class HyperOrb {
@@ -733,12 +761,10 @@
         draw() {
             const sx = this.wx - player.wx + CW/2; const sy = this.wy - player.wy + CH/2;
             
-            // [NEW LOGIC] Define color based on current player hyper type
-            let baseColor = '#f1c40f'; // Rapid (Yellow)
-            if (player.hyperType === 1) baseColor = '#2ecc71'; // EMP (Green)
-            if (player.hyperType === 2) baseColor = '#9b59b6'; // Shield (Purple)
+            let baseColor = '#f1c40f'; // Rapid
+            if (player.hyperType === 1) baseColor = '#2ecc71'; // EMP
+            if (player.hyperType === 2) baseColor = '#9b59b6'; // Shield
 
-            // Blink logic: White <-> BaseColor
             const curColor = (Math.floor(frameCount/4)%2 === 0) ? "#ffffff" : baseColor;
 
             ctx.save(); ctx.translate(sx, sy); ctx.rotate(this.angle);
@@ -1038,6 +1064,25 @@
             player.deadTimer = 180; // 3 seconds delay
             screenShake = 50; 
             spawnEffect().spawnExplosion(player.wx, player.wy);
+            
+            // [NEW] Clear visual clutter
+            hyperOrbs = [];
+            
+            // [NEW] Spawn Fragments
+            const count = Math.floor(Math.random() * 5) + 6; // 6~10
+            for(let i=0; i<count; i++) {
+                const baseAngle = (Math.PI * 2) / count * i;
+                const jitter = (Math.random() - 0.5) * 0.5; // Slight angle randomization
+                const size = (player.r * 2.5) / count; // Roughly proportional size
+                
+                fragments.push(new PlayerFragment(
+                    player.wx, 
+                    player.wy, 
+                    size, 
+                    player.color,
+                    baseAngle + jitter
+                ));
+            }
         }
     }
 
@@ -1083,6 +1128,10 @@
                 }
             }
         }
+        
+        // Update fragments regardless of alive/dead state (to allow animation)
+        fragments.forEach(f => f.update());
+        fragments = fragments.filter(f => f.life > 0);
 
         if(player.isHyper) {
             player.hyperTime--; player.hyperGauge = (player.hyperTime/(player.hyperType===HYPER_SHIELD?600:300))*100;
@@ -1106,10 +1155,12 @@
                     if(Math.hypot(b.wx-player.wx, b.wy-player.wy) < player.hitR+b.r) {
                         if((player.isHyper && player.hyperType === HYPER_SHIELD) || player.isDashing) { spawnText("BLOCK", player.wx, player.wy, "#a29bfe"); b.active=false; }
                         else { 
-                            // [HIT TRIGGER]
-                            player.hitFlashTimer = 6; 
-                            player.showHpTimer = 120;
-                            player.hp-=10; spawnText("-10", player.wx, player.wy, 'red'); player.combo=0; updateUI(); b.active=false; if(player.hp<=0) checkGameOver(); // [MODIFIED]
+                            if (!player.isDead) {
+                                // [HIT TRIGGER]
+                                player.hitFlashTimer = 6; 
+                                player.showHpTimer = 120;
+                                player.hp-=10; spawnText("-10", player.wx, player.wy, 'red'); player.combo=0; updateUI(); b.active=false; if(player.hp<=0) checkGameOver(); 
+                            }
                         }
                     }
                 } else {
@@ -1150,6 +1201,9 @@
             enemies.forEach(x => { if(x.active) x.draw(); });
             texts.forEach(x => { if(x.active) x.draw(); });
             hyperOrbs.forEach(x => { if(x.active) x.draw(); });
+            
+            // Draw Fragments
+            fragments.forEach(f => f.draw(ctx));
 
             if(player.isHyper && player.hyperType === HYPER_SHIELD && !player.isDead) {
                 ctx.strokeStyle='rgba(162,155,254,0.8)'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(CW/2,CH/2,player.r+25+Math.sin(player.shieldPulse)*3,0,Math.PI*2); ctx.stroke();
@@ -1402,6 +1456,9 @@
         player.deadTimer = 0;
         player.hitFlashTimer = 0;
         player.showHpTimer = 0;
+        
+        // [FIX] Reset Fragments
+        fragments = [];
 
         screenShake=0; ctx.setTransform(1,0,0,1,0,0);
         
