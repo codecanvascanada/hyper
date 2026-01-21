@@ -112,6 +112,9 @@
         .card-text-group h3 { margin: 0 0 4px 0; font-size: 16px; }
         .card-text-group p { margin: 0; font-size: 12px; color: #ccc; }
 
+        /* [NEW] Selected Card Style */
+        .card.selected { border-color: #fff; transform: scale(1.05); background: #2d3436; box-shadow: 0 0 15px rgba(255, 255, 255, 0.3); }
+
         #newRecordMsg { color: #fffa65; font-size: 18px; font-weight: bold; margin-bottom: 5px; display: none; animation: blink 0.5s infinite alternate; }
         @keyframes blink { from { opacity: 1; } to { opacity: 0.5; } }
         
@@ -193,12 +196,13 @@
         </div>
         
         <div id="dashZone"><div id="dashIcon" class="ready">DASH</div></div>
-        <div id="pcGuide">[PC] Mouse: Move / Space: Dash</div>
+        <div id="pcGuide">[PC] Move: WASD/Arrows | Dash: Space</div>
     </div>
 
     <div id="levelUpScreen" class="modal">
         <h2 id="levelUpTitle" style="color:#c8aa6e; margin-bottom:20px;">LEVEL UP!</h2>
         <div id="cardsBox" style="width:100%; display:flex; flex-direction:column; align-items:center;"></div>
+        <div style="margin-top:10px; font-size:12px; color:#aaa;">[← / →] Select &nbsp; [Space] Confirm</div>
     </div>
 
     <div id="gameOverScreen" class="modal">
@@ -284,7 +288,6 @@
         if(!llSessionToken) return;
         try {
             document.getElementById('loadingRank').innerText = "Loading Leaderboard...";
-            // [MODIFIED] count=8
             const res = await fetch(`https://api.lootlocker.io/game/leaderboards/${LOOTLOCKER_LEADERBOARD_KEY}/list?count=8`, {
                 method: "GET",
                 headers: { "x-session-token": llSessionToken }
@@ -447,7 +450,29 @@
     // [Keyboard Input State]
     const keys = { w: false, a: false, s: false, d: false, up: false, down: false, left: false, right: false };
 
+    // [Level Up Selection State]
+    let currentUpgradeOptions = [];
+    let selectedUpgradeIndex = 0;
+
     window.addEventListener('keydown', e => {
+        // [MODIFIED] Separate Input Handling by Game State
+        if (gameState === 'PAUSE') {
+            // Level Up Menu Navigation
+            if (e.code === 'ArrowLeft' || e.code === 'KeyA' || e.code === 'ArrowUp' || e.code === 'KeyW') {
+                selectedUpgradeIndex = (selectedUpgradeIndex - 1 + currentUpgradeOptions.length) % currentUpgradeOptions.length;
+                updateCardHighlight();
+            }
+            if (e.code === 'ArrowRight' || e.code === 'KeyD' || e.code === 'ArrowDown' || e.code === 'KeyS') {
+                selectedUpgradeIndex = (selectedUpgradeIndex + 1) % currentUpgradeOptions.length;
+                updateCardHighlight();
+            }
+            if (e.code === 'Space' || e.code === 'Enter') {
+                applyUpgrade(selectedUpgradeIndex);
+            }
+            return; // Prevent other actions (like Dash)
+        }
+
+        // Gameplay Input
         if (e.code === 'Space') useDash();
         if (e.code === 'KeyW') keys.w = true;
         if (e.code === 'KeyA') keys.a = true;
@@ -659,8 +684,8 @@
         hitFlashTimer: 0,
         isDead: false,
         deadTimer: 0,
-        inputVx: 0, // Current movement input direction X
-        inputVy: 0  // Current movement input direction Y
+        inputVx: 0, 
+        inputVy: 0
     };
 
     let joystick = { active: false, baseX: CW*0.2, baseY: CH*0.8, stickX: CW*0.2, stickY: CH*0.8, maxRadius: 30, vx: 0, vy: 0 };
@@ -700,12 +725,10 @@
 
     function useDash() {
         if(!player.dashReady || player.isDashing) return;
-        
-        // Use normalized input vector stored in update loop
+        if (gameState === 'PAUSE') return; // Double check
+
         let dx = player.inputVx; 
         let dy = player.inputVy;
-        
-        // If standing still, dash up
         if(dx === 0 && dy === 0) { dy = -1; }
         
         player.isDashing = true; player.dashTime = player.dashDuration;
@@ -728,31 +751,25 @@
         msgTimer = setTimeout(() => { infoMsg.style.opacity = 0; }, 600);
     }
 
-    // [New] Player Fragments Class with Variety
     class PlayerFragment {
         constructor(x, y, baseSize, color, baseAngle) {
             this.x = x; this.y = y;
             this.baseColor = color;
             this.blinkOffset = Math.floor(Math.random() * 10);
             
-            // 1. Varied Size (0.4x ~ 1.2x of base)
             const sizeMult = 0.4 + Math.random() * 0.8;
             this.r = baseSize * sizeMult;
 
-            // 2. Speed linked to Size (Smaller = Faster)
             const speedBase = 2 + Math.random() * 4;
             const speed = speedBase / Math.sqrt(sizeMult); 
             
-            // Base Angle + Jitter
             const angle = baseAngle + (Math.random() - 0.5) * 1.0; 
             
             this.vx = Math.cos(angle) * speed;
             this.vy = Math.sin(angle) * speed;
 
-            // 3. Friction/Drag (Randomized)
             this.friction = 0.92 + Math.random() * 0.04; 
 
-            // 4. Lifetime based on Size (Larger = Longer)
             this.maxLife = 60 + (sizeMult * 80) + (Math.random() * 30);
             this.life = this.maxLife;
         }
@@ -763,15 +780,11 @@
         }
         draw(ctx) {
             const sx = this.x - player.wx + CW/2; const sy = this.y - player.wy + CH/2;
-            
-            // [MODIFIED] Late Fade Out (Fade out at last 30% of life)
             let alpha = 1;
             const fadeStart = this.maxLife * 0.3; 
             if (this.life < fadeStart) {
                 alpha = this.life / fadeStart;
             }
-
-            // Diverse Blink
             const blinkFrame = frameCount + this.blinkOffset;
             const curColor = (blinkFrame % 10 < 5) ? this.baseColor : '#ffffff';
             
@@ -1029,7 +1042,7 @@
                 player.hitFlashTimer = 6; 
                 player.showHpTimer = 120;
                 player.hp -= 20; spawnText("-20", player.wx, player.wy, 'red'); player.combo = 0;
-                updateUI(); if(player.hp<=0) checkGameOver(); // [MODIFIED]
+                updateUI(); if(player.hp<=0) checkGameOver(); 
             } else spawnText("BLOCK", player.wx, player.wy, "#a29bfe");
         }
     }
@@ -1129,7 +1142,7 @@
             
             hyperOrbs = [];
             
-            // [IMPROVED FRAGMENTS LOGIC] - SMALLER SIZES
+            // [IMPROVED FRAGMENTS LOGIC] - SMALLER SIZES & MORE
             const count = Math.floor(Math.random() * 5) + 8; // 8~12 fragments
             
             // Generate random weights
@@ -1385,6 +1398,10 @@
         keys.up=false; keys.down=false; keys.left=false; keys.right=false;
 
         levelUpScreen.style.display='flex'; cardsBox.innerHTML='';
+        
+        currentUpgradeOptions = [];
+        selectedUpgradeIndex = 0;
+
         const statOpts = [
             {t:"Attack UP", d:"Damage +5", img: "atk.png", f:()=>{player.damage+=5;}}, 
             {t:"Fire Rate UP", d:"Attack Speed +10%", img: "speed.png", f:()=>{player.baseFireRate*=0.9;}},
@@ -1400,21 +1417,47 @@
             {t:"Equip: Shield", d:"10s Invincible + Heal", c:'hyper-card', img:'shield.png', f:()=>{player.hyperType=HYPER_SHIELD; updateTypeIcon();}},
         ];
         let pool = [...statOpts, ...hyperOpts];
+        
         for(let i=0; i<3; i++) {
             if(pool.length===0) break;
             const item = pool.splice(Math.floor(Math.random()*pool.length), 1)[0];
-            const div = document.createElement('div'); div.className = item.c ? `card ${item.c}` : 'card';
+            currentUpgradeOptions.push(item);
+
+            const div = document.createElement('div'); 
+            div.className = item.c ? `card ${item.c}` : 'card';
             div.innerHTML = `${item.img?`<img src="${item.img}" class="card-icon">`:''}<div class="card-text-group"><h3>${item.t}</h3><p>${item.d}</p></div>`;
             div.style.animationDelay = `${i * 0.1}s`;
-            div.onclick=()=>{
-                item.f(); 
-                let msgColor = item.c ? "#a29bfe" : "#c8aa6e"; 
-                let msgText = item.t + (item.c ? " Equipped" : "!");
-                showMessage(msgText, msgColor, item.img);
-                levelUpScreen.style.display='none'; gameState='PLAY';
-            };
+            
+            // Mouse click handler
+            div.onclick = () => { applyUpgrade(i); };
+
             cardsBox.appendChild(div);
         }
+        updateCardHighlight();
+    }
+
+    function updateCardHighlight() {
+        const cards = cardsBox.children;
+        for (let i = 0; i < cards.length; i++) {
+            if (i === selectedUpgradeIndex) {
+                cards[i].classList.add('selected');
+            } else {
+                cards[i].classList.remove('selected');
+            }
+        }
+    }
+
+    function applyUpgrade(index) {
+        if (!currentUpgradeOptions[index]) return;
+        const item = currentUpgradeOptions[index];
+        item.f(); 
+        
+        let msgColor = item.c ? "#a29bfe" : "#c8aa6e"; 
+        let msgText = item.t + (item.c ? " Equipped" : "!");
+        showMessage(msgText, msgColor, item.img);
+        
+        levelUpScreen.style.display='none'; 
+        gameState='PLAY';
     }
 
     function animateValue(obj, start, end, duration) {
