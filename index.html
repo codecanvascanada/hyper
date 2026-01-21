@@ -1095,24 +1095,13 @@
             
             hyperOrbs = [];
             
-            // [IMPROVED FRAGMENTS LOGIC]
-            const count = Math.floor(Math.random() * 5) + 6; // 6~10 fragments
+            // [IMPROVED FRAGMENTS LOGIC] - SMALLER SIZES
+            const count = Math.floor(Math.random() * 5) + 8; // Slightly increase count (8~12) for smaller pieces
             
-            // 1. Generate random weights
-            let weights = [];
-            let totalWeight = 0;
             for(let i=0; i<count; i++) {
-                let w = 0.5 + Math.random(); // Weight 0.5 ~ 1.5
-                weights.push(w);
-                totalWeight += w;
-            }
-
-            // 2. Spawn fragments based on weights
-            for(let i=0; i<count; i++) {
-                const ratio = weights[i] / totalWeight;
-                // Distribute player size (r=10). We boost it for visibility.
-                // If sum of ratio is 1, sum of r will be player.r * 1.5
-                const size = Math.max(1.5, (player.r * 1.5) * ratio * count * 0.5); 
+                // Significantly reduced size calculation
+                // Player radius is 10. Fragments will be between 1.5 and 3.5 radius.
+                const size = (player.r * 0.15) + (Math.random() * player.r * 0.2); 
                 
                 const baseAngle = (Math.PI * 2) / count * i;
                 
