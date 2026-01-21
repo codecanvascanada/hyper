@@ -288,6 +288,7 @@
         if(!llSessionToken) return;
         try {
             document.getElementById('loadingRank').innerText = "Loading Leaderboard...";
+            // [MODIFIED] count=8
             const res = await fetch(`https://api.lootlocker.io/game/leaderboards/${LOOTLOCKER_LEADERBOARD_KEY}/list?count=8`, {
                 method: "GET",
                 headers: { "x-session-token": llSessionToken }
@@ -453,6 +454,9 @@
     // [Level Up Selection State]
     let currentUpgradeOptions = [];
     let selectedUpgradeIndex = 0;
+    
+    // [Prevent Accidental Dash on Confirm]
+    let preventDashUntilRelease = false;
 
     window.addEventListener('keydown', e => {
         // [MODIFIED] Separate Input Handling by Game State
@@ -466,8 +470,11 @@
                 selectedUpgradeIndex = (selectedUpgradeIndex + 1) % currentUpgradeOptions.length;
                 updateCardHighlight();
             }
-            if (e.code === 'Space' || e.code === 'Enter') {
-                applyUpgrade(selectedUpgradeIndex);
+            if (e.code === 'Space') {
+                applyUpgrade(selectedUpgradeIndex, true); // true = fromKeyboard
+            }
+            if (e.code === 'Enter') {
+                applyUpgrade(selectedUpgradeIndex, false);
             }
             return; // Prevent other actions (like Dash)
         }
@@ -485,6 +492,10 @@
     });
 
     window.addEventListener('keyup', e => {
+        if (e.code === 'Space') {
+            preventDashUntilRelease = false; // Reset lock
+        }
+
         if (e.code === 'KeyW') keys.w = false;
         if (e.code === 'KeyA') keys.a = false;
         if (e.code === 'KeyS') keys.s = false;
@@ -724,8 +735,9 @@
     window.addEventListener('touchend', e=>{ if(e.touches.length === 0) inputEnd(); });
 
     function useDash() {
+        if(preventDashUntilRelease) return; // Blocked due to level up confirm
         if(!player.dashReady || player.isDashing) return;
-        if (gameState === 'PAUSE') return; // Double check
+        if (gameState === 'PAUSE') return; 
 
         let dx = player.inputVx; 
         let dy = player.inputVy;
@@ -1042,7 +1054,7 @@
                 player.hitFlashTimer = 6; 
                 player.showHpTimer = 120;
                 player.hp -= 20; spawnText("-20", player.wx, player.wy, 'red'); player.combo = 0;
-                updateUI(); if(player.hp<=0) checkGameOver(); 
+                updateUI(); if(player.hp<=0) checkGameOver(); // [MODIFIED]
             } else spawnText("BLOCK", player.wx, player.wy, "#a29bfe");
         }
     }
@@ -1429,7 +1441,7 @@
             div.style.animationDelay = `${i * 0.1}s`;
             
             // Mouse click handler
-            div.onclick = () => { applyUpgrade(i); };
+            div.onclick = () => { applyUpgrade(i, false); };
 
             cardsBox.appendChild(div);
         }
@@ -1447,7 +1459,7 @@
         }
     }
 
-    function applyUpgrade(index) {
+    function applyUpgrade(index, fromKeyboard) {
         if (!currentUpgradeOptions[index]) return;
         const item = currentUpgradeOptions[index];
         item.f(); 
@@ -1458,6 +1470,10 @@
         
         levelUpScreen.style.display='none'; 
         gameState='PLAY';
+        
+        if (fromKeyboard) {
+            preventDashUntilRelease = true;
+        }
     }
 
     function animateValue(obj, start, end, duration) {
