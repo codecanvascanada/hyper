@@ -284,7 +284,6 @@
         if(!llSessionToken) return;
         try {
             document.getElementById('loadingRank').innerText = "Loading Leaderboard...";
-            // [MODIFIED] count=8
             const res = await fetch(`https://api.lootlocker.io/game/leaderboards/${LOOTLOCKER_LEADERBOARD_KEY}/list?count=8`, {
                 method: "GET",
                 headers: { "x-session-token": llSessionToken }
@@ -730,9 +729,9 @@
         draw(ctx) {
             const sx = this.x - player.wx + CW/2; const sy = this.y - player.wy + CH/2;
             
-            // [MODIFIED] Late Fade Out
+            // [MODIFIED] Late Fade Out (Fade out at last 30% of life)
             let alpha = 1;
-            const fadeStart = this.maxLife * 0.3; // Start fading when 30% life remains
+            const fadeStart = this.maxLife * 0.3; 
             if (this.life < fadeStart) {
                 alpha = this.life / fadeStart;
             }
@@ -1096,13 +1095,29 @@
             hyperOrbs = [];
             
             // [IMPROVED FRAGMENTS LOGIC] - SMALLER SIZES
-            const count = Math.floor(Math.random() * 5) + 8; // Slightly increase count (8~12) for smaller pieces
+            const count = Math.floor(Math.random() * 5) + 8; // 8~12 fragments
             
+            // Generate random weights
+            let weights = [];
+            let totalWeight = 0;
             for(let i=0; i<count; i++) {
-                // Significantly reduced size calculation
-                // Player radius is 10. Fragments will be between 1.5 and 3.5 radius.
-                const size = (player.r * 0.15) + (Math.random() * player.r * 0.2); 
+                let w = 0.5 + Math.random(); // Weight 0.5 ~ 1.5
+                weights.push(w);
+                totalWeight += w;
+            }
+
+            // Spawn fragments based on weights
+            for(let i=0; i<count; i++) {
+                const ratio = weights[i] / totalWeight;
                 
+                // Distribute player size (r=10). 
+                // Total area logic: area = pi*r^2. Total Area ~ 314.
+                // Each fragment area = Total Area * ratio.
+                // Fragment r = sqrt(Area / pi) = sqrt(Total Area * ratio / pi) = sqrt(100 * ratio) = 10 * sqrt(ratio)
+                // However, linear distribution is visually better here.
+                
+                const size = player.r * Math.sqrt(ratio); // Mathematical split
+
                 const baseAngle = (Math.PI * 2) / count * i;
                 
                 fragments.push(new PlayerFragment(
