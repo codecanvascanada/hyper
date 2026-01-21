@@ -264,6 +264,7 @@
         } catch(e) { console.error("Connection Error:", e); }
     }
 
+    // [Waitable Submit Score]
     async function submitScoreLL(score) {
         if(!llSessionToken) return;
         try {
@@ -273,14 +274,17 @@
                 headers: { "Content-Type": "application/json", "x-session-token": llSessionToken },
                 body: JSON.stringify({ score: score })
             });
+            // After submit, fetch leaderboard
             await fetchLeaderboardLL(); 
         } catch(e) { console.error("Submit Error:", e); }
     }
 
+    // [Waitable Fetch Leaderboard]
     async function fetchLeaderboardLL() {
         if(!llSessionToken) return;
         try {
             document.getElementById('loadingRank').innerText = "Loading Leaderboard...";
+            // [MODIFIED] count=8
             const res = await fetch(`https://api.lootlocker.io/game/leaderboards/${LOOTLOCKER_LEADERBOARD_KEY}/list?count=8`, {
                 method: "GET",
                 headers: { "x-session-token": llSessionToken }
@@ -690,28 +694,45 @@
         msgTimer = setTimeout(() => { infoMsg.style.opacity = 0; }, 600);
     }
 
-    // [New] Player Fragments Class
+    // [New] Player Fragments Class with Variety
     class PlayerFragment {
-        constructor(x, y, r, color) {
-            this.x = x; this.y = y; this.r = r;
+        constructor(x, y, baseSize, color, baseAngle) {
+            this.x = x; this.y = y;
             this.baseColor = color;
-            const angle = Math.random() * Math.PI * 2;
-            const speed = 2 + Math.random() * 3;
+            this.blinkOffset = Math.floor(Math.random() * 10);
+            
+            // 1. Varied Size (0.4x ~ 1.2x of base)
+            const sizeMult = 0.4 + Math.random() * 0.8;
+            this.r = baseSize * sizeMult;
+
+            // 2. Speed linked to Size (Smaller = Faster)
+            const speedBase = 2 + Math.random() * 4;
+            const speed = speedBase / Math.sqrt(sizeMult); 
+            
+            // Base Angle + Jitter
+            const angle = baseAngle + (Math.random() - 0.5) * 1.0; 
+            
             this.vx = Math.cos(angle) * speed;
             this.vy = Math.sin(angle) * speed;
-            this.life = 100 + Math.random() * 50;
-            this.maxLife = this.life;
+
+            // 3. Friction/Drag (Randomized)
+            this.friction = 0.92 + Math.random() * 0.04; 
+
+            // 4. Lifetime based on Size (Larger = Longer)
+            this.maxLife = 60 + (sizeMult * 80) + (Math.random() * 30);
+            this.life = this.maxLife;
         }
         update() {
             this.x += this.vx; this.y += this.vy;
-            this.vx *= 0.95; this.vy *= 0.95;
+            this.vx *= this.friction; this.vy *= this.friction;
             this.life--;
         }
         draw(ctx) {
             const sx = this.x - player.wx + CW/2; const sy = this.y - player.wy + CH/2;
             const alpha = this.life / this.maxLife;
-            // Blink Color: Base <-> White
-            const curColor = (frameCount % 10 < 5) ? this.baseColor : '#ffffff';
+            // Diverse Blink
+            const blinkFrame = frameCount + this.blinkOffset;
+            const curColor = (blinkFrame % 10 < 5) ? this.baseColor : '#ffffff';
             
             ctx.globalAlpha = alpha;
             ctx.fillStyle = curColor;
@@ -721,7 +742,7 @@
     }
     
     let enemies = []; let bullets = []; let gems = []; let texts = []; let effects = []; let hyperOrbs = [];
-    let fragments = []; // Player Death Fragments
+    let fragments = []; 
 
     function getObj(arr, Class) { let o = arr.find(x=>!x.active); if(!o) { o=new Class(); arr.push(o); } return o; }
 
@@ -761,9 +782,9 @@
         draw() {
             const sx = this.wx - player.wx + CW/2; const sy = this.wy - player.wy + CH/2;
             
-            let baseColor = '#f1c40f'; // Rapid
-            if (player.hyperType === 1) baseColor = '#2ecc71'; // EMP
-            if (player.hyperType === 2) baseColor = '#9b59b6'; // Shield
+            let baseColor = '#f1c40f'; 
+            if (player.hyperType === 1) baseColor = '#2ecc71'; 
+            if (player.hyperType === 2) baseColor = '#9b59b6'; 
 
             const curColor = (Math.floor(frameCount/4)%2 === 0) ? "#ffffff" : baseColor;
 
@@ -819,7 +840,7 @@
                         const dmg = this.isElite?20:10; player.hp -= dmg; spawnText(`-${dmg}`, player.wx, player.wy, 'red');
                         player.combo = 0; comboEl.style.display='none'; comboLabel.style.display='none'; 
                         if(!this.isElite) this.active=false; updateUI(); 
-                        if(player.hp<=0) checkGameOver(); // [MODIFIED]
+                        if(player.hp<=0) checkGameOver(); 
                     }
                 }
             } else if(dist < player.grazeR + this.r && this.grazeCool<=0) { addHyper(this.isElite?5:1); this.grazeCool=20; }
@@ -1072,15 +1093,15 @@
             const count = Math.floor(Math.random() * 5) + 6; // 6~10
             for(let i=0; i<count; i++) {
                 const baseAngle = (Math.PI * 2) / count * i;
-                const jitter = (Math.random() - 0.5) * 0.5; // Slight angle randomization
-                const size = (player.r * 2.5) / count; // Roughly proportional size
                 
+                // Pass baseSize (relative to player size)
+                // Since player radius is 10, we can use that.
                 fragments.push(new PlayerFragment(
                     player.wx, 
                     player.wy, 
-                    size, 
+                    player.r * 2.5, // Base Size Reference
                     player.color,
-                    baseAngle + jitter
+                    baseAngle
                 ));
             }
         }
