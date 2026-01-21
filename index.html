@@ -284,6 +284,7 @@
         if(!llSessionToken) return;
         try {
             document.getElementById('loadingRank').innerText = "Loading Leaderboard...";
+            // [MODIFIED] count=8
             const res = await fetch(`https://api.lootlocker.io/game/leaderboards/${LOOTLOCKER_LEADERBOARD_KEY}/list?count=8`, {
                 method: "GET",
                 headers: { "x-session-token": llSessionToken }
@@ -442,6 +443,32 @@
     
     const CW = 360, CH = 640;
     canvas.width = CW; canvas.height = CH;
+
+    // [Keyboard Input State]
+    const keys = { w: false, a: false, s: false, d: false, up: false, down: false, left: false, right: false };
+
+    window.addEventListener('keydown', e => {
+        if (e.code === 'Space') useDash();
+        if (e.code === 'KeyW') keys.w = true;
+        if (e.code === 'KeyA') keys.a = true;
+        if (e.code === 'KeyS') keys.s = true;
+        if (e.code === 'KeyD') keys.d = true;
+        if (e.code === 'ArrowUp') keys.up = true;
+        if (e.code === 'ArrowDown') keys.down = true;
+        if (e.code === 'ArrowLeft') keys.left = true;
+        if (e.code === 'ArrowRight') keys.right = true;
+    });
+
+    window.addEventListener('keyup', e => {
+        if (e.code === 'KeyW') keys.w = false;
+        if (e.code === 'KeyA') keys.a = false;
+        if (e.code === 'KeyS') keys.s = false;
+        if (e.code === 'KeyD') keys.d = false;
+        if (e.code === 'ArrowUp') keys.up = false;
+        if (e.code === 'ArrowDown') keys.down = false;
+        if (e.code === 'ArrowLeft') keys.left = false;
+        if (e.code === 'ArrowRight') keys.right = false;
+    });
 
     // [Mouse Interaction Setup]
     let mouse = { x: -1000, y: -1000 };
@@ -631,7 +658,9 @@
         flashGaugeTimer: 0,
         hitFlashTimer: 0,
         isDead: false,
-        deadTimer: 0
+        deadTimer: 0,
+        inputVx: 0, // Current movement input direction X
+        inputVy: 0  // Current movement input direction Y
     };
 
     let joystick = { active: false, baseX: CW*0.2, baseY: CH*0.8, stickX: CW*0.2, stickY: CH*0.8, maxRadius: 30, vx: 0, vy: 0 };
@@ -671,8 +700,14 @@
 
     function useDash() {
         if(!player.dashReady || player.isDashing) return;
-        let dx = joystick.vx; let dy = joystick.vy;
+        
+        // Use normalized input vector stored in update loop
+        let dx = player.inputVx; 
+        let dy = player.inputVy;
+        
+        // If standing still, dash up
         if(dx === 0 && dy === 0) { dy = -1; }
+        
         player.isDashing = true; player.dashTime = player.dashDuration;
         player.dashVx = dx; player.dashVy = dy;
         player.dashReady = false; player.dashCool = player.dashMaxCool;
@@ -1111,13 +1146,10 @@
                 const ratio = weights[i] / totalWeight;
                 
                 // Distribute player size (r=10). 
-                // Total area logic: area = pi*r^2. Total Area ~ 314.
-                // Each fragment area = Total Area * ratio.
-                // Fragment r = sqrt(Area / pi) = sqrt(Total Area * ratio / pi) = sqrt(100 * ratio) = 10 * sqrt(ratio)
-                // However, linear distribution is visually better here.
+                // Using much smaller factor for "tiny pieces"
+                // e.g. player.r * 0.15 ~ 0.35 
+                const size = (player.r * 0.15) + (Math.random() * player.r * 0.2); 
                 
-                const size = player.r * Math.sqrt(ratio); // Mathematical split
-
                 const baseAngle = (Math.PI * 2) / count * i;
                 
                 fragments.push(new PlayerFragment(
@@ -1155,12 +1187,34 @@
         if(!player.dashReady) { player.dashCool--; if(player.dashCool <= 0) { player.dashReady = true; updateDashUI(); } else if(frameCount%60===0) updateDashUI(); }
 
         if (!player.isDead) {
+            // [KEYBOARD INPUT]
+            let moveX = 0, moveY = 0;
+            if (keys.w || keys.up) moveY -= 1;
+            if (keys.s || keys.down) moveY += 1;
+            if (keys.a || keys.left) moveX -= 1;
+            if (keys.d || keys.right) moveX += 1;
+
+            if (moveX !== 0 || moveY !== 0) {
+                const mag = Math.hypot(moveX, moveY);
+                moveX /= mag; moveY /= mag;
+            }
+
+            if (joystick.active) {
+                moveX = joystick.vx; moveY = joystick.vy;
+            }
+            
+            // Store for dash
+            player.inputVx = moveX; player.inputVy = moveY;
+
             if(player.isDashing) {
                 player.wx += player.dashVx * 15; player.wy += player.dashVy * 15; player.dashTime--; if(player.dashTime <= 0) player.isDashing = false;
             } else {
-                const isMoving = joystick.active && (joystick.vx !== 0 || joystick.vy !== 0);
+                const isMoving = (moveX !== 0 || moveY !== 0);
                 const spd = (player.isHyper && player.hyperType===HYPER_RAPID) ? player.baseSpeed*1.5 : player.baseSpeed;
-                player.wx += joystick.vx * spd; player.wy += joystick.vy * spd;
+                
+                player.wx += moveX * spd; 
+                player.wy += moveY * spd;
+
                 const fr = (player.isHyper && player.hyperType===HYPER_RAPID) ? 4 : player.baseFireRate;
                 if(isMoving && frameCount - player.lastShot > fr) {
                     let t=null, min=Infinity;
@@ -1187,8 +1241,10 @@
         if(player.combo>0) { player.comboTimer--; if(player.comboTimer<=0) { player.combo=0; comboEl.style.display='none'; comboLabel.style.display='none'; } }
 
         const rate = (player.isHyper && player.hyperType===HYPER_RAPID) ? 5 : Math.max(10, 60 - player.level);
-        if(frameCount % rate === 0) getObj(enemies, Enemy).spawn(false);
-        if(frameCount % 900 === 0 && player.level >= 3) {
+        // [MODIFIED] Stop spawning enemies if dead
+        if(!player.isDead && frameCount % rate === 0) getObj(enemies, Enemy).spawn(false);
+        
+        if(!player.isDead && frameCount % 900 === 0 && player.level >= 3) {
             const activeBosses = enemies.filter(e => e.active && e.isElite).length; let maxBosses = 1; if(player.level >= 9) maxBosses = 2; if(player.level >= 18) maxBosses = 3;
             if(activeBosses < maxBosses) getObj(enemies, Enemy).spawn(true);
         }
@@ -1238,7 +1294,11 @@
         } else {
             drawGrid();
             let hc = (player.hyperType === HYPER_RAPID) ? '#f1c40f' : (player.hyperType === HYPER_EMP ? '#2ecc71' : '#9b59b6');
-            ctx.strokeStyle = hc; ctx.globalAlpha = 0.4; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(CW/2, CH/2, player.grazeR, 0, Math.PI*2); ctx.stroke(); ctx.globalAlpha = 1.0;
+            
+            // [MODIFIED] Only draw circle if alive
+            if (!player.isDead) {
+                ctx.strokeStyle = hc; ctx.globalAlpha = 0.4; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(CW/2, CH/2, player.grazeR, 0, Math.PI*2); ctx.stroke(); ctx.globalAlpha = 1.0;
+            }
 
             gems.forEach(x => { if(x.active) x.draw(); });
             effects.forEach(x => { if(x.active) x.draw(); });
@@ -1263,7 +1323,16 @@
                 if(player.isDashing) { ctx.shadowColor='#f1c40f'; ctx.shadowBlur=20; ctx.fillStyle='#fff'; }
                 ctx.beginPath(); ctx.arc(CW/2, CH/2, player.r, 0, Math.PI*2); ctx.fill(); ctx.shadowBlur=0;
                 
-                let lx = joystick.vx, ly = joystick.vy; if(lx===0&&ly===0) ly=-1;
+                let lx = joystick.vx, ly = joystick.vy; 
+                // Use input vector if not joystick active
+                if (!joystick.active && (player.inputVx !== 0 || player.inputVy !== 0)) {
+                    lx = player.inputVx; ly = player.inputVy;
+                } else if (!joystick.active) {
+                    // Default facing up if no input
+                    lx = 0; ly = -1;
+                }
+
+                if(lx===0&&ly===0) ly=-1;
                 const mag = Math.hypot(lx,ly); if(mag>0) { lx/=mag; ly/=mag; }
                 ctx.fillStyle='white'; ctx.beginPath(); ctx.arc(CW/2+lx*5, CH/2+ly*5, 2, 0, Math.PI*2); ctx.fill();
             }
@@ -1311,6 +1380,10 @@
 
     function levelUp() {
         gameState='PAUSE'; joystick.active=false; joystick.vx=0; joystick.vy=0;
+        // Also reset keyboard state so it doesn't stick
+        keys.w=false; keys.a=false; keys.s=false; keys.d=false;
+        keys.up=false; keys.down=false; keys.left=false; keys.right=false;
+
         levelUpScreen.style.display='flex'; cardsBox.innerHTML='';
         const statOpts = [
             {t:"Attack UP", d:"Damage +5", img: "atk.png", f:()=>{player.damage+=5;}}, 
